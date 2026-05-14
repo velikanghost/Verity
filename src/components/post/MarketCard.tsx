@@ -134,29 +134,6 @@ export default function MarketCard({
         </div>
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-3">
-        <button
-          className={`flex items-center justify-center gap-2 rounded-[7px] border border-brand-secondary px-4 py-3 font-black text-[var(--foreground)] transition-colors hover:bg-brand-secondary/10 disabled:cursor-not-allowed disabled:opacity-60 ${
-            viewerVote === "YES" ? "bg-brand-secondary/15" : ""
-          }`}
-          disabled={isClosed}
-          onClick={() => onVote?.("YES")}
-          type="button"
-        >
-          Yes <ArrowUp className="h-4 w-4" />
-        </button>
-        <button
-          className={`flex items-center justify-center gap-2 rounded-[7px] border border-downvote px-4 py-3 font-black text-[var(--foreground)] transition-colors hover:bg-downvote/10 disabled:cursor-not-allowed disabled:opacity-60 ${
-            viewerVote === "NO" ? "bg-downvote/15" : ""
-          }`}
-          disabled={isClosed}
-          onClick={() => onVote?.("NO")}
-          type="button"
-        >
-          No <ArrowDown className="h-4 w-4" />
-        </button>
-      </div>
-
       <div className="mb-5 rounded-[9px] border border-[var(--border)] bg-[var(--surface-muted)] p-3">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <label className="font-mono text-[11px] font-black uppercase tracking-[0.14em] text-[var(--foreground)]" htmlFor={`back-${question}`}>
@@ -177,20 +154,20 @@ export default function MarketCard({
             value={backAmount}
           />
           <button
-            className="flex h-11 items-center justify-center rounded-[8px] bg-brand-secondary/15 font-black text-[var(--foreground)] transition-colors hover:bg-brand-secondary/25 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-11 items-center justify-center gap-2 rounded-[8px] border border-brand-secondary bg-brand-secondary/15 font-black text-[var(--foreground)] transition-colors hover:bg-brand-secondary/25 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isClosed || !validBackAmount}
             onClick={() => onUsdcVote?.("YES", parsedBackAmount)}
             type="button"
           >
-            Back YES
+            Yes <ArrowUp className="h-4 w-4" />
           </button>
           <button
-            className="flex h-11 items-center justify-center rounded-[8px] bg-downvote/15 font-black text-[var(--foreground)] transition-colors hover:bg-downvote/25 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-11 items-center justify-center gap-2 rounded-[8px] border border-downvote bg-downvote/15 font-black text-[var(--foreground)] transition-colors hover:bg-downvote/25 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isClosed || !validBackAmount}
             onClick={() => onUsdcVote?.("NO", parsedBackAmount)}
             type="button"
           >
-            Back NO
+            No <ArrowDown className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -216,7 +193,7 @@ export default function MarketCard({
         <span>Closes {deadline}</span>
       </div>
 
-      <div className="flex max-w-[280px] items-center justify-between border-t border-dashed border-[var(--border)] pt-2 text-[var(--muted)]">
+      <div className="flex max-w-[425px] items-center justify-between border-t border-dashed border-[var(--border)] pt-2 text-[var(--muted)]">
         <button aria-label={`Comment on ${question}`} className="group flex items-center gap-2 transition-colors hover:text-[var(--foreground)]" onClick={onComment} type="button">
           <span className="rounded-full p-2 transition-colors group-hover:bg-[var(--surface-hover)]">
             <MessageCircle className="h-4 w-4" />
@@ -235,6 +212,38 @@ export default function MarketCard({
             <Repeat2 className="h-4 w-4" />
           </span>
           <span className="text-xs">{reshares}</span>
+        </button>
+
+        <button
+          aria-label={`Upvote ${question}`}
+          aria-pressed={viewerVote === "YES"}
+          className={`group flex items-center gap-2 transition-colors hover:text-brand-secondary ${
+            viewerVote === "YES" ? "text-brand-secondary" : ""
+          }`}
+          disabled={isClosed}
+          onClick={() => onVote?.("YES")}
+          type="button"
+        >
+          <span className="rounded-full p-2 transition-colors group-hover:bg-brand-secondary/10">
+            <ArrowUp className="h-4 w-4" />
+          </span>
+          <span className="text-xs">{freeYesVotes}</span>
+        </button>
+
+        <button
+          aria-label={`Downvote ${question}`}
+          aria-pressed={viewerVote === "NO"}
+          className={`group flex items-center gap-2 transition-colors hover:text-downvote ${
+            viewerVote === "NO" ? "text-downvote" : ""
+          }`}
+          disabled={isClosed}
+          onClick={() => onVote?.("NO")}
+          type="button"
+        >
+          <span className="rounded-full p-2 transition-colors group-hover:bg-downvote/10">
+            <ArrowDown className="h-4 w-4" />
+          </span>
+          <span className="text-xs">{freeNoVotes}</span>
         </button>
 
         <button aria-label={`Share ${question}`} className="group flex items-center gap-2 transition-colors hover:text-[var(--foreground)]" onClick={onShare} type="button">

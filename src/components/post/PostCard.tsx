@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart2, Heart, MessageCircle, Repeat2, Share } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share } from "lucide-react";
 
 export interface PostCardProps {
   name: string;
@@ -53,7 +53,7 @@ export default function PostCard({
           {content}
         </p>
 
-        <div className="flex max-w-[425px] items-center justify-between border-t border-dashed border-[var(--border)] pt-2 text-[var(--muted)]">
+        <div className="flex max-w-[360px] items-center justify-between border-t border-dashed border-[var(--border)] pt-2 text-[var(--muted)]">
           <button aria-label="Comment" className="group flex items-center gap-2 transition-colors hover:text-[var(--foreground)]" onClick={onComment} type="button">
             <span className="rounded-full p-2 transition-colors group-hover:bg-[var(--surface-hover)]">
               <MessageCircle className="h-4 w-4" />
@@ -85,12 +85,6 @@ export default function PostCard({
               <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
             </span>
             <span className="text-xs">{likes}</span>
-          </button>
-
-          <button aria-label="View market context" className="group flex items-center gap-2 transition-colors hover:text-[var(--foreground)]">
-            <span className="rounded-full p-2 transition-colors group-hover:bg-[var(--surface-hover)]">
-              <BarChart2 className="h-4 w-4" />
-            </span>
           </button>
 
           <button aria-label="Share" className="group flex items-center gap-2 transition-colors hover:text-[var(--foreground)]" onClick={onShare} type="button">

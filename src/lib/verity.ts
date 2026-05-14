@@ -196,7 +196,6 @@ export async function fetchFeed(viewerProfileId?: string, onlyMarkets = false) {
     viewerProfileId ? fetchViewerIds(supabase, "reshares", "post_id", postIds, viewerProfileId) : Promise.resolve(new Set<string>()),
     viewerProfileId ? fetchViewerVotes(supabase, marketIds, viewerProfileId) : Promise.resolve(new Map<string, VoteSide>()),
   ]);
-
   return rows.map((row) => {
     const market = normalizeMarket(row.market_posts);
 
