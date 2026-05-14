@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, BarChart3, MessageCircle, Repeat2, Share, ShieldCheck } from "lucide-react";
 import { useFeed } from "@/hooks/useFeed";
+import { useSetRightPanelSlot } from "@/hooks/useRightPanelSlot";
 import { useUsdcBalance } from "@/hooks/useUsdcBalance";
 import { useUsdcTransfer } from "@/hooks/useUsdcTransfer";
 import { useWalletProfile } from "@/hooks/useWalletProfile";
@@ -47,6 +48,9 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const postId = item?.id;
   const detailMarketId = market?.id;
   const profileId = profile?.id;
+  const isConnected = Boolean(profileId);
+  const creatorHandle = item ? displayHandle(item.author) : "";
+  const creatorName = item ? displayName(item.author) : "";
   const yesPercent = market ? calculateYesPercent(market) : 50;
   const noPercent = 100 - yesPercent;
   const totalUsdc = market ? Number(market.usdc_yes_amount) + Number(market.usdc_no_amount) : 0;
@@ -56,12 +60,18 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const tradeTotal = market && validTradeAmount ? calculateGrossUsdc(tradeAmountNumber, market.trading_fee_bps) : 0;
   const leadingSide: VoteSide = yesPercent >= noPercent ? "YES" : "NO";
   const leadingPercent = Math.max(yesPercent, noPercent);
-  const createdAt = market ? new Date(market.created_at) : null;
-  const closesAt = market ? new Date(market.deadline) : null;
-  const settlesAt = closesAt ? new Date(closesAt.getTime() + 24 * 60 * 60 * 1000) : null;
+  const createdAt = useMemo(() => market ? new Date(market.created_at) : null, [market]);
+  const closesAt = useMemo(() => market ? new Date(market.deadline) : null, [market]);
+  const settlesAt = useMemo(() => closesAt ? new Date(closesAt.getTime() + 24 * 60 * 60 * 1000) : null, [closesAt]);
   const creatorMarkets = useMemo(() => {
-    if (!item) return 0;
+    if (!item?.author_id) return 0;
     return items.filter((feedItem) => feedItem.author_id === item.author_id).length;
+  }, [item, items]);
+  const creatorTotalVolume = useMemo(() => {
+    if (!item?.author_id) return 0;
+    return items
+      .filter((feedItem) => feedItem.author_id === item.author_id)
+      .reduce((sum, feedItem) => sum + Number(feedItem.market?.usdc_yes_amount || 0) + Number(feedItem.market?.usdc_no_amount || 0), 0);
   }, [item, items]);
 
   useEffect(() => {
@@ -91,18 +101,18 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     };
   }, [detailMarketId, postId, profileId]);
 
-  async function reloadDetailData(postId: string, detailMarketId: string) {
+  const reloadDetailData = useCallback(async (postId: string, detailMarketId: string) => {
     const [nextComments, nextPositions] = await Promise.all([
       fetchPostComments(postId),
-      profile ? fetchMarketPositions(detailMarketId, profile.id) : Promise.resolve([]),
+      profileId ? fetchMarketPositions(detailMarketId, profileId) : Promise.resolve([]),
     ]);
 
     setComments(nextComments);
     setPositions(nextPositions);
-  }
+  }, [profileId]);
 
-  async function runAction(action: () => Promise<void>) {
-    if (!profile) {
+  const runAction = useCallback(async (action: () => Promise<void>) => {
+    if (!profileId) {
       setActionError("Connect your wallet before taking that action.");
       return;
     }
@@ -116,7 +126,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "Action failed.");
     }
-  }
+  }, [item, market, profileId, reload, reloadDetailData]);
 
   async function sharePost(post: FeedPost) {
     const text = post.market?.question || post.content;
@@ -130,7 +140,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     await navigator.clipboard.writeText(`${text}\n${url}`);
   }
 
-  async function backMarketWithUsdc(side: VoteSide) {
+  const backMarketWithUsdc = useCallback(async (side: VoteSide) => {
     if (!market) return;
 
     await runAction(async () => {
@@ -141,7 +151,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
 
       await castUsdcVote({
         market,
-        profileId: profile!.id,
+        profileId: profileId!,
         side,
         amount: tradeAmountNumber,
         feeAmount,
@@ -149,7 +159,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         txHash: payment.hash,
       });
     });
-  }
+  }, [market, profileId, runAction, tradeAmountNumber, transferToTreasury, validTradeAmount]);
 
   async function submitComment() {
     if (!item || !market || !commentDraft.trim()) return;
@@ -163,6 +173,89 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     setCommentDraft("");
     setCommentLoading(false);
   }
+
+  const sidebarPanels = useMemo(() => {
+    if (!market || !postId) return null;
+
+    return (
+      <>
+        <TradeTicket
+          amount={tradeAmount}
+          balanceLabel={balance.balance.isLoading ? "..." : balance.formatted}
+          disabled={market.status !== "open" || !validTradeAmount}
+          fee={tradeFee}
+        isConnected={isConnected}
+          onAmountChange={setTradeAmount}
+          onSideChange={setSelectedSide}
+          onTrade={() => backMarketWithUsdc(selectedSide)}
+          selectedSide={selectedSide}
+          total={tradeTotal}
+          yesPrice={yesPercent}
+          noPrice={noPercent}
+        />
+
+        <MarketStatsPanel
+          createdAt={createdAt}
+          feeBps={market.trading_fee_bps}
+          liquidity={totalUsdc}
+          closesAt={closesAt}
+          settlesAt={settlesAt}
+          volume={totalUsdc}
+        />
+
+        <CreatorPanel
+          creator={creatorHandle}
+          creatorName={creatorName}
+          marketsCreated={creatorMarkets}
+          totalVolume={creatorTotalVolume}
+        />
+      </>
+    );
+  }, [
+    backMarketWithUsdc,
+    balance.balance.isLoading,
+    balance.formatted,
+    closesAt,
+    createdAt,
+    creatorMarkets,
+    creatorTotalVolume,
+    creatorHandle,
+    market,
+    noPercent,
+    postId,
+    creatorName,
+    isConnected,
+    selectedSide,
+    settlesAt,
+    totalUsdc,
+    tradeAmount,
+    tradeFee,
+    tradeTotal,
+    validTradeAmount,
+    yesPercent,
+  ]);
+  const rightPanelSlot = useMemo(
+    () => sidebarPanels ? <div className="flex flex-col gap-3">{sidebarPanels}</div> : null,
+    [sidebarPanels],
+  );
+  const rightPanelSlotKey = [
+    postId || "no-post",
+    detailMarketId || "no-market",
+    profileId || "disconnected",
+    tradeAmount,
+    selectedSide,
+    balance.balance.isLoading ? "loading" : balance.formatted,
+    market?.status || "unknown",
+    market?.trading_fee_bps || 0,
+    totalUsdc,
+    yesPercent,
+    noPercent,
+    creatorMarkets,
+    creatorTotalVolume,
+  ].join("|");
+
+  // Inject Trade Ticket, Market Stats, Creator Stats into the global RightPanel
+  useSetRightPanelSlot(rightPanelSlot, rightPanelSlotKey);
 
   if (loading) {
     return (
@@ -210,78 +303,44 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         </div>
       )}
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <main className="flex min-w-0 flex-col gap-3">
-          <SentimentPanel noPercent={noPercent} yesPercent={yesPercent} />
-
-          <RulesPanel
-            noCondition={market.no_condition}
-            postContent={item.content}
-            resolutionSource={market.resolution_source}
-            yesCondition={market.yes_condition}
-          />
-
-          <PositionPanel positions={positions} />
-
-          <ActivityPanel market={market} />
-
-          <CommentsPanel
-            commentDraft={commentDraft}
-            comments={comments}
-            loading={commentLoading}
-            onChange={setCommentDraft}
-            onSubmit={submitComment}
-          />
-        </main>
-
-        <aside className="flex flex-col gap-3 xl:sticky xl:top-3 xl:self-start">
-          <TradeTicket
-            amount={tradeAmount}
-            balanceLabel={balance.balance.isLoading ? "..." : balance.formatted}
-            disabled={market.status !== "open" || !validTradeAmount}
-            fee={tradeFee}
-            isConnected={Boolean(profile)}
-            onAmountChange={setTradeAmount}
-            onSideChange={setSelectedSide}
-            onTrade={() => backMarketWithUsdc(selectedSide)}
-            selectedSide={selectedSide}
-            total={tradeTotal}
-            yesPrice={yesPercent}
-            noPrice={noPercent}
-          />
-
-          <MarketStatsPanel
-            createdAt={createdAt}
-            feeBps={market.trading_fee_bps}
-            liquidity={totalUsdc}
-            closesAt={closesAt}
-            settlesAt={settlesAt}
-            volume={totalUsdc}
-          />
-
-          <CreatorPanel
-            creator={displayHandle(item.author)}
-            creatorName={displayName(item.author)}
-            marketsCreated={creatorMarkets}
-            totalVolume={items
-              .filter((feedItem) => feedItem.author_id === item.author_id)
-              .reduce((sum, feedItem) => sum + Number(feedItem.market?.usdc_yes_amount || 0) + Number(feedItem.market?.usdc_no_amount || 0), 0)}
-          />
-
-          <SocialActions
-            comments={item.commentsCount}
-            freeNoVotes={market.free_no_votes}
-            freeYesVotes={market.free_yes_votes}
-            onComment={() => document.getElementById("market-comment-input")?.focus()}
-            onReshare={() => runAction(() => toggleReshare(item.id, profile!.id, item.viewerReshared))}
-            onShare={() => sharePost(item)}
-            onVote={(side) => runAction(() => castFreeVote(market, profile!.id, side))}
-            reshares={item.resharesCount}
-            reshared={item.viewerReshared}
-            viewerVote={item.viewerVote}
-          />
-        </aside>
+      {/* Mobile fallback: show sidebar panels inline (hidden on lg+ where RightPanel is visible) */}
+      <div className="flex flex-col gap-3 lg:hidden">
+        {sidebarPanels}
       </div>
+
+      <SentimentPanel noPercent={noPercent} yesPercent={yesPercent} />
+
+      <RulesPanel
+        noCondition={market.no_condition}
+        postContent={item.content}
+        resolutionSource={market.resolution_source}
+        yesCondition={market.yes_condition}
+      />
+
+      <PositionPanel positions={positions} />
+
+      <ActivityPanel market={market} />
+
+      <CommentsPanel
+        commentDraft={commentDraft}
+        comments={comments}
+        loading={commentLoading}
+        onChange={setCommentDraft}
+        onSubmit={submitComment}
+      />
+
+      <SocialActions
+        comments={item.commentsCount}
+        freeNoVotes={market.free_no_votes}
+        freeYesVotes={market.free_yes_votes}
+        onComment={() => document.getElementById("market-comment-input")?.focus()}
+        onReshare={() => runAction(() => toggleReshare(item.id, profile!.id, item.viewerReshared))}
+        onShare={() => sharePost(item)}
+        onVote={(side) => runAction(() => castFreeVote(market, profile!.id, side))}
+        reshares={item.resharesCount}
+        reshared={item.viewerReshared}
+        viewerVote={item.viewerVote}
+      />
     </div>
   );
 }
@@ -455,11 +514,18 @@ function SentimentPanel({ noPercent, yesPercent }: { noPercent: number; yesPerce
       </div>
 
       <div className="rounded-[8px] bg-[var(--surface-muted)] p-4">
-        <div className="flex h-2 overflow-hidden rounded-full bg-zinc-200">
-          <div className="bg-brand-secondary" style={{ width: `${yesPercent}%` }} />
-          <div className="bg-downvote" style={{ width: `${noPercent}%` }} />
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <div className="rounded-[7px] border border-brand-secondary/25 bg-brand-secondary/10 p-3">
+            <span className="font-mono text-[10px] font-black uppercase tracking-[0.14em] text-brand-secondary">Yes</span>
+            <p className="mt-1 font-mono text-lg font-black text-[var(--foreground)]">{yesPercent.toFixed(1)}%</p>
+          </div>
+          <div className="rounded-[7px] border border-downvote/25 bg-downvote/10 p-3">
+            <span className="font-mono text-[10px] font-black uppercase tracking-[0.14em] text-downvote">No</span>
+            <p className="mt-1 font-mono text-lg font-black text-[var(--foreground)]">{noPercent.toFixed(1)}%</p>
+          </div>
         </div>
-        <div className="mt-3 grid gap-2 font-mono text-xs">
+
+        <div className="grid gap-3 font-mono text-xs">
           <SentimentRow label="Yes" percent={yesPercent} tone="yes" />
           <SentimentRow label="No" percent={noPercent} tone="no" />
         </div>
@@ -474,9 +540,9 @@ function SentimentPanel({ noPercent, yesPercent }: { noPercent: number; yesPerce
 
 function SentimentRow({ label, percent, tone }: { label: string; percent: number; tone: "yes" | "no" }) {
   return (
-    <div className="grid grid-cols-[42px_1fr_52px] items-center gap-3">
-      <span>{label}</span>
-      <span className="h-2 overflow-hidden rounded-full bg-[var(--surface-solid)]">
+    <div className="grid grid-cols-[34px_minmax(0,1fr)_52px] items-center gap-3">
+      <span className="text-[var(--foreground)]">{label}</span>
+      <span className="h-2 overflow-hidden rounded-full bg-[var(--surface-solid)] ring-1 ring-[var(--border)]">
         <span className={`block h-full ${tone === "yes" ? "bg-brand-secondary" : "bg-downvote"}`} style={{ width: `${percent}%` }} />
       </span>
       <span className="text-right">{percent.toFixed(1)}%</span>

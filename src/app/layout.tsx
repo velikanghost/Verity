@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen overflow-y-scroll bg-[var(--background)] text-[var(--foreground)]">
         <AppProviders>
           <div className="mx-auto flex min-h-screen max-w-[1248px] justify-center gap-4 px-3">

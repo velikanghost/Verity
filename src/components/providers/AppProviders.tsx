@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
 import { arcTestnet, arcTransport } from "@/lib/arc";
+import { RightPanelSlotProvider } from "@/hooks/useRightPanelSlot";
 
 const config = getDefaultConfig({
   appName: "Verity",
@@ -22,7 +23,9 @@ export default function AppProviders({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>{children}</RainbowKitProvider>
+        <RainbowKitProvider>
+          <RightPanelSlotProvider>{children}</RightPanelSlotProvider>
+        </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
