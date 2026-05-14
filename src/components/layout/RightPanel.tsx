@@ -40,7 +40,7 @@ export default function RightPanel() {
         <div className="flex flex-col">
           {trending.length > 0 ? trending.map((item) => {
             const market = item.market;
-            const yes = market ? calculateYesPercent(market.free_yes_votes, market.free_no_votes) : 50;
+            const yes = market ? calculateYesPercent(Number(market.usdc_yes_amount), Number(market.usdc_no_amount)) : 50;
             const volume = market ? Number(market.usdc_yes_amount) + Number(market.usdc_no_amount) : 0;
 
             return (

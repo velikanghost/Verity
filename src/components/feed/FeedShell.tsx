@@ -248,9 +248,6 @@ function FeedCard({
 }
 
 function calculateYesPercent(market: MarketPost) {
-  const totalVotes = market.free_yes_votes + market.free_no_votes;
-  if (totalVotes > 0) return (market.free_yes_votes / totalVotes) * 100;
-
   const yes = Number(market.usdc_yes_amount);
   const no = Number(market.usdc_no_amount);
   const totalUsdc = yes + no;

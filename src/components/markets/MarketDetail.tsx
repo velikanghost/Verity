@@ -308,7 +308,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         {sidebarPanels}
       </div>
 
-      <SentimentPanel noPercent={noPercent} yesPercent={yesPercent} />
+      <SentimentPanel noPercent={noPercent} totalUsdc={totalUsdc} yesPercent={yesPercent} />
 
       <RulesPanel
         noCondition={market.no_condition}
@@ -505,15 +505,23 @@ function OutcomeButton({
   );
 }
 
-function SentimentPanel({ noPercent, yesPercent }: { noPercent: number; yesPercent: number }) {
+function SentimentPanel({ noPercent, totalUsdc, yesPercent }: { noPercent: number; totalUsdc: number; yesPercent: number }) {
   return (
     <section className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-black text-[var(--foreground)]">Market Sentiment</h2>
+        <div>
+          <h2 className="font-black text-[var(--foreground)]">Market Sentiment</h2>
+          <p className="mt-1 font-mono text-[11px] text-[var(--muted)]">USDC-backed opinions only</p>
+        </div>
         <BarChart3 className="h-4 w-4 text-[var(--muted)]" />
       </div>
 
       <div className="rounded-[8px] bg-[var(--surface-muted)] p-4">
+        {totalUsdc <= 0 && (
+          <p className="mb-4 rounded-[7px] border border-dashed border-[var(--border)] bg-[var(--surface-solid)] p-3 text-sm text-[var(--muted)]">
+            No USDC-backed opinions yet.
+          </p>
+        )}
         <div className="mb-4 grid grid-cols-2 gap-2">
           <div className="rounded-[7px] border border-brand-secondary/25 bg-brand-secondary/10 p-3">
             <span className="font-mono text-[10px] font-black uppercase tracking-[0.14em] text-brand-secondary">Yes</span>
@@ -813,9 +821,6 @@ function StatRow({ label, value }: { label: string; value: string }) {
 }
 
 function calculateYesPercent(market: MarketPost) {
-  const totalVotes = market.free_yes_votes + market.free_no_votes;
-  if (totalVotes > 0) return (market.free_yes_votes / totalVotes) * 100;
-
   const yes = Number(market.usdc_yes_amount);
   const no = Number(market.usdc_no_amount);
   const totalUsdc = yes + no;
