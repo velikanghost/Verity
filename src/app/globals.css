@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #000000;
+  --color-brand-secondary: #39d77a;
+  --color-brand-accent: #ff8ea0;
+  
+  --color-bg-dark: #f3f2ef;
+  --color-bg-panel: #ffffff;
+  --color-bg-panel-hover: #ffffff;
+  
+  --color-text-primary: #000000;
+  --color-text-secondary: #6f6f6f;
+  
+  --color-upvote: #7ceda5;
+  --color-downvote: #ff8ea0;
+}
+
+:root {
+  --background: #f3f2ef;
+  --foreground: #000000;
+  --surface: #ffffff;
+  --surface-solid: #ffffff;
+  --surface-muted: #f2efe9;
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --border: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.28);
+  --muted: #6f6f6f;
+  --inverse: #000000;
+  --inverse-text: #ffffff;
+  --panel-border: var(--border);
+  --panel-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="dark"] {
+  --background: #11110f;
+  --foreground: #f4f3ef;
+  --surface: rgba(27, 27, 25, 0.95);
+  --surface-solid: #1b1b19;
+  --surface-muted: #24231f;
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.28);
+  --muted: #a3a39b;
+  --inverse: #f4f3ef;
+  --inverse-text: #11110f;
+  --panel-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--color-bg-panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+}
+
+.glass-panel-hover:hover {
+  background: var(--color-bg-panel-hover);
+  border-color: rgba(17, 17, 17, 0.2);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(17, 17, 17, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(17, 17, 17, 0.32);
+}
+
+/* Gradients */
+.text-gradient {
+  color: var(--color-brand-primary);
+}
