@@ -7,7 +7,8 @@ import { displayHandle, displayName } from "@/lib/verity";
 
 export default function RightPanel() {
   const { items } = useFeed(undefined, true);
-  const trending = items.slice(0, 3);
+  const marketItems = items.filter((item) => item.market);
+  const trending = marketItems.slice(0, 3);
   const predictors = Array.from(
     new Map(items.map((item) => [item.author.id, item.author])).values(),
   ).slice(0, 3);

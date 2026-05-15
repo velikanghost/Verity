@@ -75,8 +75,10 @@ export default function MarketCard({
   onReshare,
   onShare,
 }: MarketCardProps) {
-  const noPercent = 100 - yesPercent;
   const totalUsdc = usdcYes + usdcNo;
+  const hasBackedSentiment = totalUsdc > 0;
+  const displayYesPercent = hasBackedSentiment ? yesPercent : 0;
+  const noPercent = hasBackedSentiment ? 100 - yesPercent : 0;
   const isClosed = status !== "open";
   const isDetail = variant === "detail";
   const creatorLabel = handle === "@unknown" ? name : handle;
@@ -141,15 +143,21 @@ export default function MarketCard({
 
       <div className="mb-3 rounded-[7px] bg-[var(--surface-muted)] p-3">
         <div className="mb-3 font-mono text-[11px] font-bold uppercase text-[var(--foreground)]">
-          Sentiment
+          USDC sentiment
         </div>
         <div className="flex h-1.5 overflow-hidden rounded-full bg-zinc-200">
-          <div className="h-full bg-upvote transition-all" style={{ width: `${yesPercent}%` }} />
+          <div className="h-full bg-upvote transition-all" style={{ width: `${displayYesPercent}%` }} />
           <div className="h-full bg-downvote transition-all" style={{ width: `${noPercent}%` }} />
         </div>
         <div className="mt-2 flex justify-between font-mono text-[11px] text-[var(--muted)]">
-          <span>{yesPercent.toFixed(1)}% Yes</span>
-          <span>{noPercent.toFixed(1)}% No</span>
+          {hasBackedSentiment ? (
+            <>
+              <span>{displayYesPercent.toFixed(1)}% Yes</span>
+              <span>{noPercent.toFixed(1)}% No</span>
+            </>
+          ) : (
+            <span>No USDC-backed opinions yet</span>
+          )}
         </div>
       </div>
 
