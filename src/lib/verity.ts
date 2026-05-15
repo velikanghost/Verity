@@ -1,9 +1,11 @@
 import { formatDistanceToNow } from "date-fns";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { calculateTradingFee } from "@/lib/fees";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export type PostType = "normal" | "market";
 export type VoteSide = "YES" | "NO";
+export type MarketTradeAction = "BUY" | "SELL";
 
 export interface Profile {
   id: string;
@@ -62,9 +64,30 @@ export interface MarketComment {
 }
 
 export interface MarketPosition {
+  id: string;
+  market_id: string;
+  user_id: string;
   side: VoteSide;
-  vote_type: "free" | "usdc";
-  amount: number;
+  shares: number;
+  avg_price: number;
+  invested_usdc: number;
+  realized_pnl: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MarketTrade {
+  id: string;
+  market_id: string;
+  user_id: string;
+  side: VoteSide;
+  action: MarketTradeAction;
+  shares: number;
+  price: number;
+  amount_usdc: number;
+  fee_usdc: number;
+  gross_usdc: number;
+  tx_hash: string | null;
   created_at: string;
 }
 
@@ -400,20 +423,54 @@ export async function fetchPostComments(postId: string) {
 export async function fetchMarketPositions(marketId: string, profileId: string) {
   const supabase = requireClient();
   const { data, error } = await supabase
-    .from("votes")
-    .select("side, vote_type, amount, created_at")
+    .from("market_positions")
+    .select("*")
     .eq("market_id", marketId)
     .eq("user_id", profileId)
-    .order("created_at", { ascending: false });
+    .gt("shares", 0)
+    .order("updated_at", { ascending: false });
 
   if (error) throw error;
 
   return (data || []).map((position) => ({
+    id: position.id as string,
+    market_id: position.market_id as string,
+    user_id: position.user_id as string,
     side: position.side as VoteSide,
-    vote_type: position.vote_type as "free" | "usdc",
-    amount: Number(position.amount || 0),
+    shares: Number(position.shares || 0),
+    avg_price: Number(position.avg_price || 0),
+    invested_usdc: Number(position.invested_usdc || 0),
+    realized_pnl: Number(position.realized_pnl || 0),
     created_at: position.created_at as string,
+    updated_at: position.updated_at as string,
   })) satisfies MarketPosition[];
+}
+
+export async function fetchMarketTrades(marketId: string) {
+  const supabase = requireClient();
+  const { data, error } = await supabase
+    .from("market_trades")
+    .select("*")
+    .eq("market_id", marketId)
+    .order("created_at", { ascending: false })
+    .limit(25);
+
+  if (error) throw error;
+
+  return (data || []).map((trade) => ({
+    id: trade.id as string,
+    market_id: trade.market_id as string,
+    user_id: trade.user_id as string,
+    side: trade.side as VoteSide,
+    action: trade.action as MarketTradeAction,
+    shares: Number(trade.shares || 0),
+    price: Number(trade.price || 0),
+    amount_usdc: Number(trade.amount_usdc || 0),
+    fee_usdc: Number(trade.fee_usdc || 0),
+    gross_usdc: Number(trade.gross_usdc || 0),
+    tx_hash: (trade.tx_hash as string | null) || null,
+    created_at: trade.created_at as string,
+  })) satisfies MarketTrade[];
 }
 
 export async function castFreeVote(market: MarketPost, profileId: string, side: VoteSide) {
@@ -453,6 +510,157 @@ export async function castFreeVote(market: MarketPost, profileId: string, side: 
   if (counter.error) throw counter.error;
 }
 
+const MIN_MARKET_PRICE = 0.01;
+const MAX_MARKET_PRICE = 0.99;
+
+function clampMarketPrice(price: number) {
+  if (!Number.isFinite(price)) return 0.5;
+  return Math.min(MAX_MARKET_PRICE, Math.max(MIN_MARKET_PRICE, price));
+}
+
+export function getMarketPrice(market: Pick<MarketPost, "usdc_yes_amount" | "usdc_no_amount">, side: VoteSide) {
+  const yes = Number(market.usdc_yes_amount);
+  const no = Number(market.usdc_no_amount);
+  const total = yes + no;
+  const yesPrice = total > 0 ? yes / total : 0.5;
+  return clampMarketPrice(side === "YES" ? yesPrice : 1 - yesPrice);
+}
+
+async function syncMarketPools(supabase: SupabaseClient, marketId: string) {
+  const { data, error } = await supabase
+    .from("market_positions")
+    .select("side, invested_usdc")
+    .eq("market_id", marketId)
+    .gt("shares", 0);
+
+  if (error) throw error;
+
+  const yes = (data || [])
+    .filter((position) => position.side === "YES")
+    .reduce((sum, position) => sum + Number(position.invested_usdc || 0), 0);
+  const no = (data || [])
+    .filter((position) => position.side === "NO")
+    .reduce((sum, position) => sum + Number(position.invested_usdc || 0), 0);
+
+  const counter = await supabase
+    .from("market_posts")
+    .update({ usdc_yes_amount: yes, usdc_no_amount: no })
+    .eq("id", marketId);
+
+  if (counter.error) throw counter.error;
+}
+
+export async function executeMarketTrade({
+  market,
+  profileId,
+  side,
+  action,
+  amount,
+  feeAmount,
+  grossAmount,
+  txHash,
+}: {
+  market: MarketPost;
+  profileId: string;
+  side: VoteSide;
+  action: MarketTradeAction;
+  amount: number;
+  feeAmount?: number;
+  grossAmount?: number;
+  txHash?: string | null;
+}) {
+  const supabase = requireClient();
+  const closed = market.status !== "open" || new Date(market.deadline).getTime() <= Date.now();
+  if (closed) throw new Error("This market is closed.");
+  if (amount <= 0) throw new Error(action === "BUY" ? "Enter a USDC amount greater than 0." : "Enter shares greater than 0.");
+
+  const price = getMarketPrice(market, side);
+  const existing = await supabase
+    .from("market_positions")
+    .select("*")
+    .eq("market_id", market.id)
+    .eq("user_id", profileId)
+    .eq("side", side)
+    .maybeSingle();
+
+  if (existing.error) throw existing.error;
+
+  const currentShares = Number(existing.data?.shares || 0);
+  const currentInvested = Number(existing.data?.invested_usdc || 0);
+  const currentRealizedPnl = Number(existing.data?.realized_pnl || 0);
+  const currentAvgPrice = Number(existing.data?.avg_price || 0);
+  const now = new Date().toISOString();
+
+  let tradeShares = 0;
+  let tradeAmountUsdc = 0;
+  let tradeFee = 0;
+  let tradeGross = 0;
+  let nextShares = currentShares;
+  let nextInvested = currentInvested;
+  let nextRealizedPnl = currentRealizedPnl;
+
+  if (action === "BUY") {
+    tradeAmountUsdc = amount;
+    tradeFee = feeAmount ?? calculateTradingFee(amount, market.trading_fee_bps);
+    tradeGross = grossAmount ?? amount + tradeFee;
+    tradeShares = amount / price;
+    nextShares = currentShares + tradeShares;
+    nextInvested = currentInvested + amount;
+  } else {
+    tradeShares = amount;
+    if (currentShares < tradeShares) {
+      throw new Error(`You only have ${currentShares.toFixed(4)} ${side} shares to sell.`);
+    }
+
+    tradeAmountUsdc = tradeShares * price;
+    tradeFee = feeAmount ?? calculateTradingFee(tradeAmountUsdc, market.trading_fee_bps);
+    tradeGross = grossAmount ?? Math.max(0, tradeAmountUsdc - tradeFee);
+
+    const costBasisRemoved = currentAvgPrice * tradeShares;
+    nextShares = Math.max(0, currentShares - tradeShares);
+    nextInvested = Math.max(0, currentInvested - costBasisRemoved);
+    nextRealizedPnl = currentRealizedPnl + (tradeGross - costBasisRemoved);
+  }
+
+  const nextAvgPrice = nextShares > 0 ? nextInvested / nextShares : 0;
+  const positionPayload: Record<string, unknown> = {
+    market_id: market.id,
+    user_id: profileId,
+    side,
+    shares: nextShares,
+    avg_price: nextAvgPrice,
+    invested_usdc: nextInvested,
+    realized_pnl: nextRealizedPnl,
+    updated_at: now,
+  };
+
+  const position = await supabase
+    .from("market_positions")
+    .upsert(
+      existing.data ? positionPayload : { ...positionPayload, created_at: now },
+      { onConflict: "market_id,user_id,side" },
+    );
+
+  if (position.error) throw position.error;
+
+  const trade = await supabase.from("market_trades").insert({
+    market_id: market.id,
+    user_id: profileId,
+    side,
+    action,
+    shares: tradeShares,
+    price,
+    amount_usdc: tradeAmountUsdc,
+    fee_usdc: tradeFee,
+    gross_usdc: tradeGross,
+    tx_hash: txHash || null,
+  });
+
+  if (trade.error) throw trade.error;
+
+  await syncMarketPools(supabase, market.id);
+}
+
 export async function castUsdcVote({
   market,
   profileId,
@@ -470,46 +678,14 @@ export async function castUsdcVote({
   grossAmount: number;
   txHash: string;
 }) {
-  const supabase = requireClient();
-  const closed = market.status !== "open" || new Date(market.deadline).getTime() <= Date.now();
-  if (closed) throw new Error("This market is closed.");
-  if (amount <= 0) throw new Error("Enter a USDC amount greater than 0.");
-
-  const vote = await supabase.from("votes").upsert(
-    {
-      market_id: market.id,
-      user_id: profileId,
-      side,
-      vote_type: "usdc",
-      amount,
-      fee_amount: feeAmount,
-      gross_amount: grossAmount,
-      tx_hash: txHash,
-    },
-    { onConflict: "market_id,user_id,vote_type" },
-  );
-
-  if (vote.error) throw vote.error;
-
-  const { data, error } = await supabase
-    .from("votes")
-    .select("side, amount")
-    .eq("market_id", market.id)
-    .eq("vote_type", "usdc");
-
-  if (error) throw error;
-
-  const yes = (data || [])
-    .filter((row) => row.side === "YES")
-    .reduce((sum, row) => sum + Number(row.amount), 0);
-  const no = (data || [])
-    .filter((row) => row.side === "NO")
-    .reduce((sum, row) => sum + Number(row.amount), 0);
-
-  const counter = await supabase
-    .from("market_posts")
-    .update({ usdc_yes_amount: yes, usdc_no_amount: no })
-    .eq("id", market.id);
-
-  if (counter.error) throw counter.error;
+  await executeMarketTrade({
+    market,
+    profileId,
+    side,
+    action: "BUY",
+    amount,
+    feeAmount,
+    grossAmount,
+    txHash,
+  });
 }

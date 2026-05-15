@@ -12,16 +12,20 @@ import { calculateGrossUsdc, calculateTradingFee, formatTradingFee } from "@/lib
 import {
   addComment,
   castFreeVote,
-  castUsdcVote,
   displayHandle,
   displayName,
+  executeMarketTrade,
   fetchMarketPositions,
+  fetchMarketTrades,
   fetchPostComments,
+  getMarketPrice,
   relativeTime,
   toggleReshare,
   type FeedPost,
   type MarketComment,
   type MarketPosition,
+  type MarketTrade,
+  type MarketTradeAction,
   type MarketPost,
   type VoteSide,
 } from "@/lib/verity";
@@ -38,9 +42,11 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [comments, setComments] = useState<MarketComment[]>([]);
   const [positions, setPositions] = useState<MarketPosition[]>([]);
+  const [trades, setTrades] = useState<MarketTrade[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
   const [tradeAmount, setTradeAmount] = useState("1");
+  const [tradeAction, setTradeAction] = useState<MarketTradeAction>("BUY");
   const [selectedSide, setSelectedSide] = useState<VoteSide>("YES");
   const item = items.find((feedItem) => feedItem.market?.id === marketId);
 
@@ -56,8 +62,16 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const totalUsdc = market ? Number(market.usdc_yes_amount) + Number(market.usdc_no_amount) : 0;
   const tradeAmountNumber = Number(tradeAmount);
   const validTradeAmount = Number.isFinite(tradeAmountNumber) && tradeAmountNumber > 0;
-  const tradeFee = market && validTradeAmount ? calculateTradingFee(tradeAmountNumber, market.trading_fee_bps) : 0;
-  const tradeTotal = market && validTradeAmount ? calculateGrossUsdc(tradeAmountNumber, market.trading_fee_bps) : 0;
+  const selectedPrice = market ? getMarketPrice(market, selectedSide) : 0.5;
+  const buyShares = validTradeAmount ? tradeAmountNumber / selectedPrice : 0;
+  const sellProceeds = validTradeAmount ? tradeAmountNumber * selectedPrice : 0;
+  const tradeBaseAmount = tradeAction === "BUY" ? tradeAmountNumber : sellProceeds;
+  const tradeFee = market && validTradeAmount ? calculateTradingFee(tradeBaseAmount, market.trading_fee_bps) : 0;
+  const tradeTotal = market && validTradeAmount
+    ? tradeAction === "BUY"
+      ? calculateGrossUsdc(tradeAmountNumber, market.trading_fee_bps)
+      : Math.max(0, sellProceeds - tradeFee)
+    : 0;
   const leadingSide: VoteSide = yesPercent >= noPercent ? "YES" : "NO";
   const leadingPercent = Math.max(yesPercent, noPercent);
   const createdAt = useMemo(() => market ? new Date(market.created_at) : null, [market]);
@@ -81,14 +95,16 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
 
     async function loadDetailData() {
       try {
-        const [nextComments, nextPositions] = await Promise.all([
+        const [nextComments, nextPositions, nextTrades] = await Promise.all([
           fetchPostComments(postId!),
           profileId ? fetchMarketPositions(detailMarketId!, profileId) : Promise.resolve([]),
+          fetchMarketTrades(detailMarketId!),
         ]);
 
         if (!active) return;
         setComments(nextComments);
         setPositions(nextPositions);
+        setTrades(nextTrades);
       } catch (caught) {
         if (active) setActionError(caught instanceof Error ? caught.message : "Unable to load market details.");
       }
@@ -102,13 +118,15 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   }, [detailMarketId, postId, profileId]);
 
   const reloadDetailData = useCallback(async (postId: string, detailMarketId: string) => {
-    const [nextComments, nextPositions] = await Promise.all([
+    const [nextComments, nextPositions, nextTrades] = await Promise.all([
       fetchPostComments(postId),
       profileId ? fetchMarketPositions(detailMarketId, profileId) : Promise.resolve([]),
+      fetchMarketTrades(detailMarketId),
     ]);
 
     setComments(nextComments);
     setPositions(nextPositions);
+    setTrades(nextTrades);
   }, [profileId]);
 
   const runAction = useCallback(async (action: () => Promise<void>) => {
@@ -140,26 +158,44 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     await navigator.clipboard.writeText(`${text}\n${url}`);
   }
 
-  const backMarketWithUsdc = useCallback(async (side: VoteSide) => {
+  const executeTrade = useCallback(async (side: VoteSide) => {
     if (!market) return;
 
     await runAction(async () => {
-      if (!validTradeAmount) throw new Error("Enter a USDC amount greater than 0.");
-      const feeAmount = calculateTradingFee(tradeAmountNumber, market.trading_fee_bps);
-      const grossAmount = calculateGrossUsdc(tradeAmountNumber, market.trading_fee_bps);
-      const payment = await transferToTreasury(grossAmount);
+      if (!validTradeAmount) throw new Error(tradeAction === "BUY" ? "Enter a USDC amount greater than 0." : "Enter shares greater than 0.");
 
-      await castUsdcVote({
+      if (tradeAction === "BUY") {
+        const feeAmount = calculateTradingFee(tradeAmountNumber, market.trading_fee_bps);
+        const grossAmount = calculateGrossUsdc(tradeAmountNumber, market.trading_fee_bps);
+        const payment = await transferToTreasury(grossAmount);
+
+        await executeMarketTrade({
+          market,
+          profileId: profileId!,
+          side,
+          action: "BUY",
+          amount: tradeAmountNumber,
+          feeAmount,
+          grossAmount,
+          txHash: payment.hash,
+        });
+        return;
+      }
+
+      const proceeds = tradeAmountNumber * getMarketPrice(market, side);
+      const feeAmount = calculateTradingFee(proceeds, market.trading_fee_bps);
+
+      await executeMarketTrade({
         market,
         profileId: profileId!,
         side,
         amount: tradeAmountNumber,
+        action: "SELL",
         feeAmount,
-        grossAmount,
-        txHash: payment.hash,
+        grossAmount: Math.max(0, proceeds - feeAmount),
       });
     });
-  }, [market, profileId, runAction, tradeAmountNumber, transferToTreasury, validTradeAmount]);
+  }, [market, profileId, runAction, tradeAction, tradeAmountNumber, transferToTreasury, validTradeAmount]);
 
   async function submitComment() {
     if (!item || !market || !commentDraft.trim()) return;
@@ -180,15 +216,21 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     return (
       <>
         <TradeTicket
+          action={tradeAction}
           amount={tradeAmount}
           balanceLabel={balance.balance.isLoading ? "..." : balance.formatted}
           disabled={market.status !== "open" || !validTradeAmount}
+          estimatedShares={buyShares}
           fee={tradeFee}
-        isConnected={isConnected}
+          isConnected={isConnected}
+          netProceeds={tradeTotal}
+          onActionChange={setTradeAction}
           onAmountChange={setTradeAmount}
           onSideChange={setSelectedSide}
-          onTrade={() => backMarketWithUsdc(selectedSide)}
+          onTrade={() => executeTrade(selectedSide)}
+          price={selectedPrice}
           selectedSide={selectedSide}
+          sellProceeds={sellProceeds}
           total={tradeTotal}
           yesPrice={yesPercent}
           noPrice={noPercent}
@@ -212,7 +254,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
       </>
     );
   }, [
-    backMarketWithUsdc,
+    buyShares,
+    executeTrade,
     balance.balance.isLoading,
     balance.formatted,
     closesAt,
@@ -225,9 +268,12 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     postId,
     creatorName,
     isConnected,
+    selectedPrice,
     selectedSide,
+    sellProceeds,
     settlesAt,
     totalUsdc,
+    tradeAction,
     tradeAmount,
     tradeFee,
     tradeTotal,
@@ -242,8 +288,11 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     postId || "no-post",
     detailMarketId || "no-market",
     profileId || "disconnected",
+    tradeAction,
     tradeAmount,
     selectedSide,
+    selectedPrice,
+    sellProceeds,
     balance.balance.isLoading ? "loading" : balance.formatted,
     market?.status || "unknown",
     market?.trading_fee_bps || 0,
@@ -317,9 +366,9 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         yesCondition={market.yes_condition}
       />
 
-      <PositionPanel positions={positions} />
+      <PositionPanel freeVote={item.viewerVote} positions={positions} />
 
-      <ActivityPanel market={market} />
+      <ActivityPanel market={market} trades={trades} />
 
       <CommentsPanel
         commentDraft={commentDraft}
@@ -395,29 +444,41 @@ function MarketHero({
 }
 
 function TradeTicket({
+  action,
   amount,
   balanceLabel,
   disabled,
+  estimatedShares,
   fee,
   isConnected,
+  netProceeds,
   noPrice,
+  onActionChange,
   onAmountChange,
   onSideChange,
   onTrade,
+  price,
   selectedSide,
+  sellProceeds,
   total,
   yesPrice,
 }: {
+  action: MarketTradeAction;
   amount: string;
   balanceLabel: string;
   disabled: boolean;
+  estimatedShares: number;
   fee: number;
   isConnected: boolean;
+  netProceeds: number;
   noPrice: number;
+  onActionChange: (action: MarketTradeAction) => void;
   onAmountChange: (value: string) => void;
   onSideChange: (side: VoteSide) => void;
   onTrade: () => void;
+  price: number;
   selectedSide: VoteSide;
+  sellProceeds: number;
   total: number;
   yesPrice: number;
 }) {
@@ -428,13 +489,29 @@ function TradeTicket({
         <span className="font-mono text-[11px] text-[var(--muted)]">Arc USDC</span>
       </div>
 
+      <div className="mb-3 grid grid-cols-2 rounded-[8px] bg-[var(--surface-muted)] p-1">
+        {(["BUY", "SELL"] as const).map((nextAction) => (
+          <button
+            aria-pressed={action === nextAction}
+            className={`h-9 rounded-[7px] font-mono text-xs font-black uppercase tracking-[0.12em] transition-colors ${
+              action === nextAction ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+            }`}
+            key={nextAction}
+            onClick={() => onActionChange(nextAction)}
+            type="button"
+          >
+            {nextAction === "BUY" ? "Buy" : "Sell"}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-3 grid grid-cols-2 gap-2">
         <OutcomeButton active={selectedSide === "YES"} label="Yes" price={yesPrice} side="YES" onClick={onSideChange} />
         <OutcomeButton active={selectedSide === "NO"} label="No" price={noPrice} side="NO" onClick={onSideChange} />
       </div>
 
       <label className="mb-2 block font-mono text-[11px] font-bold uppercase text-[var(--muted)]" htmlFor="market-trade-amount">
-        Amount
+        {action === "BUY" ? "Amount (USDC)" : `Shares to sell (${selectedSide})`}
       </label>
       <input
         className="h-11 w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-solid)] px-3 font-mono text-sm text-[var(--foreground)] outline-none"
@@ -452,14 +529,28 @@ function TradeTicket({
           <span>{balanceLabel} USDC</span>
         </div>
         <div className="flex justify-between">
+          <span>Price</span>
+          <span>{(price * 100).toFixed(1)}¢</span>
+        </div>
+        <div className="flex justify-between">
+          <span>{action === "BUY" ? "Estimated shares" : "Gross proceeds"}</span>
+          <span>{action === "BUY" ? estimatedShares.toFixed(4) : `${sellProceeds.toFixed(4)} USDC`}</span>
+        </div>
+        <div className="flex justify-between">
           <span>Trading fee</span>
           <span>{fee.toFixed(4)} USDC</span>
         </div>
         <div className="flex justify-between text-[var(--foreground)]">
-          <span>Total</span>
-          <span>{total.toFixed(4)} USDC</span>
+          <span>{action === "BUY" ? "Total" : "Net ledger proceeds"}</span>
+          <span>{action === "BUY" ? total.toFixed(4) : netProceeds.toFixed(4)} USDC</span>
         </div>
       </div>
+
+      {action === "SELL" && (
+        <p className="mt-3 rounded-[7px] border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs leading-relaxed text-[var(--muted)]">
+          MVP sell orders update your in-app ledger position. On-chain USDC withdrawals require the future market escrow contract.
+        </p>
+      )}
 
       <button
         className="mt-4 flex h-11 w-full items-center justify-center rounded-[8px] bg-[var(--inverse)] font-mono text-xs font-black uppercase tracking-[0.14em] text-[var(--inverse-text)] transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45"
@@ -467,7 +558,7 @@ function TradeTicket({
         onClick={onTrade}
         type="button"
       >
-        {isConnected ? `Back ${selectedSide}` : "Connect Wallet"}
+        {isConnected ? `${action === "BUY" ? "Buy" : "Sell"} ${selectedSide}` : "Connect Wallet"}
       </button>
     </section>
   );
@@ -588,38 +679,49 @@ function RulesPanel({
   );
 }
 
-function PositionPanel({ positions }: { positions: MarketPosition[] }) {
-  const freePosition = positions.find((position) => position.vote_type === "free");
-  const usdcPosition = positions.find((position) => position.vote_type === "usdc");
-
+function PositionPanel({ freeVote, positions }: { freeVote: VoteSide | null; positions: MarketPosition[] }) {
   return (
     <section className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
       <h2 className="mb-4 font-black text-[var(--foreground)]">My Position</h2>
-      {positions.length === 0 ? (
+      {!freeVote && positions.length === 0 ? (
         <p className="text-sm font-medium text-[var(--muted)]">No position is open on this market.</p>
       ) : (
         <div className="grid gap-2 font-mono text-xs text-[var(--muted)]">
-          {freePosition && (
+          {freeVote && (
             <div className="flex justify-between rounded-[8px] bg-[var(--surface-muted)] p-3">
               <span>Free opinion</span>
-              <span className={freePosition.side === "YES" ? "text-brand-secondary" : "text-downvote"}>{freePosition.side}</span>
+              <span className={freeVote === "YES" ? "text-brand-secondary" : "text-downvote"}>{freeVote}</span>
             </div>
           )}
-          {usdcPosition && (
-            <div className="flex justify-between rounded-[8px] bg-[var(--surface-muted)] p-3">
-              <span>USDC backed</span>
-              <span className={usdcPosition.side === "YES" ? "text-brand-secondary" : "text-downvote"}>
-                {usdcPosition.side} {usdcPosition.amount.toLocaleString()} USDC
-              </span>
+          {positions.map((position) => (
+            <div className="grid gap-1 rounded-[8px] bg-[var(--surface-muted)] p-3" key={position.id}>
+              <div className="flex justify-between">
+                <span>USDC {position.side}</span>
+                <span className={position.side === "YES" ? "text-brand-secondary" : "text-downvote"}>
+                  {position.shares.toLocaleString(undefined, { maximumFractionDigits: 4 })} shares
+                </span>
+              </div>
+              <div className="flex justify-between text-[10px]">
+                <span>Avg {(position.avg_price * 100).toFixed(1)}¢</span>
+                <span>{position.invested_usdc.toLocaleString(undefined, { maximumFractionDigits: 4 })} USDC invested</span>
+              </div>
+              {position.realized_pnl !== 0 && (
+                <div className="flex justify-between text-[10px]">
+                  <span>Realized PnL</span>
+                  <span className={position.realized_pnl >= 0 ? "text-brand-secondary" : "text-downvote"}>
+                    {position.realized_pnl.toLocaleString(undefined, { maximumFractionDigits: 4 })} USDC
+                  </span>
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
       )}
     </section>
   );
 }
 
-function ActivityPanel({ market }: { market: MarketPost }) {
+function ActivityPanel({ market, trades }: { market: MarketPost; trades: MarketTrade[] }) {
   const lastUpdated = relativeTime(market.created_at);
 
   return (
@@ -628,9 +730,28 @@ function ActivityPanel({ market }: { market: MarketPost }) {
         <h2 className="font-black text-[var(--foreground)]">Activity</h2>
         <span className="font-mono text-[11px] text-[var(--muted)]">Since {lastUpdated}</span>
       </div>
-      <div className="rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--muted)]">
-        Live trade history and order book depth will appear here after Phase 3 market events are added.
-      </div>
+      {trades.length === 0 ? (
+        <div className="rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--muted)]">
+          No USDC trades yet. Order book depth will appear here after Phase 3 market contracts are added.
+        </div>
+      ) : (
+        <div className="grid gap-2">
+          {trades.map((trade) => (
+            <div className="grid gap-1 rounded-[8px] bg-[var(--surface-muted)] p-3 font-mono text-xs text-[var(--muted)]" key={trade.id}>
+              <div className="flex justify-between gap-3">
+                <span className={trade.side === "YES" ? "text-brand-secondary" : "text-downvote"}>
+                  {trade.action} {trade.side}
+                </span>
+                <span>{relativeTime(trade.created_at)}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span>{trade.shares.toLocaleString(undefined, { maximumFractionDigits: 4 })} shares @ {(trade.price * 100).toFixed(1)}¢</span>
+                <span>{trade.amount_usdc.toLocaleString(undefined, { maximumFractionDigits: 4 })} USDC</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
