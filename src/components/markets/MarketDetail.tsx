@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, BarChart3, MessageCircle, Repeat2, Share, ShieldCheck } from "lucide-react";
+import { ArrowDown, ArrowUp, BarChart3, Info, MessageCircle, Repeat2, Share, ShieldCheck } from "lucide-react";
 import { useFeed } from "@/hooks/useFeed";
 import { useSetRightPanelSlot } from "@/hooks/useRightPanelSlot";
 import { useUsdcBalance } from "@/hooks/useUsdcBalance";
@@ -16,7 +16,6 @@ import {
   displayName,
   executeMarketTrade,
   fetchMarketPositions,
-  fetchMarketTrades,
   fetchPostComments,
   getMarketPrice,
   relativeTime,
@@ -24,7 +23,6 @@ import {
   type FeedPost,
   type MarketComment,
   type MarketPosition,
-  type MarketTrade,
   type MarketTradeAction,
   type MarketPost,
   type VoteSide,
@@ -42,7 +40,6 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [comments, setComments] = useState<MarketComment[]>([]);
   const [positions, setPositions] = useState<MarketPosition[]>([]);
-  const [trades, setTrades] = useState<MarketTrade[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
   const [tradeAmount, setTradeAmount] = useState("1");
@@ -95,16 +92,14 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
 
     async function loadDetailData() {
       try {
-        const [nextComments, nextPositions, nextTrades] = await Promise.all([
+        const [nextComments, nextPositions] = await Promise.all([
           fetchPostComments(postId!),
           profileId ? fetchMarketPositions(detailMarketId!, profileId) : Promise.resolve([]),
-          fetchMarketTrades(detailMarketId!),
         ]);
 
         if (!active) return;
         setComments(nextComments);
         setPositions(nextPositions);
-        setTrades(nextTrades);
       } catch (caught) {
         if (active) setActionError(caught instanceof Error ? caught.message : "Unable to load market details.");
       }
@@ -118,15 +113,13 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   }, [detailMarketId, postId, profileId]);
 
   const reloadDetailData = useCallback(async (postId: string, detailMarketId: string) => {
-    const [nextComments, nextPositions, nextTrades] = await Promise.all([
+    const [nextComments, nextPositions] = await Promise.all([
       fetchPostComments(postId),
       profileId ? fetchMarketPositions(detailMarketId, profileId) : Promise.resolve([]),
-      fetchMarketTrades(detailMarketId),
     ]);
 
     setComments(nextComments);
     setPositions(nextPositions);
-    setTrades(nextTrades);
   }, [profileId]);
 
   const runAction = useCallback(async (action: () => Promise<void>) => {
@@ -366,9 +359,15 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         yesCondition={market.yes_condition}
       />
 
-      <PositionPanel freeVote={item.viewerVote} positions={positions} />
-
-      <ActivityPanel market={market} trades={trades} />
+      <PositionPanel
+        freeVote={item.viewerVote}
+        market={market}
+        onSell={(side) => {
+          setSelectedSide(side);
+          setTradeAction("SELL");
+        }}
+        positions={positions}
+      />
 
       <CommentsPanel
         commentDraft={commentDraft}
@@ -679,81 +678,108 @@ function RulesPanel({
   );
 }
 
-function PositionPanel({ freeVote, positions }: { freeVote: VoteSide | null; positions: MarketPosition[] }) {
+function PositionPanel({
+  freeVote,
+  market,
+  onSell,
+  positions,
+}: {
+  freeVote: VoteSide | null;
+  market: MarketPost;
+  onSell: (side: VoteSide) => void;
+  positions: MarketPosition[];
+}) {
+  const positionRows = positions.map((position) => {
+    const currentPrice = getMarketPrice(market, position.side);
+    return {
+      ...position,
+      currentPrice,
+      currentValue: position.shares * currentPrice,
+      payoutPreview: position.shares,
+    };
+  });
+
   return (
-    <section className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
-      <h2 className="mb-4 font-black text-[var(--foreground)]">My Position</h2>
-      {!freeVote && positions.length === 0 ? (
-        <p className="text-sm font-medium text-[var(--muted)]">No position is open on this market.</p>
-      ) : (
-        <div className="grid gap-2 font-mono text-xs text-[var(--muted)]">
-          {freeVote && (
-            <div className="flex justify-between rounded-[8px] bg-[var(--surface-muted)] p-3">
-              <span>Free opinion</span>
-              <span className={freeVote === "YES" ? "text-brand-secondary" : "text-downvote"}>{freeVote}</span>
-            </div>
-          )}
-          {positions.map((position) => (
-            <div className="grid gap-1 rounded-[8px] bg-[var(--surface-muted)] p-3" key={position.id}>
-              <div className="flex justify-between">
-                <span>USDC {position.side}</span>
-                <span className={position.side === "YES" ? "text-brand-secondary" : "text-downvote"}>
-                  {position.shares.toLocaleString(undefined, { maximumFractionDigits: 4 })} shares
-                </span>
+    <div className="grid gap-3">
+      <section className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
+        <h2 className="font-black text-[var(--foreground)]">My Position</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--foreground)]">
+          Position values are estimates based on the current state of the market. They will change as additional trades are placed. You can buy and sell until market close.
+        </p>
+
+        {!freeVote && positionRows.length === 0 ? (
+          <p className="mt-5 border-t border-dashed border-[var(--border)] pt-4 text-sm font-medium text-[var(--muted)]">
+            No position is open on this market.
+          </p>
+        ) : (
+          <div className="mt-5 grid gap-4 border-t border-dashed border-[var(--border)] pt-4">
+            {freeVote && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] bg-[var(--surface-muted)] p-3 font-mono text-xs">
+                <span className="text-[var(--muted)]">Free opinion</span>
+                <span className={freeVote === "YES" ? "text-brand-secondary" : "text-downvote"}>{freeVote}</span>
               </div>
-              <div className="flex justify-between text-[10px]">
-                <span>Avg {(position.avg_price * 100).toFixed(1)}¢</span>
-                <span>{position.invested_usdc.toLocaleString(undefined, { maximumFractionDigits: 4 })} USDC invested</span>
-              </div>
-              {position.realized_pnl !== 0 && (
-                <div className="flex justify-between text-[10px]">
-                  <span>Realized PnL</span>
-                  <span className={position.realized_pnl >= 0 ? "text-brand-secondary" : "text-downvote"}>
-                    {position.realized_pnl.toLocaleString(undefined, { maximumFractionDigits: 4 })} USDC
-                  </span>
+            )}
+
+            {positionRows.map((position) => (
+              <div className="grid gap-4" key={position.id}>
+                <div>
+                  <span className="font-mono text-xs text-[var(--muted)]">Outcome:</span>
+                  <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{position.side === "YES" ? "Yes" : "No"}</p>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
 
-function ActivityPanel({ market, trades }: { market: MarketPost; trades: MarketTrade[] }) {
-  const lastUpdated = relativeTime(market.created_at);
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-sm text-[var(--muted)]">
+                  <span>
+                    Cost <span className="text-[var(--foreground)]">${position.invested_usdc.toFixed(2)}</span>
+                  </span>
+                  <span>
+                    Shares <span className="text-[var(--foreground)]">{position.shares.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                  </span>
+                  <span>
+                    Current Value{" "}
+                    <span className={position.currentValue >= position.invested_usdc ? "text-brand-secondary" : "text-downvote"}>
+                      ${position.currentValue.toFixed(2)}
+                    </span>
+                    <Info
+                      aria-label={`Current price ${(position.currentPrice * 100).toFixed(1)} cents`}
+                      className="ml-1 inline h-3 w-3 text-[var(--muted)]"
+                    />
+                  </span>
+                  <button
+                    className="ml-auto text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--muted)]"
+                    onClick={() => onSell(position.side)}
+                    type="button"
+                  >
+                    Sell
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
-  return (
-    <section className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-black text-[var(--foreground)]">Activity</h2>
-        <span className="font-mono text-[11px] text-[var(--muted)]">Since {lastUpdated}</span>
-      </div>
-      {trades.length === 0 ? (
-        <div className="rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--muted)]">
-          No USDC trades yet. Order book depth will appear here after Phase 3 market contracts are added.
-        </div>
-      ) : (
-        <div className="grid gap-2">
-          {trades.map((trade) => (
-            <div className="grid gap-1 rounded-[8px] bg-[var(--surface-muted)] p-3 font-mono text-xs text-[var(--muted)]" key={trade.id}>
-              <div className="flex justify-between gap-3">
-                <span className={trade.side === "YES" ? "text-brand-secondary" : "text-downvote"}>
-                  {trade.action} {trade.side}
+      {positionRows.length > 0 && (
+        <section className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
+          <h2 className="font-black text-[var(--foreground)]">My Payout Preview</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
+            Payout if the market resolves to this outcome, based on the current in-app share ledger. Final payouts require the future market escrow contract.
+          </p>
+
+          <div className="mt-5 grid gap-3">
+            {positionRows.map((position) => (
+              <div className="flex items-center justify-between gap-4 font-mono text-sm" key={position.id}>
+                <span className="text-[var(--muted)]">{position.side === "YES" ? "Yes" : "No"}</span>
+                <span className={position.side === "YES" ? "text-brand-secondary" : "text-downvote"}>
+                  ${position.payoutPreview.toFixed(2)}
                 </span>
-                <span>{relativeTime(trade.created_at)}</span>
               </div>
-              <div className="flex justify-between gap-3">
-                <span>{trade.shares.toLocaleString(undefined, { maximumFractionDigits: 4 })} shares @ {(trade.price * 100).toFixed(1)}¢</span>
-                <span>{trade.amount_usdc.toLocaleString(undefined, { maximumFractionDigits: 4 })} USDC</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
       )}
-    </section>
+    </div>
   );
+
 }
 
 function CommentsPanel({
