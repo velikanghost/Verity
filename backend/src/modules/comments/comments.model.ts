@@ -1,24 +1,24 @@
-import { model, Schema, Types, type HydratedDocument } from "mongoose";
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
 
-export interface IComment {
+export type CommentDocument = HydratedDocument<Comment>;
+
+@Schema({ timestamps: true, versionKey: false })
+export class Comment {
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Post", required: true, index: true })
   postId: Types.ObjectId;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true })
   authorId: Types.ObjectId;
+
+  @Prop({ type: String, required: true, trim: true })
   content: string;
+
+  @Prop({ type: Number, default: 0 })
   likesCount: number;
-  createdAt: Date;
-  updatedAt: Date;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-export type CommentDocument = HydratedDocument<IComment>;
-
-const commentSchema = new Schema<IComment>(
-  {
-    postId: { type: Schema.Types.ObjectId, ref: "Post", required: true, index: true },
-    authorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    content: { type: String, required: true, trim: true },
-    likesCount: { type: Number, default: 0 },
-  },
-  { timestamps: true, versionKey: false },
-);
-
-export const CommentModel = model<IComment>("Comment", commentSchema);
+export const CommentSchema = SchemaFactory.createForClass(Comment);

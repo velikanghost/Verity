@@ -1,13 +1,27 @@
-import { body } from "express-validator";
+import { IsEmail, IsOptional, IsString, Length, MinLength } from "class-validator";
 
-export const registerDto = [
-  body("email").isEmail().normalizeEmail().withMessage("A valid email is required."),
-  body("password").isString().isLength({ min: 8 }).withMessage("Password must be at least 8 characters."),
-  body("username").isString().trim().isLength({ min: 3, max: 32 }).withMessage("Username must be 3-32 characters."),
-  body("display_name").optional({ nullable: true }).isString().trim().isLength({ max: 80 }),
-];
+export class RegisterDto {
+  @IsEmail({}, { message: "A valid email is required." })
+  email: string;
 
-export const loginDto = [
-  body("email").isEmail().normalizeEmail().withMessage("A valid email is required."),
-  body("password").isString().notEmpty().withMessage("Password is required."),
-];
+  @IsString()
+  @MinLength(8, { message: "Password must be at least 8 characters." })
+  password: string;
+
+  @IsString()
+  @Length(3, 32, { message: "Username must be 3-32 characters." })
+  username: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 80)
+  display_name?: string | null;
+}
+
+export class LoginDto {
+  @IsEmail({}, { message: "A valid email is required." })
+  email: string;
+
+  @IsString()
+  password: string;
+}

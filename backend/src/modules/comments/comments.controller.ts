@@ -1,21 +1,20 @@
-import type { NextFunction, Request, Response } from "express";
-import { created, ok } from "../../utils/response";
-import * as commentsService from "./comments.service";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from "@nestjs/common";
+import { CommentsService } from "./comments.service";
+import { CreateCommentDto, FetchCommentsQueryDto } from "./comments.dto";
 
-export async function fetchPostComments(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const comments = await commentsService.fetchPostComments(String(req.query.postId));
-    ok(res, comments);
-  } catch (error) {
-    next(error);
+@Controller("comments")
+export class CommentsController {
+  constructor(private readonly commentsService: CommentsService) {}
+
+  @Get()
+  async fetchPostComments(@Query() query: FetchCommentsQueryDto) {
+    return this.commentsService.fetchPostComments(query.postId);
   }
-}
 
-export async function addComment(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    await commentsService.addComment(req.body.postId, req.body.profileId, req.body.content);
-    created(res, null, "Comment added.");
-  } catch (error) {
-    next(error);
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  async addComment(@Body() createCommentDto: CreateCommentDto) {
+    await this.commentsService.addComment(createCommentDto.postId, createCommentDto.profileId, createCommentDto.content);
+    return null;
   }
 }

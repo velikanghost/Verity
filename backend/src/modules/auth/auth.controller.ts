@@ -1,31 +1,27 @@
-import type { NextFunction, Request, Response } from "express";
-import type { AuthRequest } from "../../middlewares/auth.middleware";
-import { created, ok } from "../../utils/response";
-import * as authService from "./auth.service";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards, Request } from "@nestjs/common";
+import { AuthService } from "./auth.service";
+import { RegisterDto, LoginDto } from "./auth.dto";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 
-export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const result = await authService.register(req.body);
-    created(res, result, "Registered.");
-  } catch (error) {
-    next(error);
+@Controller("auth")
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Post("register")
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto);
   }
-}
 
-export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const result = await authService.login(req.body);
-    ok(res, result, "Logged in.");
-  } catch (error) {
-    next(error);
+  @Post("login")
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
   }
-}
 
-export async function me(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const user = await authService.me(req.user!.id);
-    ok(res, user);
-  } catch (error) {
-    next(error);
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  async me(@Request() req: any) {
+    return this.authService.me(req.user.id);
   }
 }

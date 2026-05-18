@@ -1,34 +1,36 @@
-import { model, Schema, Types, type HydratedDocument } from "mongoose";
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
 
 export type PostType = "normal" | "market";
+export type PostDocument = HydratedDocument<Post>;
 
-export interface IPost {
+@Schema({ timestamps: true, versionKey: false })
+export class Post {
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
   authorId: Types.ObjectId;
+
+  @Prop({ type: String, enum: ["normal", "market"], required: true })
   type: PostType;
+
+  @Prop({ type: String, required: true, trim: true })
   content: string;
+
+  @Prop({ type: Number, default: 0 })
   likesCount: number;
+
+  @Prop({ type: Number, default: 0 })
   commentsCount: number;
+
+  @Prop({ type: Number, default: 0 })
   resharesCount: number;
+
+  @Prop({ type: Number, default: 0 })
   sharesCount: number;
-  createdAt: Date;
-  updatedAt: Date;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-export type PostDocument = HydratedDocument<IPost>;
+export const PostSchema = SchemaFactory.createForClass(Post);
 
-const postSchema = new Schema<IPost>(
-  {
-    authorId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    type: { type: String, enum: ["normal", "market"], required: true },
-    content: { type: String, required: true, trim: true },
-    likesCount: { type: Number, default: 0 },
-    commentsCount: { type: Number, default: 0 },
-    resharesCount: { type: Number, default: 0 },
-    sharesCount: { type: Number, default: 0 },
-  },
-  { timestamps: true, versionKey: false },
-);
-
-postSchema.index({ createdAt: -1 });
-
-export const PostModel = model<IPost>("Post", postSchema);
+PostSchema.index({ createdAt: -1 });

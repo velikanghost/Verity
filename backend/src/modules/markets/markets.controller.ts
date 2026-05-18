@@ -1,98 +1,76 @@
-import type { NextFunction, Request, Response } from "express";
-import { ok } from "../../utils/response";
-import * as marketsService from "./markets.service";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common";
+import { MarketsService } from "./markets.service";
+import { FetchMarketsQueryDto, CastFreeVoteDto, ExecuteTradeDto } from "./markets.dto";
 
-function readParam(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? value[0] : value || "";
-}
+@Controller("markets")
+export class MarketsController {
+  constructor(private readonly marketsService: MarketsService) {}
 
-export async function castFreeVote(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const result = await marketsService.castFreeVote(readParam(req.params.marketId), req.body.userId || req.body.profileId, req.body.side);
-    ok(res, result, "Vote recorded.");
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function fetchMarkets(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const markets = await marketsService.fetchMarkets({
-      status: typeof req.query.status === "string" ? req.query.status as never : undefined,
-      category: typeof req.query.category === "string" ? req.query.category : undefined,
-      trending: req.query.trending === "true",
-      newest: req.query.newest !== "false",
-      qualified: req.query.qualified === "true",
-      open_for_votes: req.query.open_for_votes === "true",
+  @Get()
+  async fetchMarkets(@Query() query: FetchMarketsQueryDto) {
+    return this.marketsService.fetchMarkets({
+      status: query.status as any,
+      category: query.category,
+      trending: query.trending,
+      newest: query.newest,
+      qualified: query.qualified,
+      open_for_votes: query.open_for_votes,
     });
-    ok(res, markets);
-  } catch (error) {
-    next(error);
   }
-}
 
-export async function fetchMarketDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const detail = await marketsService.fetchMarketDetail(
-      readParam(req.params.marketId),
-      typeof req.query.userId === "string" ? req.query.userId : undefined,
-    );
-    ok(res, detail);
-  } catch (error) {
-    next(error);
+  @Get(":marketId")
+  async fetchMarketDetail(
+    @Param("marketId") marketId: string,
+    @Query("userId") userId?: string,
+  ) {
+    return this.marketsService.fetchMarketDetail(marketId, userId);
   }
-}
 
-export async function fetchDailyVotes(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const dailyVotes = await marketsService.getDailyVotes(String(req.query.userId || req.body.userId || ""));
-    ok(res, dailyVotes);
-  } catch (error) {
-    next(error);
+  @Get(":marketId/positions")
+  async fetchMarketPositions(
+    @Param("marketId") marketId: string,
+    @Query("profileId") profileId: string,
+  ) {
+    return this.marketsService.fetchMarketPositions(marketId, profileId);
   }
-}
 
-export async function fetchMarketPositions(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const positions = await marketsService.fetchMarketPositions(readParam(req.params.marketId), String(req.query.profileId));
-    ok(res, positions);
-  } catch (error) {
-    next(error);
+  @Get(":marketId/trades")
+  async fetchMarketTrades(@Param("marketId") marketId: string) {
+    return this.marketsService.fetchMarketTrades(marketId);
   }
-}
 
-export async function fetchMarketTrades(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const trades = await marketsService.fetchMarketTrades(readParam(req.params.marketId));
-    ok(res, trades);
-  } catch (error) {
-    next(error);
+  @Post(":marketId/vote")
+  @HttpCode(HttpStatus.OK)
+  async castFreeVoteDirect(
+    @Param("marketId") marketId: string,
+    @Body() dto: CastFreeVoteDto,
+  ) {
+    const authorId = dto.userId || dto.profileId;
+    return this.marketsService.castFreeVote(marketId, authorId!, dto.side);
   }
-}
 
-export async function approveMarketForTrading(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const market = await marketsService.approveMarketForTrading(readParam(req.params.marketId));
-    ok(res, market, "Market approved for USDC trading.");
-  } catch (error) {
-    next(error);
+  @Post(":marketId/free-vote")
+  @HttpCode(HttpStatus.OK)
+  async castFreeVote(
+    @Param("marketId") marketId: string,
+    @Body() dto: CastFreeVoteDto,
+  ) {
+    const authorId = dto.userId || dto.profileId;
+    return this.marketsService.castFreeVote(marketId, authorId!, dto.side);
   }
-}
 
-export async function executeMarketTrade(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    await marketsService.executeMarketTrade({
-      marketId: readParam(req.params.marketId),
-      profileId: req.body.profileId,
-      side: req.body.side,
-      action: req.body.action,
-      amount: req.body.amount,
-      feeAmount: req.body.feeAmount,
-      grossAmount: req.body.grossAmount,
-      txHash: req.body.txHash,
-    });
-    ok(res, null, "Trade recorded.");
-  } catch (error) {
-    next(error);
+  @Post(":marketId/approve-trading")
+  @HttpCode(HttpStatus.OK)
+  async approveMarketForTrading(@Param("marketId") marketId: string) {
+    return this.marketsService.approveMarketForTrading(marketId);
+  }
+
+  @Post(":marketId/trade")
+  @HttpCode(HttpStatus.OK)
+  async executeMarketTrade(
+    @Param("marketId") marketId: string,
+    @Body() dto: ExecuteTradeDto,
+  ) {
+    return this.marketsService.executeMarketTrade(dto);
   }
 }

@@ -1,72 +1,82 @@
-import type { NextFunction, Request, Response } from "express";
-import { created, ok } from "../../utils/response";
-import * as commentsService from "../comments/comments.service";
-import * as interactionsService from "../interactions/interactions.service";
-import * as postsService from "./posts.service";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common";
+import { PostsService } from "./posts.service";
+import { FeedQueryDto, CreatePostDto, CreateMarketPostDto } from "./posts.dto";
+import { CommentsService } from "../comments/comments.service";
+import { InteractionsService } from "../interactions/interactions.service";
 
-interface FeedQuery {
-  viewerProfileId?: string;
-  userId?: string;
-  onlyMarkets?: string;
-}
+@Controller(["posts", "feed"])
+export class PostsController {
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly commentsService: CommentsService,
+    private readonly interactionsService: InteractionsService,
+  ) {}
 
-function readParam(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? value[0] : value || "";
-}
-
-export async function fetchFeed(req: Request<unknown, unknown, unknown, FeedQuery>, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const items = await postsService.fetchFeed(
-      req.query.viewerProfileId || req.query.userId,
-      req.query.onlyMarkets === "true",
+  @Get()
+  async fetchFeed(@Query() query: FeedQueryDto) {
+    return this.postsService.fetchFeed(
+      query.viewerProfileId || query.userId,
+      query.onlyMarkets,
     );
-    ok(res, items);
-  } catch (error) {
-    next(error);
   }
-}
 
-export async function createNormalPost(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const post = await postsService.createNormalPost(req.body.authorId || req.body.profileId, req.body.content);
-    created(res, post, "Post created.");
-  } catch (error) {
-    next(error);
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  async createNormalPostDirect(@Body() dto: CreatePostDto) {
+    const authorId = dto.authorId || dto.profileId;
+    return this.postsService.createNormalPost(authorId!, dto.content);
   }
-}
 
-export async function createMarketPost(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const result = await postsService.createMarketPost(req.body.authorId || req.body.profileId, req.body);
-    created(res, result, result.warning || "Market created.");
-  } catch (error) {
-    next(error);
+  @Post("normal")
+  @HttpCode(HttpStatus.CREATED)
+  async createNormalPost(@Body() dto: CreatePostDto) {
+    const authorId = dto.authorId || dto.profileId;
+    return this.postsService.createNormalPost(authorId!, dto.content);
   }
-}
 
-export async function addPostComment(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    await commentsService.addComment(readParam(req.params.postId), req.body.authorId || req.body.profileId, req.body.content);
-    created(res, null, "Comment added.");
-  } catch (error) {
-    next(error);
+  @Post("market")
+  @HttpCode(HttpStatus.CREATED)
+  async createMarketPost(@Body() dto: CreateMarketPostDto) {
+    const authorId = dto.authorId || dto.profileId;
+    return this.postsService.createMarketPost(authorId!, dto);
   }
-}
 
-export async function likePost(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    await interactionsService.toggleLike(readParam(req.params.postId), req.body.userId || req.body.profileId, Boolean(req.body.currentlyActive));
-    ok(res, null, "Like updated.");
-  } catch (error) {
-    next(error);
+  @Post(":postId/comment")
+  @HttpCode(HttpStatus.CREATED)
+  async addPostComment(
+    @Param("postId") postId: string,
+    @Body("authorId") authorId?: string,
+    @Body("profileId") profileId?: string,
+    @Body("content") content?: string,
+  ) {
+    const pId = authorId || profileId;
+    await this.commentsService.addComment(postId, pId!, content!);
+    return null;
   }
-}
 
-export async function resharePost(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    await interactionsService.toggleReshare(readParam(req.params.postId), req.body.userId || req.body.profileId, Boolean(req.body.currentlyActive));
-    ok(res, null, "Reshare updated.");
-  } catch (error) {
-    next(error);
+  @Post(":postId/like")
+  @HttpCode(HttpStatus.OK)
+  async likePost(
+    @Param("postId") postId: string,
+    @Body("userId") userId?: string,
+    @Body("profileId") profileId?: string,
+    @Body("currentlyActive") currentlyActive?: boolean,
+  ) {
+    const pId = userId || profileId;
+    await this.interactionsService.toggleLike(postId, pId!, Boolean(currentlyActive));
+    return null;
+  }
+
+  @Post(":postId/reshare")
+  @HttpCode(HttpStatus.OK)
+  async resharePost(
+    @Param("postId") postId: string,
+    @Body("userId") userId?: string,
+    @Body("profileId") profileId?: string,
+    @Body("currentlyActive") currentlyActive?: boolean,
+  ) {
+    const pId = userId || profileId;
+    await this.interactionsService.toggleReshare(postId, pId!, Boolean(currentlyActive));
+    return null;
   }
 }

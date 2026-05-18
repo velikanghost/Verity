@@ -1,44 +1,33 @@
-import type { NextFunction, Request, Response } from "express";
-import { ok } from "../../utils/response";
-import { getDailyVotes } from "../markets/markets.service";
-import * as usersService from "./users.service";
+import { Body, Controller, Get, Param, Patch, UseGuards, Inject, forwardRef } from "@nestjs/common";
+import { UsersService } from "./users.service";
+import { UpdateUserDto } from "./users.dto";
+import { MarketsService } from "../markets/markets.service";
 
-function readParam(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? value[0] : value || "";
-}
+@Controller("users")
+export class UsersController {
+  constructor(
+    private readonly usersService: UsersService,
+    @Inject(forwardRef(() => MarketsService))
+    private readonly marketsService: MarketsService,
+  ) {}
 
-export async function getOrCreateWalletUser(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const user = await usersService.getOrCreateByWallet(readParam(req.params.walletAddress));
-    ok(res, user);
-  } catch (error) {
-    next(error);
+  @Get("dev")
+  async getDevUser() {
+    return this.usersService.getDevUser();
   }
-}
 
-export async function getDevUser(_req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const user = await usersService.getDevUser();
-    ok(res, user);
-  } catch (error) {
-    next(error);
+  @Get("wallet/:walletAddress")
+  async getOrCreateWalletUser(@Param("walletAddress") walletAddress: string) {
+    return this.usersService.getOrCreateByWallet(walletAddress);
   }
-}
 
-export async function getUserDailyVotes(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const dailyVotes = await getDailyVotes(readParam(req.params.id));
-    ok(res, dailyVotes);
-  } catch (error) {
-    next(error);
+  @Get(":id/daily-votes")
+  async getUserDailyVotes(@Param("id") id: string) {
+    return this.marketsService.getDailyVotes(id);
   }
-}
 
-export async function updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const user = await usersService.updateUser(readParam(req.params.id), req.body);
-    ok(res, user, "Profile updated.");
-  } catch (error) {
-    next(error);
+  @Patch(":id")
+  async updateUser(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.updateUser(id, updateUserDto);
   }
 }

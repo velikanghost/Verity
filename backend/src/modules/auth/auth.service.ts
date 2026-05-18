@@ -1,63 +1,114 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import type { SignOptions } from "jsonwebtoken";
-import { env } from "../../config/env";
-import { HttpError } from "../../utils/http-error";
-import { serializeUser } from "../users/users.service";
-import { UserModel } from "../users/users.model";
-import type { AuthTokenPayload } from "./auth.model";
+import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import * as bcrypt from "bcryptjs";
+import { JwtService } from "@nestjs/jwt";
+import { User, UserDocument } from "../users/users.model";
+import { RegisterDto, LoginDto } from "./auth.dto";
 
-interface AuthResponse {
-  token: string;
-  user: ReturnType<typeof serializeUser>;
-}
-
-function signToken(payload: AuthTokenPayload): string {
-  const options: SignOptions = { expiresIn: env.jwtExpiresIn as SignOptions["expiresIn"] };
-  return jwt.sign(payload, env.jwtSecret, options);
-}
-
-export async function register(input: {
-  email: string;
-  password: string;
+export interface UserResponse {
+  id: string;
+  wallet_address: string | null;
+  walletAddress: string | null;
   username: string;
-  display_name?: string | null;
-}): Promise<AuthResponse> {
-  const existing = await UserModel.findOne({
-    $or: [{ email: input.email.toLowerCase() }, { username: input.username }],
-  });
+  display_name: string | null;
+  displayName: string | null;
+  avatar_url: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  followersCount: number;
+  followingCount: number;
+  signalPoints: number;
+  freeVotesCorrect: number;
+  freeVotesWrong: number;
+  freeVotesTotal: number;
+  created_at: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  if (existing) throw new HttpError(409, "Email or username is already in use.");
-
-  const passwordHash = await bcrypt.hash(input.password, 12);
-  const user = await UserModel.create({
-    email: input.email.toLowerCase(),
-    passwordHash,
-    username: input.username,
-    displayName: input.display_name || null,
-  });
+export function serializeUser(user: UserDocument): UserResponse {
+  const createdAt = user.createdAt ? new Date(user.createdAt).toISOString() : new Date().toISOString();
+  const updatedAt = user.updatedAt ? new Date(user.updatedAt).toISOString() : new Date().toISOString();
 
   return {
-    token: signToken({ id: user.id, email: user.email || undefined }),
-    user: serializeUser(user),
+    id: user.id || (user as any)._id?.toString(),
+    wallet_address: user.walletAddress,
+    walletAddress: user.walletAddress,
+    username: user.username,
+    display_name: user.displayName,
+    displayName: user.displayName,
+    avatar_url: user.avatarUrl,
+    avatarUrl: user.avatarUrl,
+    bio: user.bio,
+    followersCount: user.followersCount,
+    followingCount: user.followingCount,
+    signalPoints: user.signalPoints,
+    freeVotesCorrect: user.freeVotesCorrect,
+    freeVotesWrong: user.freeVotesWrong,
+    freeVotesTotal: user.freeVotesTotal,
+    created_at: createdAt,
+    createdAt,
+    updatedAt,
   };
 }
 
-export async function login(input: { email: string; password: string }): Promise<AuthResponse> {
-  const user = await UserModel.findOne({ email: input.email.toLowerCase() });
-  if (!user?.passwordHash) throw new HttpError(401, "Invalid email or password.");
+@Injectable()
+export class AuthService {
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private jwtService: JwtService,
+  ) {}
 
-  const matches = await bcrypt.compare(input.password, user.passwordHash);
-  if (!matches) throw new HttpError(401, "Invalid email or password.");
+  private signToken(payload: { id: string; email?: string }): string {
+    return this.jwtService.sign(payload);
+  }
 
-  return {
-    token: signToken({ id: user.id, email: user.email || undefined }),
-    user: serializeUser(user),
-  };
-}
+  async register(input: RegisterDto) {
+    const existing = await this.userModel.findOne({
+      $or: [{ email: input.email.toLowerCase() }, { username: input.username }],
+    });
 
-export async function me(userId: string): Promise<AuthResponse["user"]> {
-  const user = await UserModel.findById(userId);
-  if (!user) throw new HttpError(404, "User not found.");
-  return serializeUser(user);
+    if (existing) {
+      throw new ConflictException("Email or username is already in use.");
+    }
+
+    const passwordHash = await bcrypt.hash(input.password, 12);
+    const user = await this.userModel.create({
+      email: input.email.toLowerCase(),
+      passwordHash,
+      username: input.username,
+      displayName: input.display_name || null,
+    });
+
+    return {
+      token: this.signToken({ id: user.id, email: user.email || undefined }),
+      user: serializeUser(user),
+    };
+  }
+
+  async login(input: LoginDto) {
+    const user = await this.userModel.findOne({ email: input.email.toLowerCase() });
+    if (!user || !user.passwordHash) {
+      throw new UnauthorizedException("Invalid email or password.");
+    }
+
+    const matches = await bcrypt.compare(input.password, user.passwordHash);
+    if (!matches) {
+      throw new UnauthorizedException("Invalid email or password.");
+    }
+
+    return {
+      token: this.signToken({ id: user.id, email: user.email || undefined }),
+      user: serializeUser(user),
+    };
+  }
+
+  async me(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException("User not found.");
+    }
+    return serializeUser(user);
+  }
 }

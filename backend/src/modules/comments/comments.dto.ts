@@ -1,11 +1,18 @@
-import { body, query } from "express-validator";
+import { IsMongoId, IsString, Length } from "class-validator";
 
-export const commentsQueryDto = [
-  query("postId").isMongoId().withMessage("A valid post id is required."),
-];
+export class CreateCommentDto {
+  @IsMongoId({ message: "A valid post id is required." })
+  postId: string;
 
-export const createCommentDto = [
-  body("postId").isMongoId().withMessage("A valid post id is required."),
-  body("profileId").isMongoId().withMessage("A valid profile id is required."),
-  body("content").isString().trim().isLength({ min: 1, max: 500 }).withMessage("Comment content is required."),
-];
+  @IsMongoId({ message: "A valid profile id is required." })
+  profileId: string;
+
+  @IsString()
+  @Length(1, 500, { message: "Comment content is required (max 500 chars)." })
+  content: string;
+}
+
+export class FetchCommentsQueryDto {
+  @IsMongoId({ message: "A valid post id is required." })
+  postId: string;
+}

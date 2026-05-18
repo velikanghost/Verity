@@ -1,21 +1,22 @@
-import type { NextFunction, Request, Response } from "express";
-import { ok } from "../../utils/response";
-import * as interactionsService from "./interactions.service";
+import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
+import { InteractionsService } from "./interactions.service";
+import { ToggleInteractionDto } from "./interactions.dto";
 
-export async function toggleLike(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    await interactionsService.toggleLike(req.body.postId, req.body.profileId, req.body.currentlyActive);
-    ok(res, null, "Like updated.");
-  } catch (error) {
-    next(error);
+@Controller("interactions")
+export class InteractionsController {
+  constructor(private readonly interactionsService: InteractionsService) {}
+
+  @Post("like")
+  @HttpCode(HttpStatus.OK)
+  async toggleLike(@Body() dto: ToggleInteractionDto) {
+    await this.interactionsService.toggleLike(dto.postId, dto.profileId, dto.currentlyActive);
+    return null;
   }
-}
 
-export async function toggleReshare(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    await interactionsService.toggleReshare(req.body.postId, req.body.profileId, req.body.currentlyActive);
-    ok(res, null, "Reshare updated.");
-  } catch (error) {
-    next(error);
+  @Post("reshare")
+  @HttpCode(HttpStatus.OK)
+  async toggleReshare(@Body() dto: ToggleInteractionDto) {
+    await this.interactionsService.toggleReshare(dto.postId, dto.profileId, dto.currentlyActive);
+    return null;
   }
 }

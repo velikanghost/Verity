@@ -1,7 +1,12 @@
-import { body } from "express-validator";
+import { IsBoolean, IsMongoId } from "class-validator";
 
-export const toggleInteractionDto = [
-  body("postId").isMongoId().withMessage("A valid post id is required."),
-  body("profileId").isMongoId().withMessage("A valid profile id is required."),
-  body("currentlyActive").isBoolean().withMessage("Current interaction state is required."),
-];
+export class ToggleInteractionDto {
+  @IsMongoId({ message: "A valid post id is required." })
+  postId: string;
+
+  @IsMongoId({ message: "A valid profile id is required." })
+  profileId: string;
+
+  @IsBoolean({ message: "Current interaction state must be a boolean." })
+  currentlyActive: boolean;
+}

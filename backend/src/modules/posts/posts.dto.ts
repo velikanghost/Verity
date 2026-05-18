@@ -1,35 +1,77 @@
-import { body, query } from "express-validator";
+import { IsBoolean, IsMongoId, IsOptional, IsString, Length, IsISO8601 } from "class-validator";
+import { Transform } from "class-transformer";
 
-export const feedQueryDto = [
-  query("viewerProfileId").optional().isMongoId(),
-  query("userId").optional().isMongoId(),
-  query("onlyMarkets").optional().isBoolean().toBoolean(),
-];
+export class FeedQueryDto {
+  @IsOptional()
+  @IsMongoId()
+  viewerProfileId?: string;
 
-export const createPostDto = [
-  body("authorId").optional().isMongoId(),
-  body("profileId").optional().isMongoId(),
-  body("content").isString().trim().isLength({ min: 1, max: 1000 }).withMessage("Post content is required."),
-];
+  @IsOptional()
+  @IsMongoId()
+  userId?: string;
 
-export const createMarketPostDto = [
-  body("authorId").optional().isMongoId(),
-  body("profileId").optional().isMongoId(),
-  body("content").optional({ nullable: true }).isString().trim().isLength({ max: 1000 }),
-  body("question").isString().trim().isLength({ min: 1, max: 240 }).withMessage("Market question is required."),
-  body("category").isString().trim().isLength({ min: 1, max: 60 }),
-  body("deadline").isISO8601().withMessage("A valid deadline is required."),
-  body("resolutionSource").isString().trim().isLength({ min: 1, max: 240 }),
-  body("yesCondition").isString().trim().isLength({ min: 1, max: 500 }),
-  body("noCondition").isString().trim().isLength({ min: 1, max: 500 }),
-  body("creationFeeTxHash")
-    .isString()
-    .trim()
-    .isLength({ min: 1, max: 120 })
-    .withMessage("Prediction posts require a 1 USDC Arc testnet creation transaction."),
-  body("feeCollectorAddress")
-    .isString()
-    .trim()
-    .isLength({ min: 1, max: 120 })
-    .withMessage("Prediction posts require the Arc testnet fee collector address."),
-];
+  @IsOptional()
+  @Transform(({ value }) => value === "true" || value === true)
+  @IsBoolean()
+  onlyMarkets?: boolean;
+}
+
+export class CreatePostDto {
+  @IsOptional()
+  @IsMongoId()
+  authorId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  profileId?: string;
+
+  @IsString()
+  @Length(1, 1000, { message: "Post content must be between 1 and 1000 characters." })
+  content: string;
+}
+
+export class CreateMarketPostDto {
+  @IsOptional()
+  @IsMongoId()
+  authorId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  profileId?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 1000)
+  content?: string;
+
+  @IsString()
+  @Length(1, 240, { message: "Market question is required (max 240 chars)." })
+  question: string;
+
+  @IsString()
+  @Length(1, 60)
+  category: string;
+
+  @IsISO8601({}, { message: "A valid deadline date is required." })
+  deadline: string;
+
+  @IsString()
+  @Length(1, 240)
+  resolutionSource: string;
+
+  @IsString()
+  @Length(1, 500)
+  yesCondition: string;
+
+  @IsString()
+  @Length(1, 500)
+  noCondition: string;
+
+  @IsString()
+  @Length(1, 120, { message: "Prediction posts require a 1 USDC Arc testnet creation transaction." })
+  creationFeeTxHash: string;
+
+  @IsString()
+  @Length(1, 120, { message: "Prediction posts require the Arc testnet fee collector address." })
+  feeCollectorAddress: string;
+}

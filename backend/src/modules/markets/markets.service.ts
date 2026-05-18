@@ -1,21 +1,23 @@
-import type { SortOrder } from "mongoose";
-import { HttpError } from "../../utils/http-error";
-import { PostModel } from "../posts/posts.model";
-import { fetchFeed, serializeMarket, type MarketResponse } from "../posts/posts.service";
-import { UserModel } from "../users/users.model";
+import { Injectable, NotFoundException, ConflictException, NotImplementedException, Inject, forwardRef } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model, Types, SortOrder } from "mongoose";
 import {
-  DailyVoteUsageModel,
-  MarketModel,
-  MarketPositionModel,
-  MarketTradeModel,
-  VoteModel,
-  type DailyVoteUsageDocument,
-  type MarketPositionDocument,
-  type MarketTradeAction,
-  type MarketTradeDocument,
-  type MarketStatus,
-  type VoteSide,
+  Market,
+  MarketDocument,
+  Vote,
+  VoteDocument,
+  DailyVoteUsage,
+  DailyVoteUsageDocument,
+  MarketPosition,
+  MarketPositionDocument,
+  MarketTrade,
+  MarketTradeDocument,
+  VoteSide,
+  MarketStatus,
 } from "./markets.model";
+import { User, UserDocument } from "../users/users.model";
+import { Post, PostDocument } from "../posts/posts.model";
+import { PostsService, MarketResponse } from "../posts/posts.service";
 
 export interface DailyVotesResponse {
   votesLimit: number;
@@ -47,7 +49,7 @@ export interface MarketTradeResponse {
   market_id: string;
   user_id: string;
   side: VoteSide;
-  action: MarketTradeAction;
+  action: string;
   shares: number;
   price: number;
   amount_usdc: number;
@@ -57,247 +59,287 @@ export interface MarketTradeResponse {
   created_at: string;
 }
 
-function todayKey(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
-}
+@Injectable()
+export class MarketsService {
+  constructor(
+    @InjectModel(Market.name) private marketModel: Model<MarketDocument>,
+    @InjectModel(Vote.name) private voteModel: Model<VoteDocument>,
+    @InjectModel(DailyVoteUsage.name) private dailyVoteUsageModel: Model<DailyVoteUsageDocument>,
+    @InjectModel(MarketPosition.name) private marketPositionModel: Model<MarketPositionDocument>,
+    @InjectModel(MarketTrade.name) private marketTradeModel: Model<MarketTradeDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @Inject(forwardRef(() => PostsService))
+    private readonly postsService: PostsService,
+  ) {}
 
-function serializeDailyUsage(usage: DailyVoteUsageDocument | null, date = todayKey()): DailyVotesResponse {
-  const votesLimit = usage?.votesLimit ?? 10;
-  const votesUsed = usage?.votesUsed ?? 0;
-  return {
-    votesLimit,
-    votesUsed,
-    votesRemaining: Math.max(0, votesLimit - votesUsed),
-    date,
-  };
-}
+  private todayKey(date = new Date()): string {
+    return date.toISOString().slice(0, 10);
+  }
 
-function isDuplicateKeyError(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === 11000;
-}
-
-export async function getDailyVotes(userId: string, date = todayKey()): Promise<DailyVotesResponse> {
-  const usage = await DailyVoteUsageModel.findOne({ userId, date });
-  return serializeDailyUsage(usage, date);
-}
-
-async function getOrCreateDailyUsage(userId: string, date = todayKey()): Promise<DailyVoteUsageDocument> {
-  return DailyVoteUsageModel.findOneAndUpdate(
-    { userId, date },
-    { $setOnInsert: { userId, date, votesUsed: 0, votesLimit: 10 } },
-    { upsert: true, new: true, runValidators: true },
-  );
-}
-
-async function reserveDailyVote(userId: string, date = todayKey()): Promise<DailyVoteUsageDocument> {
-  await getOrCreateDailyUsage(userId, date);
-
-  const usage = await DailyVoteUsageModel.findOneAndUpdate(
-    {
-      userId,
+  private serializeDailyUsage(usage: DailyVoteUsageDocument | null, date = this.todayKey()): DailyVotesResponse {
+    const votesLimit = usage?.votesLimit ?? 10;
+    const votesUsed = usage?.votesUsed ?? 0;
+    return {
+      votesLimit,
+      votesUsed,
+      votesRemaining: Math.max(0, votesLimit - votesUsed),
       date,
-      $expr: { $lt: ["$votesUsed", "$votesLimit"] },
-    },
-    { $inc: { votesUsed: 1 } },
-    { new: true, runValidators: true },
-  );
-
-  if (!usage) {
-    throw new HttpError(409, "You have used all 10 votes today. Votes reset tomorrow.");
+    };
   }
 
-  return usage;
-}
-
-async function releaseDailyVote(userId: string, date = todayKey()): Promise<void> {
-  await DailyVoteUsageModel.updateOne(
-    { userId, date, votesUsed: { $gt: 0 } },
-    { $inc: { votesUsed: -1 } },
-  );
-}
-
-export async function castFreeVote(marketId: string, userId: string, side: VoteSide): Promise<VoteResponse> {
-  const [market, user] = await Promise.all([
-    MarketModel.findById(marketId),
-    UserModel.exists({ _id: userId }),
-  ]);
-
-  if (!market) throw new HttpError(404, "Market not found.");
-  if (!user) throw new HttpError(404, "User not found.");
-  if (!["open_for_votes", "qualified"].includes(market.status)) {
-    throw new HttpError(409, "This market is not open for free voting.");
+  private isDuplicateKeyError(error: any): boolean {
+    return typeof error === "object" && error !== null && "code" in error && error.code === 11000;
   }
 
-  const existingVote = await VoteModel.exists({ marketId, userId, voteType: "free" });
-  if (existingVote) throw new HttpError(409, "You have already voted on this market.");
+  private serializePosition(position: MarketPositionDocument): MarketPositionResponse {
+    const createdAt = position.createdAt ? new Date(position.createdAt).toISOString() : new Date().toISOString();
+    const updatedAt = position.updatedAt ? new Date(position.updatedAt).toISOString() : new Date().toISOString();
 
-  const usageDate = todayKey();
-  const usage = await reserveDailyVote(userId, usageDate);
-  try {
-    await VoteModel.create({
-      marketId,
-      userId,
-      side,
+    return {
+      id: position.id || (position as any)._id?.toString(),
+      market_id: position.marketId.toString(),
+      user_id: position.userId.toString(),
+      side: position.side,
+      shares: position.shares,
+      avg_price: position.avgPrice,
+      invested_usdc: position.investedUsdc,
+      realized_pnl: position.realizedPnl,
+      created_at: createdAt,
+      updated_at: updatedAt,
+    };
+  }
+
+  private serializeTrade(trade: MarketTradeDocument): MarketTradeResponse {
+    const createdAt = trade.createdAt ? new Date(trade.createdAt).toISOString() : new Date().toISOString();
+
+    return {
+      id: trade.id || (trade as any)._id?.toString(),
+      market_id: trade.marketId.toString(),
+      user_id: trade.userId.toString(),
+      side: trade.side,
+      action: trade.action,
+      shares: trade.shares,
+      price: trade.price,
+      amount_usdc: trade.amountUsdc,
+      fee_usdc: trade.feeUsdc,
+      gross_usdc: trade.grossUsdc,
+      tx_hash: trade.txHash,
+      created_at: createdAt,
+    };
+  }
+
+  async getDailyVotes(userId: string, date = this.todayKey()): Promise<DailyVotesResponse> {
+    const usage = await this.dailyVoteUsageModel.findOne({ userId: new Types.ObjectId(userId), date });
+    return this.serializeDailyUsage(usage, date);
+  }
+
+  private async getOrCreateDailyUsage(userId: string, date = this.todayKey()): Promise<DailyVoteUsageDocument> {
+    return this.dailyVoteUsageModel.findOneAndUpdate(
+      { userId: new Types.ObjectId(userId), date },
+      { $setOnInsert: { userId: new Types.ObjectId(userId), date, votesUsed: 0, votesLimit: 10 } },
+      { upsert: true, new: true, runValidators: true },
+    );
+  }
+
+  private async reserveDailyVote(userId: string, date = this.todayKey()): Promise<DailyVoteUsageDocument> {
+    await this.getOrCreateDailyUsage(userId, date);
+
+    const usage = await this.dailyVoteUsageModel.findOneAndUpdate(
+      {
+        userId: new Types.ObjectId(userId),
+        date,
+        $expr: { $lt: ["$votesUsed", "$votesLimit"] },
+      },
+      { $inc: { votesUsed: 1 } },
+      { new: true, runValidators: true },
+    );
+
+    if (!usage) {
+      throw new ConflictException("You have used all 10 votes today. Votes reset tomorrow.");
+    }
+
+    return usage;
+  }
+
+  private async releaseDailyVote(userId: string, date = this.todayKey()): Promise<void> {
+    await this.dailyVoteUsageModel.updateOne(
+      { userId: new Types.ObjectId(userId), date, votesUsed: { $gt: 0 } },
+      { $inc: { votesUsed: -1 } },
+    );
+  }
+
+  async castFreeVote(marketId: string, userId: string, side: VoteSide): Promise<VoteResponse> {
+    const [market, userExists] = await Promise.all([
+      this.marketModel.findById(marketId),
+      this.userModel.exists({ _id: userId }),
+    ]);
+
+    if (!market) {
+      throw new NotFoundException("Market not found.");
+    }
+    if (!userExists) {
+      throw new NotFoundException("User not found.");
+    }
+    if (!["open_for_votes", "qualified"].includes(market.status)) {
+      throw new ConflictException("This market is not open for free voting.");
+    }
+
+    const existingVote = await this.voteModel.exists({
+      marketId: new Types.ObjectId(marketId),
+      userId: new Types.ObjectId(userId),
       voteType: "free",
     });
-  } catch (error) {
-    await releaseDailyVote(userId, usageDate);
-    if (isDuplicateKeyError(error)) {
-      throw new HttpError(409, "You have already voted on this market.");
+    if (existingVote) {
+      throw new ConflictException("You have already voted on this market.");
     }
-    throw error;
+
+    const usageDate = this.todayKey();
+    const usage = await this.reserveDailyVote(userId, usageDate);
+    try {
+      await this.voteModel.create({
+        marketId: new Types.ObjectId(marketId),
+        userId: new Types.ObjectId(userId),
+        side,
+        voteType: "free",
+      });
+    } catch (error) {
+      await this.releaseDailyVote(userId, usageDate);
+      if (this.isDuplicateKeyError(error)) {
+        throw new ConflictException("You have already voted on this market.");
+      }
+      throw error;
+    }
+
+    const [freeYesVotes, freeNoVotes, uniqueVotersCount] = await Promise.all([
+      this.voteModel.countDocuments({ marketId: new Types.ObjectId(marketId), voteType: "free", side: "YES" }),
+      this.voteModel.countDocuments({ marketId: new Types.ObjectId(marketId), voteType: "free", side: "NO" }),
+      this.voteModel.distinct("userId", { marketId: new Types.ObjectId(marketId), voteType: "free" }).then((ids) => ids.length),
+    ]);
+    const totalFreeVotes = freeYesVotes + freeNoVotes;
+    const nextStatus =
+      totalFreeVotes >= market.qualificationThreshold && uniqueVotersCount >= market.uniqueVoterThreshold
+        ? "qualified"
+        : market.status;
+
+    const updatedMarket = await this.marketModel.findByIdAndUpdate(
+      marketId,
+      {
+        freeYesVotes,
+        freeNoVotes,
+        totalFreeVotes,
+        uniqueVotersCount,
+        status: nextStatus,
+      },
+      { new: true, runValidators: true },
+    );
+
+    return {
+      market: this.postsService.serializeMarket(updatedMarket!),
+      dailyVotes: this.serializeDailyUsage(usage, usageDate),
+    };
   }
 
-  const [freeYesVotes, freeNoVotes, uniqueVotersCount] = await Promise.all([
-    VoteModel.countDocuments({ marketId, voteType: "free", side: "YES" }),
-    VoteModel.countDocuments({ marketId, voteType: "free", side: "NO" }),
-    VoteModel.distinct("userId", { marketId, voteType: "free" }).then((ids) => ids.length),
-  ]);
-  const totalFreeVotes = freeYesVotes + freeNoVotes;
-  const nextStatus =
-    totalFreeVotes >= market.qualificationThreshold && uniqueVotersCount >= market.uniqueVoterThreshold
-      ? "qualified"
-      : market.status;
+  async fetchMarkets(filters: {
+    status?: MarketStatus;
+    category?: string;
+    qualified?: boolean;
+    open_for_votes?: boolean;
+    trending?: boolean;
+    newest?: boolean;
+  }): Promise<MarketResponse[]> {
+    const query: Record<string, unknown> = {};
+    if (filters.status) query.status = filters.status;
+    if (filters.category) query.category = filters.category;
+    if (filters.qualified) query.status = "qualified";
+    if (filters.open_for_votes) query.status = "open_for_votes";
 
-  const updatedMarket = await MarketModel.findByIdAndUpdate(
-    marketId,
-    {
-      freeYesVotes,
-      freeNoVotes,
-      totalFreeVotes,
-      uniqueVotersCount,
-      status: nextStatus,
-    },
-    { new: true, runValidators: true },
-  );
+    const sort: Record<string, SortOrder> = filters.trending
+      ? { totalFreeVotes: -1, uniqueVotersCount: -1, createdAt: -1 }
+      : { createdAt: filters.newest === false ? 1 : -1 };
 
-  return {
-    market: serializeMarket(updatedMarket!),
-    dailyVotes: serializeDailyUsage(usage, usageDate),
-  };
-}
-
-export async function fetchMarkets(filters: {
-  status?: MarketStatus;
-  category?: string;
-  qualified?: boolean;
-  open_for_votes?: boolean;
-  trending?: boolean;
-  newest?: boolean;
-}): Promise<MarketResponse[]> {
-  const query: Record<string, unknown> = {};
-  if (filters.status) query.status = filters.status;
-  if (filters.category) query.category = filters.category;
-  if (filters.qualified) query.status = "qualified";
-  if (filters.open_for_votes) query.status = "open_for_votes";
-
-  const sort: Record<string, SortOrder> = filters.trending
-    ? { totalFreeVotes: -1, uniqueVotersCount: -1, createdAt: -1 }
-    : { createdAt: filters.newest === false ? 1 : -1 };
-
-  const markets = await MarketModel.find(query).sort(sort).limit(100);
-  return markets.map(serializeMarket);
-}
-
-export async function fetchMarketDetail(marketId: string, viewerProfileId?: string) {
-  const market = await MarketModel.findById(marketId);
-  if (!market) throw new HttpError(404, "Market not found.");
-
-  const feed = await fetchFeed(viewerProfileId, true);
-  const feedItem = feed.find((item) => item.market?.id === market.id);
-  if (feedItem) return feedItem;
-
-  const post = await PostModel.findById(market.postId);
-  if (!post) throw new HttpError(404, "Market post not found.");
-  return {
-    id: post.id,
-    authorId: market.authorId.toString(),
-    author_id: market.authorId.toString(),
-    type: "market",
-    content: post.content,
-    createdAt: post.createdAt.toISOString(),
-    created_at: post.createdAt.toISOString(),
-    updatedAt: post.updatedAt.toISOString(),
-    likesCount: 0,
-    commentsCount: post.commentsCount,
-    resharesCount: post.resharesCount,
-    sharesCount: post.sharesCount,
-    author: null,
-    market: serializeMarket(market),
-    viewerLiked: false,
-    viewerReshared: false,
-    viewerVote: null,
-  };
-}
-
-export async function approveMarketForTrading(marketId: string): Promise<MarketResponse> {
-  const market = await MarketModel.findById(marketId);
-  if (!market) throw new HttpError(404, "Market not found.");
-  if (market.status === "tradable") return serializeMarket(market);
-  if (market.status !== "qualified") {
-    throw new HttpError(409, "Only qualified markets can be approved for USDC trading.");
+    const markets = await this.marketModel.find(query).sort(sort).limit(100);
+    return markets.map((m) => this.postsService.serializeMarket(m));
   }
 
-  const updatedMarket = await MarketModel.findByIdAndUpdate(
-    marketId,
-    { status: "tradable" },
-    { new: true, runValidators: true },
-  );
+  async fetchMarketDetail(marketId: string, viewerProfileId?: string) {
+    const market = await this.marketModel.findById(marketId);
+    if (!market) {
+      throw new NotFoundException("Market not found.");
+    }
 
-  return serializeMarket(updatedMarket!);
-}
+    const feed = await this.postsService.fetchFeed(viewerProfileId, true);
+    const feedItem = feed.find((item) => item.market?.id === market.id);
+    if (feedItem) return feedItem;
 
-function serializePosition(position: MarketPositionDocument): MarketPositionResponse {
-  return {
-    id: position.id,
-    market_id: position.marketId.toString(),
-    user_id: position.userId.toString(),
-    side: position.side,
-    shares: position.shares,
-    avg_price: position.avgPrice,
-    invested_usdc: position.investedUsdc,
-    realized_pnl: position.realizedPnl,
-    created_at: position.createdAt.toISOString(),
-    updated_at: position.updatedAt.toISOString(),
-  };
-}
+    const post = await this.postModel.findById(market.postId);
+    if (!post) {
+      throw new NotFoundException("Market post not found.");
+    }
 
-function serializeTrade(trade: MarketTradeDocument): MarketTradeResponse {
-  return {
-    id: trade.id,
-    market_id: trade.marketId.toString(),
-    user_id: trade.userId.toString(),
-    side: trade.side,
-    action: trade.action,
-    shares: trade.shares,
-    price: trade.price,
-    amount_usdc: trade.amountUsdc,
-    fee_usdc: trade.feeUsdc,
-    gross_usdc: trade.grossUsdc,
-    tx_hash: trade.txHash,
-    created_at: trade.createdAt.toISOString(),
-  };
-}
+    return {
+      id: post.id,
+      authorId: market.authorId.toString(),
+      author_id: market.authorId.toString(),
+      type: "market",
+      content: post.content,
+      createdAt: post.createdAt ? post.createdAt.toISOString() : new Date().toISOString(),
+      created_at: post.createdAt ? post.createdAt.toISOString() : new Date().toISOString(),
+      updatedAt: post.updatedAt ? post.updatedAt.toISOString() : new Date().toISOString(),
+      likesCount: 0,
+      commentsCount: post.commentsCount,
+      resharesCount: post.resharesCount,
+      sharesCount: post.sharesCount,
+      author: null,
+      market: this.postsService.serializeMarket(market),
+      viewerLiked: false,
+      viewerReshared: false,
+      viewerVote: null,
+    };
+  }
 
-export async function fetchMarketPositions(marketId: string, profileId: string): Promise<MarketPositionResponse[]> {
-  const positions = await MarketPositionModel.find({
-    marketId,
-    userId: profileId,
-    shares: { $gt: 0 },
-  }).sort({ updatedAt: -1 });
+  async approveMarketForTrading(marketId: string): Promise<MarketResponse> {
+    const market = await this.marketModel.findById(marketId);
+    if (!market) {
+      throw new NotFoundException("Market not found.");
+    }
+    if (market.status === "tradable") {
+      return this.postsService.serializeMarket(market);
+    }
+    if (market.status !== "qualified") {
+      throw new ConflictException("Only qualified markets can be approved for USDC trading.");
+    }
 
-  return positions.map(serializePosition);
-}
+    const updatedMarket = await this.marketModel.findByIdAndUpdate(
+      marketId,
+      { status: "tradable" },
+      { new: true, runValidators: true },
+    );
 
-export async function fetchMarketTrades(marketId: string): Promise<MarketTradeResponse[]> {
-  const trades = await MarketTradeModel.find({ marketId })
-    .sort({ createdAt: -1 })
-    .limit(25);
+    return this.postsService.serializeMarket(updatedMarket!);
+  }
 
-  return trades.map(serializeTrade);
-}
+  async fetchMarketPositions(marketId: string, profileId: string): Promise<MarketPositionResponse[]> {
+    const positions = await this.marketPositionModel.find({
+      marketId: new Types.ObjectId(marketId),
+      userId: new Types.ObjectId(profileId),
+      shares: { $gt: 0 },
+    }).sort({ updatedAt: -1 });
 
-export async function executeMarketTrade(_input?: unknown): Promise<void> {
-  void _input;
-  throw new HttpError(501, "USDC trading is not implemented in this phase.");
+    return positions.map((p) => this.serializePosition(p));
+  }
+
+  async fetchMarketTrades(marketId: string): Promise<MarketTradeResponse[]> {
+    const trades = await this.marketTradeModel.find({
+      marketId: new Types.ObjectId(marketId),
+    })
+      .sort({ createdAt: -1 })
+      .limit(25);
+
+    return trades.map((t) => this.serializeTrade(t));
+  }
+
+  async executeMarketTrade(input?: any): Promise<void> {
+    throw new NotImplementedException("USDC trading is not implemented in this phase.");
+  }
 }

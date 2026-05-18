@@ -1,28 +1,73 @@
-import { body, param, query } from "express-validator";
+import { IsBoolean, IsEnum, IsMongoId, IsNumber, IsOptional, IsString, Length, Min } from "class-validator";
+import { Transform } from "class-transformer";
 
-export const marketParamDto = [
-  param("marketId").isMongoId().withMessage("A valid market id is required."),
-];
+export class FetchMarketsQueryDto {
+  @IsOptional()
+  @IsString()
+  status?: string;
 
-export const positionsQueryDto = [
-  ...marketParamDto,
-  query("profileId").isMongoId().withMessage("A valid profile id is required."),
-];
+  @IsOptional()
+  @IsString()
+  category?: string;
 
-export const freeVoteDto = [
-  ...marketParamDto,
-  body("userId").optional().isMongoId(),
-  body("profileId").optional().isMongoId(),
-  body("side").isIn(["YES", "NO"]).withMessage("Vote side must be YES or NO."),
-];
+  @IsOptional()
+  @Transform(({ value }) => value === "true" || value === true)
+  @IsBoolean()
+  trending?: boolean;
 
-export const tradeDto = [
-  ...marketParamDto,
-  body("profileId").isMongoId().withMessage("A valid profile id is required."),
-  body("side").isIn(["YES", "NO"]).withMessage("Trade side must be YES or NO."),
-  body("action").isIn(["BUY", "SELL"]).withMessage("Trade action must be BUY or SELL."),
-  body("amount").isFloat({ gt: 0 }).toFloat().withMessage("Amount must be greater than 0."),
-  body("feeAmount").optional({ nullable: true }).isFloat({ min: 0 }).toFloat(),
-  body("grossAmount").optional({ nullable: true }).isFloat({ min: 0 }).toFloat(),
-  body("txHash").optional({ nullable: true }).isString().trim().isLength({ max: 120 }),
-];
+  @IsOptional()
+  @Transform(({ value }) => value !== "false" && value !== false)
+  @IsBoolean()
+  newest?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === "true" || value === true)
+  @IsBoolean()
+  qualified?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === "true" || value === true)
+  @IsBoolean()
+  open_for_votes?: boolean;
+}
+
+export class CastFreeVoteDto {
+  @IsOptional()
+  @IsMongoId()
+  userId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  profileId?: string;
+
+  @IsEnum(["YES", "NO"], { message: "Vote side must be YES or NO." })
+  side: "YES" | "NO";
+}
+
+export class ExecuteTradeDto {
+  @IsMongoId({ message: "A valid profile id is required." })
+  profileId: string;
+
+  @IsEnum(["YES", "NO"], { message: "Trade side must be YES or NO." })
+  side: "YES" | "NO";
+
+  @IsEnum(["BUY", "SELL"], { message: "Trade action must be BUY or SELL." })
+  action: "BUY" | "SELL";
+
+  @IsNumber()
+  @Min(0.0001, { message: "Amount must be greater than 0." })
+  amount: number;
+
+  @IsOptional()
+  @IsNumber()
+  feeAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  grossAmount?: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 120)
+  txHash?: string;
+}
