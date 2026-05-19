@@ -9,6 +9,8 @@ import { CommentsModule } from "./modules/comments/comments.module";
 import { InteractionsModule } from "./modules/interactions/interactions.module";
 import { PostsModule } from "./modules/posts/posts.module";
 import { MarketsModule } from "./modules/markets/markets.module";
+import { BlockchainModule } from "./modules/blockchain/blockchain.module";
+import { LiquidityModule } from "./modules/liquidity/liquidity.module";
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { MarketsModule } from "./modules/markets/markets.module";
     InteractionsModule,
     PostsModule,
     MarketsModule,
+    BlockchainModule,
+    LiquidityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

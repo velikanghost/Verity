@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, NotImplementedException, Inject, forwardRef } from "@nestjs/common";
+import { Injectable, NotFoundException, ConflictException, NotImplementedException, Inject, forwardRef, BadRequestException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types, SortOrder } from "mongoose";
 import {
@@ -18,6 +18,8 @@ import {
 import { User, UserDocument } from "../users/users.model";
 import { Post, PostDocument } from "../posts/posts.model";
 import { PostsService, MarketResponse } from "../posts/posts.service";
+import { BlockchainService } from "../blockchain/blockchain.service";
+
 
 export interface DailyVotesResponse {
   votesLimit: number;
@@ -71,6 +73,7 @@ export class MarketsService {
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @Inject(forwardRef(() => PostsService))
     private readonly postsService: PostsService,
+    private readonly blockchainService: BlockchainService,
   ) {}
 
   private todayKey(date = new Date()): string {
@@ -303,16 +306,20 @@ export class MarketsService {
     if (!market) {
       throw new NotFoundException("Market not found.");
     }
-    if (market.status === "tradable") {
+    if (market.status === "funding_pool") {
       return this.postsService.serializeMarket(market);
     }
     if (market.status !== "qualified") {
       throw new ConflictException("Only qualified markets can be approved for USDC trading.");
     }
 
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const fundingDeadline = market.deadline < sevenDaysFromNow ? market.deadline : sevenDaysFromNow;
+
     const updatedMarket = await this.marketModel.findByIdAndUpdate(
       marketId,
-      { status: "tradable" },
+      { status: "funding_pool", fundingDeadline },
       { new: true, runValidators: true },
     );
 
@@ -339,7 +346,123 @@ export class MarketsService {
     return trades.map((t) => this.serializeTrade(t));
   }
 
-  async executeMarketTrade(input?: any): Promise<void> {
-    throw new NotImplementedException("USDC trading is not implemented in this phase.");
+  async executeMarketTrade(marketId: string, dto: any): Promise<void> {
+    const market = await this.marketModel.findById(marketId);
+    if (!market) {
+      throw new NotFoundException("Market not found.");
+    }
+    const user = await this.userModel.findById(dto.profileId);
+    if (!user) {
+      throw new NotFoundException("User not found.");
+    }
+
+    // Verify txHash if provided
+    if (dto.txHash) {
+      await this.blockchainService.getTransactionReceipt(dto.txHash as `0x${string}`);
+    }
+
+    const amountUsdc = dto.amount;
+    const grossUsdc = dto.grossAmount || dto.amount;
+    const feeUsdc = dto.feeAmount || 0;
+    
+    // Create MarketTrade record
+    const shares = dto.grossAmount || dto.amount;
+    const price = amountUsdc / (shares || 1);
+
+    await this.marketTradeModel.create({
+      marketId: new Types.ObjectId(marketId),
+      userId: new Types.ObjectId(dto.profileId),
+      side: dto.side,
+      action: dto.action,
+      shares,
+      price,
+      amountUsdc,
+      feeUsdc,
+      grossUsdc,
+      txHash: dto.txHash || null,
+    });
+
+    // Update or create Position
+    let position = await this.marketPositionModel.findOne({
+      marketId: new Types.ObjectId(marketId),
+      userId: new Types.ObjectId(dto.profileId),
+      side: dto.side,
+    });
+
+    if (dto.action === "BUY") {
+      if (position) {
+        position.shares += shares;
+        position.investedUsdc += amountUsdc;
+        position.avgPrice = position.investedUsdc / (position.shares || 1);
+        await position.save();
+      } else {
+        await this.marketPositionModel.create({
+          marketId: new Types.ObjectId(marketId),
+          userId: new Types.ObjectId(dto.profileId),
+          side: dto.side,
+          shares,
+          avgPrice: price,
+          investedUsdc: amountUsdc,
+          realizedPnl: 0,
+        });
+      }
+    } else if (dto.action === "SELL") {
+      if (!position) {
+        throw new BadRequestException("No position to sell.");
+      }
+      const oldShares = position.shares;
+      position.shares = Math.max(0, position.shares - shares);
+      
+      const exitPrice = price;
+      const avgPrice = position.avgPrice;
+      const pnl = (exitPrice - avgPrice) * shares;
+      
+      position.realizedPnl += pnl;
+      position.investedUsdc = Math.max(0, position.investedUsdc - (avgPrice * shares));
+      
+      if (position.shares === 0) {
+        await this.marketPositionModel.deleteOne({ _id: position._id });
+      } else {
+        await position.save();
+      }
+    }
+
+    // Sync market balances and prices from chain
+    await this.syncMarketPrices(marketId);
+  }
+
+  async syncMarketPrices(marketId: string): Promise<void> {
+    try {
+      const balances = await this.blockchainService.readPoolBalances(marketId as `0x${string}`);
+      await this.marketModel.findByIdAndUpdate(marketId, {
+        usdcYesAmount: Number(balances.yesBalance) / 1e6,
+        usdcNoAmount: Number(balances.noBalance) / 1e6,
+        liquidity: Number(balances.totalDeposited) / 1e6,
+      });
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  async resolveMarket(
+    marketId: string,
+    winningOutcome: "YES" | "NO",
+    txHash: string,
+    adminAddress: string,
+  ): Promise<MarketResponse> {
+    const market = await this.marketModel.findById(marketId);
+    if (!market) {
+      throw new NotFoundException("Market not found.");
+    }
+
+    // Verify transaction receipt
+    await this.blockchainService.getTransactionReceipt(txHash as `0x${string}`);
+
+    market.status = "resolved";
+    market.resolvedOutcome = winningOutcome;
+    market.resolvedByAdmin = adminAddress;
+    await market.save();
+
+    return this.postsService.serializeMarket(market);
   }
 }

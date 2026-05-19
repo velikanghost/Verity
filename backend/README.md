@@ -1,98 +1,73 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Verity NestJS Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Verity's decentralized backend service, built using the NestJS framework and MongoDB (Mongoose). It is responsible for database persistence, user registration, post indexing, free voting rules, and validating/syncing state with smart contracts deployed on the Arc Testnet.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Core Features
 
-## Description
+- **Auth & Users**: Wallet-based login (`POST /api/users/wallet/:address`) and JWT protection.
+- **Posts & Comments**: Native posts feed supporting standard content and prediction market declarations.
+- **On-Chain Escrow & Funding Verification**: Verifies USDC transfer receipts and triggers database state changes (e.g. `qualified` $\to$ `funding_pool` $\to$ `tradable`).
+- **AMM Pricing & LP Tracking**: Integrates with `VerityFPMM` contract to fetch YES/NO token pricing and user LP positions.
+- **Swagger API Docs**: Premium interactive documentation served at `/api/docs`.
+- **On-Chain E2E Tests**: Suite that executes actual, signed transactions on Arc Testnet to verify the system from end to end.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## Getting Started
 
+### 1. Project Configuration
+Install dependencies from the monorepo root:
 ```bash
-$ pnpm install
+pnpm install
 ```
 
-## Compile and run the project
-
+Configure the environment variables by copying `.env.example` to `.env` inside the `backend/` folder:
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+cp .env.example .env
 ```
 
-## Run tests
+Ensure the following variables are configured correctly:
+```env
+MONGODB_URI=mongodb://localhost:27017/verity
+JWT_SECRET=your-long-secure-secret-key
+JWT_EXPIRES_IN=7d
 
-```bash
-# unit tests
-$ pnpm run test
+# Arc Testnet Configuration
+ARC_RPC_URL=https://rpc.testnet.arc.network
+USDC_ADDRESS=0x3600000000000000000000000000000000000000
+CONDITIONAL_TOKEN_VAULT_ADDRESS=0x79De0fD38A5c34C5336Ba4C42bD51011d4167d6e
+FPMM_ADDRESS=0xB9842bf8c49b4Db54262141DcD289126E1A43a82
+FACTORY_ADDRESS=0x230ec66d9898E81050Fb721c67E3093938Eb8a16
 
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+# Required only for running the E2E test suite (requires gas + mock USDC)
+TEST_PRIVATE_KEY=0x...
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Available Scripts
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### Extract ABIs
+Extracts ABI definitions from compiled Foundry artifacts and copies them into the backend package for use in blockchain read/write calls:
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm run extract-abis
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Run Local Development Server
+Starts the NestJS application in watch mode:
+```bash
+pnpm run dev
+```
+The server runs on http://localhost:5050/api, and you can view the Swagger UI documentation at http://localhost:5050/api/docs.
 
-## Resources
+### Seed Database
+Seeds the MongoDB database with initial sample mock data:
+```bash
+pnpm run seed
+```
 
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Run On-Chain E2E Tests
+Executes the E2E test suite, spinning up a local server instance and signing actual transactions on Arc Testnet via your `TEST_PRIVATE_KEY`:
+```bash
+pnpm run test:backend-e2e
+```

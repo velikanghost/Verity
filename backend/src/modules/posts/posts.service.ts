@@ -44,6 +44,10 @@ export interface MarketResponse {
   usdcNoAmount: number;
   usdc_no_amount: number;
   liquidity: number;
+  resolvedOutcome: string | null;
+  resolved_outcome: string | null;
+  resolvedByAdmin: string | null;
+  resolved_by_admin: string | null;
   createdAt: string;
   created_at: string;
   updatedAt: string;
@@ -132,6 +136,10 @@ export class PostsService {
       usdcNoAmount: market.usdcNoAmount,
       usdc_no_amount: market.usdcNoAmount,
       liquidity: market.liquidity,
+      resolvedOutcome: market.resolvedOutcome,
+      resolved_outcome: market.resolvedOutcome,
+      resolvedByAdmin: market.resolvedByAdmin,
+      resolved_by_admin: market.resolvedByAdmin,
       createdAt,
       created_at: createdAt,
       updatedAt,

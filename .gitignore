@@ -1,4 +1,5 @@
 node_modules/
+docs
 architecture_guide.md
 implementation_plan.md
 task.md

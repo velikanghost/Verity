@@ -8,6 +8,7 @@ export type MarketStatus =
   | "draft"
   | "open_for_votes"
   | "qualified"
+  | "funding_pool"
   | "tradable"
   | "closed"
   | "resolving"
@@ -48,7 +49,7 @@ export class Market {
 
   @Prop({
     type: String,
-    enum: ["draft", "open_for_votes", "qualified", "tradable", "closed", "resolving", "resolved", "voided"],
+    enum: ["draft", "open_for_votes", "qualified", "funding_pool", "tradable", "closed", "resolving", "resolved", "voided"],
     default: "open_for_votes",
     index: true,
   })
@@ -89,6 +90,21 @@ export class Market {
 
   @Prop({ type: Number, default: 0 })
   liquidity: number;
+
+  @Prop({ type: Number, default: 10 })
+  creatorLiquidityUsdc: number;
+
+  @Prop({ type: Number, default: 40 })
+  minimumPoolBalance: number;
+
+  @Prop({ type: Date, default: null })
+  fundingDeadline: Date | null;
+
+  @Prop({ type: String, enum: ["YES", "NO", null], default: null })
+  resolvedOutcome: "YES" | "NO" | null;
+
+  @Prop({ type: String, default: null, trim: true })
+  resolvedByAdmin: string | null;
 
   createdAt?: Date;
   updatedAt?: Date;

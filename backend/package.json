@@ -13,6 +13,8 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "seed": "ts-node src/seed.ts",
+    "test:backend-e2e": "ts-node src/scripts/test-backend-e2e.ts",
+    "extract-abis": "ts-node src/scripts/extract-abis.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -28,6 +30,7 @@
     "@nestjs/mongoose": "^11.0.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.4.3",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
@@ -36,7 +39,9 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1",
+    "viem": "^2.49.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
