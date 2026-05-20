@@ -5,6 +5,7 @@
     "dev:frontend": "pnpm --filter verity dev",
     "dev:backend": "pnpm --filter verity-backend dev",
     "dev:e2e-test": "pnpm --filter verity-backend test:backend-e2e",
+    "dev:resolver-test": "pnpm --filter verity-backend test:resolver-live",
     "build:frontend": "pnpm --filter verity build",
     "build:backend": "pnpm --filter verity-backend build",
     "install:all": "pnpm install"

@@ -6,7 +6,7 @@ import "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
 
 contract MockPyth is IPyth {
     uint256 public feeAmount = 1 wei;
-    
+
     // We can store a mock price to return
     mapping(bytes32 => PythStructs.Price) public prices;
 
@@ -38,16 +38,25 @@ contract MockPyth is IPyth {
         bytes32[] calldata priceIds,
         uint64 minPublishTime,
         uint64 maxPublishTime
-    ) external payable override returns (PythStructs.PriceFeed[] memory priceFeeds) {
+    )
+        external
+        payable
+        override
+        returns (PythStructs.PriceFeed[] memory priceFeeds)
+    {
         if (msg.value < feeAmount) revert("InsufficientFee");
-        
+
         priceFeeds = new PythStructs.PriceFeed[](priceIds.length);
         for (uint i = 0; i < priceIds.length; i++) {
             bytes32 id = priceIds[i];
             PythStructs.Price memory p = prices[id];
-            
+
             // Validate the publish time is within the allowed range
-            require(p.publishTime >= minPublishTime && p.publishTime <= maxPublishTime, "PriceFeedNotFoundWithinRange");
+            require(
+                p.publishTime >= minPublishTime &&
+                    p.publishTime <= maxPublishTime,
+                "PriceFeedNotFoundWithinRange"
+            );
 
             priceFeeds[i] = PythStructs.PriceFeed({
                 id: id,
@@ -58,14 +67,80 @@ contract MockPyth is IPyth {
     }
 
     // Remaining required IPyth functions (can revert/be empty as they are not used)
-    function getPriceUnsafe(bytes32) external view override returns (PythStructs.Price memory) { revert("Unimplemented"); }
-    function getPriceNoOlderThan(bytes32, uint) external view override returns (PythStructs.Price memory) { revert("Unimplemented"); }
-    function getEmaPriceUnsafe(bytes32) external view override returns (PythStructs.Price memory) { revert("Unimplemented"); }
-    function getEmaPriceNoOlderThan(bytes32, uint) external view override returns (PythStructs.Price memory) { revert("Unimplemented"); }
-    function updatePriceFeeds(bytes[] calldata) external payable override { revert("Unimplemented"); }
-    function updatePriceFeedsIfNecessary(bytes[] calldata, bytes32[] calldata, uint64[] calldata) external payable override { revert("Unimplemented"); }
-    function getTwapUpdateFee(bytes[] calldata) external view override returns (uint) { revert("Unimplemented"); }
-    function parsePriceFeedUpdatesWithConfig(bytes[] calldata, bytes32[] calldata, uint64, uint64, bool, bool, bool) external payable override returns (PythStructs.PriceFeed[] memory, uint64[] memory) { revert("Unimplemented"); }
-    function parseTwapPriceFeedUpdates(bytes[] calldata, bytes32[] calldata) external payable override returns (PythStructs.TwapPriceFeed[] memory) { revert("Unimplemented"); }
-    function parsePriceFeedUpdatesUnique(bytes[] calldata, bytes32[] calldata, uint64, uint64) external payable override returns (PythStructs.PriceFeed[] memory) { revert("Unimplemented"); }
+    function getPriceUnsafe(
+        bytes32
+    ) external pure override returns (PythStructs.Price memory) {
+        revert("Unimplemented");
+    }
+
+    function getPriceNoOlderThan(
+        bytes32,
+        uint
+    ) external pure override returns (PythStructs.Price memory) {
+        revert("Unimplemented");
+    }
+
+    function getEmaPriceUnsafe(
+        bytes32
+    ) external pure override returns (PythStructs.Price memory) {
+        revert("Unimplemented");
+    }
+
+    function getEmaPriceNoOlderThan(
+        bytes32,
+        uint
+    ) external pure override returns (PythStructs.Price memory) {
+        revert("Unimplemented");
+    }
+
+    function updatePriceFeeds(bytes[] calldata) external payable override {
+        revert("Unimplemented");
+    }
+
+    function updatePriceFeedsIfNecessary(
+        bytes[] calldata,
+        bytes32[] calldata,
+        uint64[] calldata
+    ) external payable override {
+        revert("Unimplemented");
+    }
+
+    function getTwapUpdateFee(
+        bytes[] calldata
+    ) external pure override returns (uint) {
+        revert("Unimplemented");
+    }
+
+    function parsePriceFeedUpdatesWithConfig(
+        bytes[] calldata,
+        bytes32[] calldata,
+        uint64,
+        uint64,
+        bool,
+        bool,
+        bool
+    )
+        external
+        payable
+        override
+        returns (PythStructs.PriceFeed[] memory, uint64[] memory)
+    {
+        revert("Unimplemented");
+    }
+
+    function parseTwapPriceFeedUpdates(
+        bytes[] calldata,
+        bytes32[] calldata
+    ) external payable override returns (PythStructs.TwapPriceFeed[] memory) {
+        revert("Unimplemented");
+    }
+
+    function parsePriceFeedUpdatesUnique(
+        bytes[] calldata,
+        bytes32[] calldata,
+        uint64,
+        uint64
+    ) external payable override returns (PythStructs.PriceFeed[] memory) {
+        revert("Unimplemented");
+    }
 }

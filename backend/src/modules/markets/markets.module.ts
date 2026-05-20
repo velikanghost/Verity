@@ -18,9 +18,11 @@ import { MarketsService } from "./markets.service";
 import { MarketsKeeperService } from "./marketskeeper.service";
 import { MarketsController } from "./markets.controller";
 import { PostsModule } from "../posts/posts.module";
+import { AgentModule } from "../agent/agent.module";
 
 @Module({
   imports: [
+    AgentModule,
     MongooseModule.forFeature([
       { name: Market.name, schema: MarketSchema },
       { name: Vote.name, schema: VoteSchema },

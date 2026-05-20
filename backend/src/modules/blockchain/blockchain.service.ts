@@ -27,6 +27,7 @@ export class BlockchainService implements OnModuleInit {
   private factoryAddress: `0x${string}`;
   private usdcAddress: `0x${string}`;
   private pythAddress: `0x${string}`;
+  private resolverAddress: `0x${string}`;
 
   constructor(private configService: ConfigService) {}
 
@@ -36,6 +37,7 @@ export class BlockchainService implements OnModuleInit {
     this.factoryAddress = this.configService.get<string>("FACTORY_ADDRESS") as `0x${string}`;
     this.usdcAddress = this.configService.get<string>("USDC_ADDRESS") as `0x${string}`;
     this.pythAddress = (this.configService.get<string>("PYTH_ADDRESS") || "0x2880aB155794e7179c9eE2e38200202908C17B43") as `0x${string}`;
+    this.resolverAddress = (this.configService.get<string>("RESOLVER_ADDRESS") || "0x0000000000000000000000000000000000000000") as `0x${string}`;
 
     this.publicClient = createPublicClient({
       chain: arcTestnet,
@@ -308,6 +310,234 @@ export class BlockchainService implements OnModuleInit {
       return { resolved, winningIsYes, totalCollateral };
     } catch (error) {
       throw new Error(`Failed to read on-chain market state for ${marketId}: ${error.message}`);
+    }
+  }
+
+  async approveUsdcIfNecessary(spender: string, amount: bigint): Promise<string | null> {
+    if (!this.walletClient) {
+      throw new Error("Wallet client not initialized");
+    }
+    const allowance = (await this.publicClient.readContract({
+      address: this.usdcAddress,
+      abi: this.usdcAbi,
+      functionName: "allowance",
+      args: [this.account.address, spender as `0x${string}`],
+    })) as bigint;
+
+    if (allowance >= amount) {
+      return null;
+    }
+
+    // Approve
+    const txHash = await this.walletClient.writeContract({
+      address: this.usdcAddress,
+      abi: [
+        {
+          type: "function",
+          name: "approve",
+          inputs: [
+            { name: "spender", type: "address" },
+            { name: "amount", type: "uint256" },
+          ],
+          outputs: [{ name: "", type: "bool" }],
+          stateMutability: "nonpayable",
+        },
+      ],
+      functionName: "approve",
+      args: [spender as `0x${string}`, amount],
+      chain: arcTestnet,
+    });
+
+    // Wait for approval transaction receipt
+    await this.publicClient.waitForTransactionReceipt({ hash: txHash });
+    return txHash;
+  }
+
+  async getResolutionBond(): Promise<bigint> {
+    try {
+      const result = await this.publicClient.readContract({
+        address: this.resolverAddress,
+        abi: [
+          {
+            type: "function",
+            name: "resolutionBond",
+            inputs: [],
+            outputs: [{ name: "", type: "uint256" }],
+            stateMutability: "view",
+          },
+        ],
+        functionName: "resolutionBond",
+        args: [],
+      });
+      return result as bigint;
+    } catch (error) {
+      // Fallback: 10 USDC (assuming 6 decimals)
+      return 10_000_000n;
+    }
+  }
+
+  async readProposal(marketId: string) {
+    const formattedMarketId = this.formatMarketId(marketId);
+    try {
+      const result = await this.publicClient.readContract({
+        address: this.resolverAddress,
+        abi: [
+          {
+            type: "function",
+            name: "proposals",
+            inputs: [{ name: "", type: "bytes32" }],
+            outputs: [
+              { name: "proposer", type: "address" },
+              { name: "proposedWinningOutcome", type: "bool" },
+              { name: "proposalTime", type: "uint256" },
+              { name: "disputed", type: "bool" },
+              { name: "disputer", type: "address" },
+              { name: "finalized", type: "bool" },
+            ],
+            stateMutability: "view",
+          },
+        ],
+        functionName: "proposals",
+        args: [formattedMarketId],
+      });
+      const [proposer, proposedWinningOutcome, proposalTime, disputed, disputer, finalized] = result as [
+        string,
+        boolean,
+        bigint,
+        boolean,
+        string,
+        boolean,
+      ];
+      return {
+        proposer,
+        proposedWinningOutcome,
+        proposalTime,
+        disputed,
+        disputer,
+        finalized,
+      };
+    } catch (error) {
+      throw new Error(`Failed to read proposal for market ${marketId}: ${error.message}`);
+    }
+  }
+
+  async proposeResolution(marketId: string, proposedOutcome: boolean): Promise<string> {
+    if (!this.walletClient) {
+      throw new Error("Wallet client not initialized");
+    }
+    const bondAmount = await this.getResolutionBond();
+    await this.approveUsdcIfNecessary(this.resolverAddress, bondAmount);
+
+    const formattedMarketId = this.formatMarketId(marketId);
+    try {
+      const txHash = await this.walletClient.writeContract({
+        address: this.resolverAddress,
+        abi: [
+          {
+            type: "function",
+            name: "proposeResolution",
+            inputs: [
+              { name: "marketId", type: "bytes32" },
+              { name: "proposedOutcome", type: "bool" },
+            ],
+            outputs: [],
+            stateMutability: "nonpayable",
+          },
+        ],
+        functionName: "proposeResolution",
+        args: [formattedMarketId, proposedOutcome],
+        chain: arcTestnet,
+      });
+      return txHash;
+    } catch (error) {
+      throw new Error(`Failed to propose resolution for market ${marketId}: ${error.message}`);
+    }
+  }
+
+  async disputeResolution(marketId: string): Promise<string> {
+    if (!this.walletClient) {
+      throw new Error("Wallet client not initialized");
+    }
+    const bondAmount = await this.getResolutionBond();
+    await this.approveUsdcIfNecessary(this.resolverAddress, bondAmount);
+
+    const formattedMarketId = this.formatMarketId(marketId);
+    try {
+      const txHash = await this.walletClient.writeContract({
+        address: this.resolverAddress,
+        abi: [
+          {
+            type: "function",
+            name: "disputeResolution",
+            inputs: [{ name: "marketId", type: "bytes32" }],
+            outputs: [],
+            stateMutability: "nonpayable",
+          },
+        ],
+        functionName: "disputeResolution",
+        args: [formattedMarketId],
+        chain: arcTestnet,
+      });
+      return txHash;
+    } catch (error) {
+      throw new Error(`Failed to dispute resolution for market ${marketId}: ${error.message}`);
+    }
+  }
+
+  async finalizeResolution(marketId: string): Promise<string> {
+    if (!this.walletClient) {
+      throw new Error("Wallet client not initialized");
+    }
+    const formattedMarketId = this.formatMarketId(marketId);
+    try {
+      const txHash = await this.walletClient.writeContract({
+        address: this.resolverAddress,
+        abi: [
+          {
+            type: "function",
+            name: "finalizeResolution",
+            inputs: [{ name: "marketId", type: "bytes32" }],
+            outputs: [],
+            stateMutability: "nonpayable",
+          },
+        ],
+        functionName: "finalizeResolution",
+        args: [formattedMarketId],
+        chain: arcTestnet,
+      });
+      return txHash;
+    } catch (error) {
+      throw new Error(`Failed to finalize resolution for market ${marketId}: ${error.message}`);
+    }
+  }
+
+  async resolveDisputedMarket(marketId: string, winningIsYes: boolean): Promise<string> {
+    if (!this.walletClient) {
+      throw new Error("Wallet client not initialized");
+    }
+    const formattedMarketId = this.formatMarketId(marketId);
+    try {
+      const txHash = await this.walletClient.writeContract({
+        address: this.resolverAddress,
+        abi: [
+          {
+            type: "function",
+            name: "resolveDisputedMarket",
+            inputs: [
+              { name: "marketId", type: "bytes32" },
+              { name: "winningIsYes", type: "bool" },
+            ],
+            outputs: [],
+            stateMutability: "nonpayable",
+          },
+        ],
+        functionName: "resolveDisputedMarket",
+        args: [formattedMarketId, winningIsYes],
+        chain: arcTestnet,
+      });
+      return txHash;
+    } catch (error) {
+      throw new Error(`Failed to resolve disputed market ${marketId}: ${error.message}`);
     }
   }
 }

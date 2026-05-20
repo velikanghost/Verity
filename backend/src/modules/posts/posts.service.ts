@@ -56,6 +56,12 @@ export interface MarketResponse {
   resolve_above: boolean | null;
   isPythMarket: boolean;
   is_pyth_market: boolean;
+  proposalReasoning?: string | null;
+  proposalCitations?: string[] | null;
+  proposalProposer?: string | null;
+  proposalDisputer?: string | null;
+  disputed?: boolean;
+  proposedOutcome?: boolean | null;
   createdAt: string;
   created_at: string;
   updatedAt: string;
@@ -156,6 +162,12 @@ export class PostsService {
       resolve_above: market.resolveAbove,
       isPythMarket: market.isPythMarket,
       is_pyth_market: market.isPythMarket,
+      proposalReasoning: market.proposalReasoning,
+      proposalCitations: market.proposalCitations,
+      proposalProposer: market.proposalProposer,
+      proposalDisputer: market.proposalDisputer,
+      disputed: market.disputed,
+      proposedOutcome: market.proposedOutcome,
       createdAt,
       created_at: createdAt,
       updatedAt,

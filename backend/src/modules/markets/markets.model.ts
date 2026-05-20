@@ -118,6 +118,24 @@ export class Market {
   @Prop({ type: Boolean, default: false })
   isPythMarket: boolean;
 
+  @Prop({ type: String, default: null })
+  proposalReasoning: string | null;
+
+  @Prop({ type: [String], default: [] })
+  proposalCitations: string[];
+
+  @Prop({ type: String, default: null })
+  proposalProposer: string | null;
+
+  @Prop({ type: String, default: null })
+  proposalDisputer: string | null;
+
+  @Prop({ type: Boolean, default: false })
+  disputed: boolean;
+
+  @Prop({ type: Boolean, default: null })
+  proposedOutcome: boolean | null;
+
   createdAt?: Date;
   updatedAt?: Date;
 }

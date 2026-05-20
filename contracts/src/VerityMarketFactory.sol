@@ -20,6 +20,7 @@ contract VerityMarketFactory {
     IERC20 public immutable usdc;
     IPyth public immutable pyth;
     address public admin;
+    address public optimisticResolver;
 
     struct PreMarketDeposit {
         address lp;
@@ -55,6 +56,7 @@ contract VerityMarketFactory {
     event MarketFunded(bytes32 indexed marketId, address indexed creator, uint256 amount);
     event MarketResolved(bytes32 indexed marketId, bool winningIsYes);
     event MarketVoided(bytes32 indexed marketId);
+    event OptimisticResolverUpdated(address resolver);
 
     // ─── Errors ──────────────────────────────────────────────────────────
     error Unauthorized();
@@ -88,6 +90,11 @@ contract VerityMarketFactory {
 
     function transferAdmin(address _newAdmin) external onlyAdmin {
         admin = _newAdmin;
+    }
+
+    function setOptimisticResolver(address _resolver) external onlyAdmin {
+        optimisticResolver = _resolver;
+        emit OptimisticResolverUpdated(_resolver);
     }
 
     // ─── Market Registration ─────────────────────────────────────────────
@@ -301,6 +308,20 @@ contract VerityMarketFactory {
             payable(msg.sender).transfer(msg.value - fee);
         }
 
+        emit MarketResolved(marketId, winningIsYes);
+    }
+
+    /// @notice Resolution callback triggered by the authorized optimistic resolver contract.
+    function resolveMarketFromResolver(bytes32 marketId, bool winningIsYes) external {
+        if (msg.sender != optimisticResolver) revert Unauthorized();
+        MarketInfo storage info = marketRegistry[marketId];
+        if (!info.registered) revert MarketNotRegistered();
+        if (info.resolved) revert MarketAlreadyResolved();
+        if (info.voided) revert MarketAlreadyVoided();
+
+        info.resolved = true;
+        vault.resolve(marketId, winningIsYes);
+        fpmm.markResolved(marketId);
         emit MarketResolved(marketId, winningIsYes);
     }
 

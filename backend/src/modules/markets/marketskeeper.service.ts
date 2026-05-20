@@ -3,6 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Market, MarketDocument } from "./markets.model";
 import { BlockchainService } from "../blockchain/blockchain.service";
+import { AgentService } from "../agent/agent.service";
 
 @Injectable()
 export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
@@ -13,10 +14,11 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @InjectModel(Market.name) private marketModel: Model<MarketDocument>,
     private readonly blockchainService: BlockchainService,
+    private readonly agentService: AgentService,
   ) {}
 
   onModuleInit() {
-    this.logger.log("Initializing Pyth Market Resolution Keeper...");
+    this.logger.log("Initializing Market Resolution Keeper...");
     // Run the keeper loop every 30 seconds
     this.intervalId = setInterval(() => this.processExpiredMarkets(), 30000);
   }
@@ -34,29 +36,129 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
     this.isProcessing = true;
 
     try {
-      const now = new Date();
-      // Find unresolved Pyth markets that have passed their deadline
-      const expiredMarkets = await this.marketModel.find({
-        isPythMarket: true,
-        status: { $in: ["funding_pool", "tradable"] },
-        deadline: { $lte: now },
-      });
-
-      if (expiredMarkets.length > 0) {
-        this.logger.log(`Found ${expiredMarkets.length} expired Pyth markets to resolve.`);
-      }
-
-      for (const market of expiredMarkets) {
-        try {
-          await this.resolveMarket(market);
-        } catch (error) {
-          this.logger.error(`Failed to auto-resolve market ${market._id}: ${error.message}`);
-        }
-      }
+      await this.processPythMarkets();
+      await this.processSubjectiveMarkets();
     } catch (error) {
       this.logger.error(`Error in keeper loop: ${error.message}`);
     } finally {
       this.isProcessing = false;
+    }
+  }
+
+  async processPythMarkets() {
+    const now = new Date();
+    // Find unresolved Pyth markets that have passed their deadline
+    const expiredMarkets = await this.marketModel.find({
+      isPythMarket: true,
+      status: { $in: ["funding_pool", "tradable"] },
+      deadline: { $lte: now },
+    });
+
+    if (expiredMarkets.length > 0) {
+      this.logger.log(`Found ${expiredMarkets.length} expired Pyth markets to resolve.`);
+    }
+
+    for (const market of expiredMarkets) {
+      try {
+        await this.resolveMarket(market);
+      } catch (error) {
+        this.logger.error(`Failed to auto-resolve market ${market._id}: ${error.message}`);
+      }
+    }
+  }
+
+  async processSubjectiveMarkets() {
+    const now = new Date();
+    // Find unresolved non-Pyth markets that have passed their deadline
+    const expiredMarkets = await this.marketModel.find({
+      isPythMarket: { $ne: true },
+      status: { $in: ["funding_pool", "tradable", "resolving"] },
+      deadline: { $lte: now },
+    });
+
+    if (expiredMarkets.length > 0) {
+      this.logger.log(`Found ${expiredMarkets.length} expired subjective markets for AI resolution.`);
+    }
+
+    for (const market of expiredMarkets) {
+      try {
+        const marketIdStr = market._id.toString();
+        const proposal = await this.blockchainService.readProposal(marketIdStr);
+
+        if (proposal.proposer === "0x0000000000000000000000000000000000000000") {
+          // No proposal yet -> AI agent investigates and proposes
+          this.logger.log(`No active proposal found for market ${marketIdStr}. Invoking AI Agent...`);
+          
+          const result = await this.agentService.resolveMarket(
+            market.question,
+            market.yesCondition,
+            market.noCondition,
+            market.resolutionSource,
+          );
+
+          if (result.outcome === "INVALID") {
+            this.logger.warn(`AI Agent resolved market ${marketIdStr} as INVALID. Skipping automated proposal (requires manual intervention).`);
+            continue;
+          }
+
+          const proposedOutcomeBool = result.outcome === "YES";
+          this.logger.log(`AI Agent proposed outcome: ${result.outcome}. Submitting proposeResolution transaction...`);
+
+          const txHash = await this.blockchainService.proposeResolution(marketIdStr, proposedOutcomeBool);
+          await this.blockchainService.getTransactionReceipt(txHash as `0x${string}`);
+
+          // Save proposal info to DB
+          market.proposalReasoning = result.reasoning;
+          market.proposalCitations = result.citations;
+          market.proposedOutcome = proposedOutcomeBool;
+          market.proposalProposer = "0xKeeper"; // Mark keeper as proposer
+          market.status = "resolving";
+          await market.save();
+
+          this.logger.log(`Successfully proposed resolution for market ${marketIdStr} (Outcome: ${result.outcome})`);
+        } else {
+          // Proposal already exists -> check if disputed or finalized
+          if (proposal.finalized) {
+            // Already finalized on-chain -> sync with DB if needed
+            if (market.status !== "resolved") {
+              const onChainState = await this.blockchainService.readOnChainMarketState(marketIdStr);
+              market.status = "resolved";
+              market.resolvedOutcome = onChainState.winningIsYes ? "YES" : "NO";
+              market.resolvedByAdmin = "0xKeeper";
+              await market.save();
+              this.logger.log(`Synced finalized market ${marketIdStr} in database.`);
+            }
+          } else if (proposal.disputed) {
+            // Disputed but not finalized -> mark as disputed in DB
+            if (!market.disputed) {
+              market.disputed = true;
+              market.proposalDisputer = proposal.disputer;
+              market.status = "resolving";
+              await market.save();
+              this.logger.log(`Market ${marketIdStr} flagged as DISPUTED in database.`);
+            }
+          } else {
+            // Active proposal, undisputed -> check if dispute window has expired
+            const elapsed = Math.floor(Date.now() / 1000) - Number(proposal.proposalTime);
+            // Default dispute window is 2 hours (7200 seconds)
+            const disputeWindowSeconds = 7200;
+            if (elapsed > disputeWindowSeconds) {
+              this.logger.log(`Dispute window for market ${marketIdStr} has elapsed. Finalizing resolution...`);
+              const txHash = await this.blockchainService.finalizeResolution(marketIdStr);
+              await this.blockchainService.getTransactionReceipt(txHash as `0x${string}`);
+
+              market.status = "resolved";
+              market.resolvedOutcome = proposal.proposedWinningOutcome ? "YES" : "NO";
+              market.resolvedByAdmin = "0xKeeper";
+              await market.save();
+
+              this.logger.log(`Successfully finalized resolution for market ${marketIdStr}.`);
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.error(`Error processing subjective market ${market._id}: ${error.message}`);
+      }
     }
   }
 

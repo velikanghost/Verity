@@ -4,3 +4,4 @@ node_modules
 src/seed.ts
 src/scripts/test-backend-e2e.ts
 src/scripts/test-pyth-live.ts
+src/scripts/test-resolver-live.ts

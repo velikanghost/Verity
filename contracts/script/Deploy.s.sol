@@ -6,6 +6,7 @@ import "forge-std/console2.sol";
 import "../src/ConditionalTokenVault.sol";
 import "../src/VerityFPMM.sol";
 import "../src/VerityMarketFactory.sol";
+import "../src/VerityOptimisticResolver.sol";
 import "../test/helpers/MockUSDC.sol";
 import "../test/helpers/MockPyth.sol";
 
@@ -114,11 +115,24 @@ contract Deploy is Script {
         );
         console2.log("VerityMarketFactory deployed at:", address(factory));
 
-        // 4. Wire up permissions
+        // 4. Deploy VerityOptimisticResolver
+        console2.log("Deploying VerityOptimisticResolver...");
+        VerityOptimisticResolver resolver = new VerityOptimisticResolver(
+            usdcAddr,
+            address(factory),
+            deployer // deployer is the initial arbitrator
+        );
+        console2.log(
+            "VerityOptimisticResolver deployed at:",
+            address(resolver)
+        );
+
+        // 5. Wire up permissions
         console2.log("\nWiring up contract permissions...");
         vault.setFPMM(address(fpmm));
         vault.setFactory(address(factory));
         fpmm.setFactory(address(factory));
+        factory.setOptimisticResolver(address(resolver));
         console2.log("Contract permissions wired successfully.");
 
         vm.stopBroadcast();
@@ -127,6 +141,7 @@ contract Deploy is Script {
             address(vault),
             address(fpmm),
             address(factory),
+            address(resolver),
             usdcAddr,
             pythAddr,
             deployer,
@@ -139,12 +154,13 @@ contract Deploy is Script {
         address vault,
         address fpmm,
         address factory,
+        address resolver,
         address usdcAddr,
         address pythAddr,
         address deployer,
         address treasury,
         NetworkConfig memory config
-    ) internal view {
+    ) internal pure {
         console2.log("\n=== Deployment Summary ===");
         console2.log("Network:", config.networkName);
         console2.log("\n--- Contract Addresses ---");
@@ -153,6 +169,7 @@ contract Deploy is Script {
         console2.log("ConditionalTokenVault:", vault);
         console2.log("VerityFPMM (AMM):", fpmm);
         console2.log("VerityMarketFactory (Registry):", factory);
+        console2.log("VerityOptimisticResolver:", resolver);
         console2.log("\n--- Configuration ---");
         console2.log("Admin (Factory/FPMM/Vault Owner):", deployer);
         console2.log("Treasury:", treasury);
