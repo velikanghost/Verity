@@ -926,9 +926,7 @@ function OutcomeButton({
       onClick={() => onClick(side)}
       type="button"
     >
-      <span className="block text-sm font-black text-foreground">
-        {label}
-      </span>
+      <span className="block text-sm font-black text-foreground">{label}</span>
       <span className="font-mono text-[11px] text-muted">
         {price.toFixed(1)}¢ implied
       </span>
@@ -1073,9 +1071,7 @@ function CreationReviewPanel({
     <section className="rounded-[12px] border border-border bg-surface p-5 shadow-sm">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-black text-foreground">
-            Creation & Review
-          </h2>
+          <h2 className="font-black text-foreground">Creation & Review</h2>
           <p className="mt-1 text-sm text-muted">
             Prediction posts pay an Arc testnet creation fee before entering
             social qualification.
@@ -1179,9 +1175,7 @@ function PositionPanel({
             {positionRows.map((position) => (
               <div className="grid gap-4" key={position.id}>
                 <div>
-                  <span className="font-mono text-xs text-muted">
-                    Outcome:
-                  </span>
+                  <span className="font-mono text-xs text-muted">Outcome:</span>
                   <p className="mt-1 text-sm font-semibold text-foreground">
                     {position.side === 'YES' ? 'Yes' : 'No'}
                   </p>
@@ -1234,9 +1228,7 @@ function PositionPanel({
 
       {positionRows.length > 0 && (
         <section className="rounded-[12px] border border-border bg-surface p-5 shadow-sm">
-          <h2 className="font-black text-foreground">
-            My Payout Preview
-          </h2>
+          <h2 className="font-black text-foreground">My Payout Preview</h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
             Preview of potential payouts if the market resolves to your chosen
             outcome side. Payouts are fully secured on-chain.
@@ -1554,7 +1546,7 @@ function VoteQualificationProgressPanel({
   const votesProgress = Math.min(100, (currentVotes / targetVotes) * 100)
   const votersProgress = Math.min(100, (currentVoters / targetVoters) * 100)
 
-  const isDev = process.env.NODE_ENV !== 'production'
+  const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production'
 
   return (
     <section className="rounded-[12px] border border-border bg-surface p-5 shadow-sm">
@@ -2089,19 +2081,14 @@ function ResolutionPanel({
           {market.proposalReasoning && (
             <div className="rounded-[6px] bg-surface-muted p-3 border border-border text-xs text-foreground leading-relaxed">
               <p className="font-bold mb-1">AI Agent Reasoning:</p>
-              <p className="text-muted italic">
-                {market.proposalReasoning}
-              </p>
+              <p className="text-muted italic">{market.proposalReasoning}</p>
               {market.proposalCitations &&
                 market.proposalCitations.length > 0 && (
                   <div className="mt-2">
                     <p className="font-bold mb-1">Sources & Citations:</p>
                     <ul className="list-disc pl-4 space-y-1">
                       {market.proposalCitations.map((c, i) => (
-                        <li
-                          key={i}
-                          className="text-muted truncate max-w-full"
-                        >
+                        <li key={i} className="text-muted truncate max-w-full">
                           <a
                             href={c}
                             target="_blank"
