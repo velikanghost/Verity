@@ -31,7 +31,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen overflow-y-scroll bg-[(--background)] text-[(--foreground)]">
+      <body className="min-h-screen overflow-y-scroll bg-background text-foreground">
         <AppProviders>
           <div className="mx-auto flex min-h-screen w-full max-w-[1440px] justify-center gap-4 px-3 xl:gap-6 xl:px-6">
             {/* Left Sidebar */}

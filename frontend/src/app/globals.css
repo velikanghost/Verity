@@ -14,6 +14,19 @@
   
   --color-upvote: #7ceda5;
   --color-downvote: #ff8ea0;
+  --color-accent: var(--color-brand-accent);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-muted: var(--muted);
+  --color-inverse: var(--inverse);
+  --color-inverse-text: var(--inverse-text);
 }
 
 :root {

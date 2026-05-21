@@ -89,8 +89,8 @@ export default function FeedShell() {
 
   return (
     <div className="flex flex-col gap-3 py-3">
-      <div className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-3 shadow-sm">
-        <div className="mb-2 text-xs font-black text-[(--foreground)]">Category</div>
+      <div className="rounded-[18px] border border-border bg-surface p-3 shadow-sm">
+        <div className="mb-2 text-xs font-black text-foreground">Category</div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {FEED_CATEGORIES.map((category) => {
             const isActive = activeCategory === category;
@@ -100,8 +100,8 @@ export default function FeedShell() {
                 aria-pressed={isActive}
                 className={`h-9 shrink-0 rounded-[8px] border px-4 text-sm transition-colors ${
                   isActive
-                    ? "border-[(--border-strong)] bg-[(--surface-muted)] text-[(--foreground)]"
-                    : "border-[(--border)] bg-[(--surface-solid)] text-[(--foreground)] hover:border-[(--border-strong)]"
+                    ? "border-border-strong bg-surface-muted text-foreground"
+                    : "border-border bg-surface-solid text-foreground hover:border-border-strong"
                 }`}
                 key={category}
                 onClick={() => setActiveCategory(isActive ? null : category)}
@@ -118,7 +118,7 @@ export default function FeedShell() {
       <ComposeBox onCreated={reload} profile={profile} />
 
       {error && (
-        <div className="rounded-[18px] border border-[(--color-brand-accent)]/30 bg-[(--color-brand-accent)]/10 p-4 text-sm font-medium text-[(--foreground)]">
+        <div className="rounded-[18px] border border-brand-accent/30 bg-brand-accent/10 p-4 text-sm font-medium text-foreground">
           {error}
         </div>
       )}
@@ -131,7 +131,7 @@ export default function FeedShell() {
         role="tabpanel"
       >
         {loading ? (
-          <div className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-8 text-center text-sm font-medium text-[(--muted)] shadow-sm">
+          <div className="rounded-[18px] border border-border bg-surface p-8 text-center text-sm font-medium text-muted shadow-sm">
             Loading feed...
           </div>
         ) : visibleItems.length > 0 ? (
@@ -150,7 +150,7 @@ export default function FeedShell() {
             />
           ))
         ) : (
-          <div className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-8 text-center text-sm font-medium text-[(--muted)] shadow-sm">
+          <div className="rounded-[18px] border border-border bg-surface p-8 text-center text-sm font-medium text-muted shadow-sm">
             No feed items yet.
           </div>
         )}

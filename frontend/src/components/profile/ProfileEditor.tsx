@@ -12,14 +12,14 @@ export default function ProfileEditor() {
   const isConnected = Boolean(profile)
 
   return (
-    <section className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-5 shadow-sm">
+    <section className="rounded-[18px] border border-border bg-surface p-5 shadow-sm">
       <div className="mb-5">
         <WalletConnectControl />
       </div>
 
       <div className="flex items-center gap-4">
         <div
-          className="h-16 w-16 rounded-full bg-cover bg-center bg-[(--inverse)]"
+          className="h-16 w-16 rounded-full bg-cover bg-center bg-inverse"
           style={
             profile?.avatar_url
               ? { backgroundImage: `url(${profile.avatar_url})` }
@@ -28,26 +28,26 @@ export default function ProfileEditor() {
         />
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-black text-[(--foreground)]">
+            <h2 className="text-xl font-black text-foreground">
               {isConnected ? displayName(profile) : 'Connect wallet'}
             </h2>
             {profile && (
-              <BadgeCheck className="h-5 w-5 text-[(--color-brand-secondary)]" />
+              <BadgeCheck className="h-5 w-5 text-brand-secondary" />
             )}
           </div>
-          <p className="font-mono text-sm text-[(--muted)]">
+          <p className="font-mono text-sm text-muted">
             {isConnected ? displayHandle(profile) : '@wallet'}
           </p>
         </div>
       </div>
 
       {profile && (
-        <div className="mt-5 rounded-[10px] border border-dashed border-[(--border)] bg-[(--surface-muted)] p-4">
+        <div className="mt-5 rounded-[10px] border border-dashed border-border bg-surface-muted p-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="font-mono text-xs font-black uppercase tracking-[0.14em] text-[(--muted)]">
+            <span className="font-mono text-xs font-black uppercase tracking-[0.14em] text-muted">
               Signal Points
             </span>
-            <span className="font-mono text-lg font-black text-[(--foreground)]">
+            <span className="font-mono text-lg font-black text-foreground">
               {profile.signalPoints || 0}
             </span>
           </div>
@@ -59,7 +59,7 @@ export default function ProfileEditor() {
             <SignalMetric label="Wrong" value={profile.freeVotesWrong || 0} />
             <SignalMetric label="Total" value={profile.freeVotesTotal || 0} />
           </div>
-          <p className="mt-2 text-sm text-[(--muted)]">
+          <p className="mt-2 text-sm text-muted">
             Signal Points activate when markets resolve. Correct early votes and
             correct minority votes earn bonus reputation.
           </p>
@@ -78,11 +78,11 @@ export default function ProfileEditor() {
 
 function SignalMetric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[8px] bg-[(--surface)] p-3">
-      <p className="font-mono text-base font-black text-[(--foreground)]">
+    <div className="rounded-[8px] bg-surface p-3">
+      <p className="font-mono text-base font-black text-foreground">
         {value}
       </p>
-      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[(--muted)]">
+      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
         {label}
       </p>
     </div>
@@ -136,28 +136,28 @@ function ProfileForm({
     <>
       <div className="mt-5 grid gap-3">
         <input
-          className="h-11 rounded-[10px] border border-[(--border)] bg-[(--surface-solid)] px-3 text-sm text-[(--foreground)] outline-none"
+          className="h-11 rounded-[10px] border border-border bg-surface-solid px-3 text-sm text-foreground outline-none"
           disabled={!profile || saving}
           onChange={(event) => setUsername(event.target.value)}
           placeholder="username"
           value={username}
         />
         <input
-          className="h-11 rounded-[10px] border border-[(--border)] bg-[(--surface-solid)] px-3 text-sm text-[(--foreground)] outline-none"
+          className="h-11 rounded-[10px] border border-border bg-surface-solid px-3 text-sm text-foreground outline-none"
           disabled={!profile || saving}
           onChange={(event) => setDisplay(event.target.value)}
           placeholder="Display name"
           value={display}
         />
         <input
-          className="h-11 rounded-[10px] border border-[(--border)] bg-[(--surface-solid)] px-3 text-sm text-[(--foreground)] outline-none"
+          className="h-11 rounded-[10px] border border-border bg-surface-solid px-3 text-sm text-foreground outline-none"
           disabled={!profile || saving}
           onChange={(event) => setAvatar(event.target.value)}
           placeholder="Avatar URL"
           value={avatar}
         />
         <textarea
-          className="min-h-24 rounded-[10px] border border-[(--border)] bg-[(--surface-solid)] p-3 text-sm text-[(--foreground)] outline-none"
+          className="min-h-24 rounded-[10px] border border-border bg-surface-solid p-3 text-sm text-foreground outline-none"
           disabled={!profile || saving}
           onChange={(event) => setBio(event.target.value)}
           placeholder="Bio"
@@ -166,13 +166,13 @@ function ProfileForm({
       </div>
 
       {(message || error || loading) && (
-        <p className="mt-3 text-sm text-[(--muted)]">
+        <p className="mt-3 text-sm text-muted">
           {loading ? 'Loading profile...' : message || error}
         </p>
       )}
 
       <button
-        className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[13px] bg-[(--inverse)] font-mono text-xs font-black uppercase tracking-[0.14em] text-[(--inverse-text)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[13px] bg-inverse font-mono text-xs font-black uppercase tracking-[0.14em] text-inverse-text disabled:cursor-not-allowed disabled:opacity-60"
         disabled={!profile || saving}
         onClick={save}
         type="button"

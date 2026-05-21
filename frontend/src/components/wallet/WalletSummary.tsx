@@ -29,54 +29,54 @@ export default function WalletSummary() {
       <WalletConnectControl />
 
       <section className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-[(--color-brand-secondary)]">
+        <div className="rounded-[18px] border border-border bg-surface p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-brand-secondary">
             <CircleDollarSign className="h-5 w-5" />
             <span className="font-mono text-xs font-black uppercase tracking-[0.16em]">
               Arc USDC
             </span>
           </div>
-          <p className="mt-4 text-3xl font-black text-[(--foreground)]">
+          <p className="mt-4 text-3xl font-black text-foreground">
             {isLoading ? '...' : formattedBalance}
           </p>
-          <p className="font-mono text-xs text-[(--muted)]">
+          <p className="font-mono text-xs text-muted">
             testnet USDC balance
           </p>
         </div>
 
-        <div className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-[(--muted)]">
+        <div className="rounded-[18px] border border-border bg-surface p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-muted">
             <Wallet className="h-5 w-5" />
             <span className="font-mono text-xs font-black uppercase tracking-[0.16em]">
               Wallet
             </span>
           </div>
-          <p className="mt-4 break-all font-mono text-sm font-black text-[(--foreground)]">
+          <p className="mt-4 break-all font-mono text-sm font-black text-foreground">
             {isConnected ? shortAddress(address) : 'Not connected'}
           </p>
-          <p className="mt-1 font-mono text-xs text-[(--muted)]">
+          <p className="mt-1 font-mono text-xs text-muted">
             {isConnected ? address : 'Connect to create posts and vote'}
           </p>
         </div>
       </section>
 
-      <section className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-5 shadow-sm">
+      <section className="rounded-[18px] border border-border bg-surface p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {isConnected && isArcTestnet ? (
-              <CheckCircle2 className="h-5 w-5 text-[(--color-brand-secondary)]" />
+              <CheckCircle2 className="h-5 w-5 text-brand-secondary" />
             ) : (
-              <AlertTriangle className="h-5 w-5 text-[(--color-brand-accent)]" />
+              <AlertTriangle className="h-5 w-5 text-brand-accent" />
             )}
             <div>
-              <h2 className="font-black text-[(--foreground)]">Arc Testnet</h2>
-              <p className="font-mono text-xs text-[(--muted)]">
+              <h2 className="font-black text-foreground">Arc Testnet</h2>
+              <p className="font-mono text-xs text-muted">
                 Required chain ID {arcTestnet.id}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 font-mono text-xs text-[(--muted)]">
+          <div className="flex items-center gap-2 font-mono text-xs text-muted">
             <Network className="h-4 w-4" />
             {isConnected ? `Connected ${chainId}` : 'Disconnected'}
           </div>
@@ -84,7 +84,7 @@ export default function WalletSummary() {
 
         {isConnected && !isArcTestnet && (
           <button
-            className="mt-4 flex h-11 w-full items-center justify-center rounded-[13px] bg-[(--inverse)] font-mono text-xs font-black uppercase tracking-[0.14em] text-[(--inverse-text)] transition-opacity hover:opacity-85"
+            className="mt-4 flex h-11 w-full items-center justify-center rounded-[13px] bg-inverse font-mono text-xs font-black uppercase tracking-[0.14em] text-inverse-text transition-opacity hover:opacity-85"
             disabled={isPending}
             onClick={() => switchChain({ chainId: arcTestnet.id })}
             type="button"

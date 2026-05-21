@@ -300,10 +300,10 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
   }
 
   return (
-    <div className="flex gap-4 rounded-[18px] border border-[(--border)] bg-[(--surface)] p-4 shadow-sm">
+    <div className="flex gap-4 rounded-[18px] border border-border bg-surface p-4 shadow-sm">
       {/* Avatar */}
       <div className="shrink-0">
-        <div className="h-10 w-10 rounded-full bg-[(--inverse)] animate-pulse" />
+        <div className="h-10 w-10 rounded-full bg-inverse animate-pulse" />
       </div>
 
       <div className="flex-1 flex flex-col pt-1">
@@ -314,12 +314,12 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
             profile ? "What's your conviction?" : 'Connect wallet to post'
           }
           value={content}
-          className="min-h-[60px] w-full resize-none border-none bg-transparent text-lg font-semibold text-[(--foreground)] outline-none placeholder:text-[(--muted)]"
+          className="min-h-[60px] w-full resize-none border-none bg-transparent text-lg font-semibold text-foreground outline-none placeholder:text-muted"
         />
 
         {isMarket && (
-          <div className="mt-3 grid gap-3 rounded-[13px] border border-dashed border-[(--border)] bg-[(--surface-muted)] p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-[(--border)] bg-[(--surface)] px-3 py-2 font-mono text-[11px] text-[(--muted)]">
+          <div className="mt-3 grid gap-3 rounded-[13px] border border-dashed border-border bg-surface-muted p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-border bg-surface px-3 py-2 font-mono text-[11px] text-muted">
               <span>
                 Prediction posts cost {MARKET_CREATION_FEE_USDC} Arc testnet
                 USDC
@@ -328,7 +328,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
             </div>
 
             <input
-              className="h-10 rounded-[8px] border border-[(--border)] bg-[(--surface)] px-3 text-sm text-[(--foreground)] outline-none placeholder:text-[(--muted)]"
+              className="h-10 rounded-[8px] border border-border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-muted"
               onChange={(event) =>
                 setMarket((current) => ({
                   ...current,
@@ -341,7 +341,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
 
             <div className="grid gap-2 sm:grid-cols-2">
               <select
-                className="h-10 rounded-[8px] border border-[(--border)] bg-[(--surface)] px-3 text-sm text-[(--foreground)] outline-none"
+                className="h-10 rounded-[8px] border border-border bg-surface px-3 text-sm text-foreground outline-none"
                 onChange={(event) =>
                   setMarket((current) => ({
                     ...current,
@@ -355,7 +355,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                 ))}
               </select>
               <input
-                className="h-10 rounded-[8px] border border-[(--border)] bg-[(--surface)] px-3 text-sm text-[(--foreground)] outline-none"
+                className="h-10 rounded-[8px] border border-border bg-surface px-3 text-sm text-foreground outline-none"
                 onChange={(event) =>
                   setMarket((current) => ({
                     ...current,
@@ -369,30 +369,30 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
 
             {/* Pyth Programmatic Detection Display OR Manual Resolution Fields */}
             {detectedPyth.isPyth ? (
-              <div className="rounded-[10px] border border-[(--color-brand-secondary)]/30 bg-[(--color-brand-secondary)]/5 p-3 flex flex-col gap-1.5">
-                <p className="text-xs text-[(--foreground)] font-semibold leading-relaxed">
+              <div className="rounded-[10px] border border-brand-secondary/30 bg-brand-secondary/5 p-3 flex flex-col gap-1.5">
+                <p className="text-xs text-foreground font-semibold leading-relaxed">
                   Verity detected this is a quantitative price prediction for{' '}
-                  <span className="text-[(--color-brand-secondary)]">
+                  <span className="text-brand-secondary">
                     {detectedPyth.assetName}
                   </span>
                   .
                 </p>
-                <div className="mt-1 grid grid-cols-3 gap-2 rounded-[8px] bg-[(--surface)] border border-[(--border)] p-2 font-mono text-[10px] text-[(--muted)]">
+                <div className="mt-1 grid grid-cols-3 gap-2 rounded-[8px] bg-surface border border-border p-2 font-mono text-[10px] text-muted">
                   <div className="flex flex-col gap-0.5">
                     <span>FEED</span>
-                    <span className="font-bold text-[(--foreground)]">
+                    <span className="font-bold text-foreground">
                       {detectedPyth.asset}/USD
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span>TARGET</span>
-                    <span className="font-bold text-[(--foreground)]">
+                    <span className="font-bold text-foreground">
                       ${detectedPyth.targetPrice?.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span>CONDITION</span>
-                    <span className="font-bold text-[(--foreground)]">
+                    <span className="font-bold text-foreground">
                       {detectedPyth.resolveAbove
                         ? 'Price >= Target'
                         : 'Price < Target'}
@@ -401,12 +401,12 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                 </div>
               </div>
             ) : (
-              <div className="grid gap-2 border-t border-dashed border-[(--border)] pt-2">
-                <label className="text-[10px] font-bold text-[(--muted)] uppercase tracking-wider">
+              <div className="grid gap-2 border-t border-dashed border-border pt-2">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-wider">
                   Resolution Criteria Details
                 </label>
                 <input
-                  className="h-10 rounded-[8px] border border-[(--border)] bg-[(--surface)] px-3 text-sm text-[(--foreground)] outline-none placeholder:text-[(--muted)]"
+                  className="h-10 rounded-[8px] border border-border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-muted"
                   onChange={(event) =>
                     setMarket((current) => ({
                       ...current,
@@ -418,7 +418,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                 />
                 <div className="grid gap-2 sm:grid-cols-2">
                   <input
-                    className="h-10 rounded-[8px] border border-[(--color-brand-secondary)]/40 bg-[(--surface)] px-3 text-sm text-[(--foreground)] outline-none placeholder:text-[(--muted)]"
+                    className="h-10 rounded-[8px] border border-brand-secondary/40 bg-surface px-3 text-sm text-foreground outline-none placeholder:text-muted"
                     onChange={(event) =>
                       setMarket((current) => ({
                         ...current,
@@ -429,7 +429,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                     value={market.yesCondition}
                   />
                   <input
-                    className="h-10 rounded-[8px] border border-[(--color-brand-accent)]/40 bg-[(--surface)] px-3 text-sm text-[(--foreground)] outline-none placeholder:text-[(--muted)]"
+                    className="h-10 rounded-[8px] border border-brand-accent/40 bg-surface px-3 text-sm text-foreground outline-none placeholder:text-muted"
                     onChange={(event) =>
                       setMarket((current) => ({
                         ...current,
@@ -443,18 +443,18 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
               </div>
             )}
 
-            <div className="rounded-[10px] border border-[(--border)] bg-[(--surface)] p-3">
+            <div className="rounded-[10px] border border-border bg-surface p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-[11px] font-black uppercase tracking-[0.12em] text-[(--foreground)]">
+                <span className="font-mono text-[11px] font-black uppercase tracking-[0.12em] text-foreground">
                   Verity AI Agent
                 </span>
                 <span
-                  className={`font-mono text-[11px] font-bold ${visibleAgentReview.approved ? 'text-[(--color-brand-secondary)]' : 'text-[(--color-brand-accent)]'}`}
+                  className={`font-mono text-[11px] font-bold ${visibleAgentReview.approved ? 'text-brand-secondary' : 'text-brand-accent'}`}
                 >
                   {visibleAgentReview.score}/100
                 </span>
               </div>
-              <p className="mb-2 text-sm text-[(--muted)]">
+              <p className="mb-2 text-sm text-muted">
                 {reviewIsCurrent ? visibleAgentReview.summary : marketReadyText}
               </p>
               <div className="grid gap-1">
@@ -462,10 +462,10 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                   <p
                     className={`text-xs ${
                       finding.severity === 'blocker'
-                        ? 'text-[(--color-brand-accent)]'
+                        ? 'text-brand-accent'
                         : finding.severity === 'warning'
-                          ? 'text-[(--muted)]'
-                          : 'text-[(--color-brand-secondary)]'
+                          ? 'text-muted'
+                          : 'text-brand-secondary'
                     }`}
                     key={finding.message}
                   >
@@ -478,14 +478,14 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
         )}
 
         {error && (
-          <p className="mt-2 text-sm text-[(--color-brand-accent)]">{error}</p>
+          <p className="mt-2 text-sm text-brand-accent">{error}</p>
         )}
 
-        <div className="mt-2 flex items-center justify-between border-t border-dashed border-[(--border)] pt-3">
-          <div className="flex items-center gap-1 text-[(--muted)]">
+        <div className="mt-2 flex items-center justify-between border-t border-dashed border-border pt-3">
+          <div className="flex items-center gap-1 text-muted">
             <button
               aria-label="Add image"
-              className="rounded-full p-2 transition-colors hover:bg-[(--surface-hover)] hover:text-[(--foreground)]"
+              className="rounded-full p-2 transition-colors hover:bg-surface-hover hover:text-foreground"
               type="button"
             >
               <ImageIcon className="w-5 h-5" />
@@ -493,9 +493,9 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
             <button
               aria-label="Create market"
               aria-pressed={isMarket}
-              className={`rounded-full p-2 transition-colors hover:bg-[(--surface-hover)] hover:text-[(--foreground)] ${
+              className={`rounded-full p-2 transition-colors hover:bg-surface-hover hover:text-foreground ${
                 isMarket
-                  ? 'bg-[(--color-brand-secondary)]/10 text-[(--color-brand-secondary)]'
+                  ? 'bg-brand-secondary/10 text-brand-secondary'
                   : ''
               }`}
               onClick={() => setIsMarket((current) => !current)}
@@ -505,14 +505,14 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
             </button>
             <button
               aria-label="Add emoji"
-              className="hidden rounded-full p-2 transition-colors hover:bg-[(--surface-hover)] hover:text-[(--foreground)] sm:block"
+              className="hidden rounded-full p-2 transition-colors hover:bg-surface-hover hover:text-foreground sm:block"
               type="button"
             >
               <Smile className="w-5 h-5" />
             </button>
             <button
               aria-label="Add location"
-              className="hidden rounded-full p-2 transition-colors hover:bg-[(--surface-hover)] hover:text-[(--foreground)] sm:block"
+              className="hidden rounded-full p-2 transition-colors hover:bg-surface-hover hover:text-foreground sm:block"
               type="button"
             >
               <MapPin className="w-5 h-5" />
@@ -522,7 +522,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
           <button
             className={`rounded-[10px] px-5 py-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] transition-opacity ${
               canUsePrimaryAction
-                ? 'bg-[(--inverse)] text-[(--inverse-text)] hover:opacity-85'
+                ? 'bg-inverse text-inverse-text hover:opacity-85'
                 : 'cursor-not-allowed bg-zinc-300 text-zinc-500'
             }`}
             disabled={!canUsePrimaryAction}

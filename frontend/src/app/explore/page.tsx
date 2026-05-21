@@ -28,26 +28,26 @@ export default function ExplorePage() {
       eyebrow="Discover"
       title="Explore"
     >
-      <section className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-4 shadow-sm">
+      <section className="rounded-[18px] border border-border bg-surface p-4 shadow-sm">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[(--muted)]" />
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
           <input
-            className="h-12 w-full rounded-[13px] border border-[(--border)] bg-[(--surface-solid)] pl-12 pr-4 text-[(--foreground)] outline-none placeholder:text-[(--muted)] focus:border-[(--border-strong)]"
+            className="h-12 w-full rounded-[13px] border border-border bg-surface-solid pl-12 pr-4 text-foreground outline-none placeholder:text-muted focus:border-border-strong"
             placeholder="Search markets, users, topics..."
             type="text"
           />
         </div>
       </section>
 
-      <section className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-5 shadow-sm">
-        <h2 className="flex items-center gap-2 font-mono text-xs font-black uppercase tracking-[0.16em] text-[(--foreground)]">
-          <Sparkles className="h-4 w-4 text-[(--color-brand-secondary)]" />
+      <section className="rounded-[18px] border border-border bg-surface p-5 shadow-sm">
+        <h2 className="flex items-center gap-2 font-mono text-xs font-black uppercase tracking-[0.16em] text-foreground">
+          <Sparkles className="h-4 w-4 text-brand-secondary" />
           Topics
         </h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {TOPICS.map((topic) => (
             <button
-              className="rounded-[8px] border border-[(--border)] bg-[(--surface-solid)] px-3 py-2 text-sm font-medium text-[(--foreground)] transition-colors hover:border-[(--border-strong)]"
+              className="rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-border-strong"
               key={topic}
               type="button"
             >
@@ -57,24 +57,24 @@ export default function ExplorePage() {
         </div>
       </section>
 
-      <section className="rounded-[18px] border border-[(--border)] bg-[(--surface)] shadow-sm">
-        <div className="border-b border-dashed border-[(--border)] p-5">
-          <h2 className="flex items-center gap-2 font-mono text-xs font-black uppercase tracking-[0.16em] text-[(--foreground)]">
-            <TrendingUp className="h-4 w-4 text-[(--color-brand-secondary)]" />
+      <section className="rounded-[18px] border border-border bg-surface shadow-sm">
+        <div className="border-b border-dashed border-border p-5">
+          <h2 className="flex items-center gap-2 font-mono text-xs font-black uppercase tracking-[0.16em] text-foreground">
+            <TrendingUp className="h-4 w-4 text-brand-secondary" />
             Moving Now
           </h2>
         </div>
         {DISCOVERIES.map((item) => (
           <article
-            className="border-b border-dashed border-[(--border)] p-5 last:border-b-0"
+            className="border-b border-dashed border-border p-5 last:border-b-0"
             key={item.title}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="font-black leading-snug text-[(--foreground)]">{item.title}</h3>
-                <p className="mt-2 font-mono text-xs text-[(--muted)]">{item.meta}</p>
+                <h3 className="font-black leading-snug text-foreground">{item.title}</h3>
+                <p className="mt-2 font-mono text-xs text-muted">{item.meta}</p>
               </div>
-              <span className="font-mono text-sm font-black text-[(--color-brand-secondary)]">{item.trend}</span>
+              <span className="font-mono text-sm font-black text-brand-secondary">{item.trend}</span>
             </div>
           </article>
         ))}

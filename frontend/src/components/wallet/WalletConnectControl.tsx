@@ -21,7 +21,7 @@ export default function WalletConnectControl() {
         if (!ready) {
           return (
             <button
-              className="flex h-11 w-full items-center justify-center rounded-[13px] bg-[(--inverse)] px-4 font-mono text-xs font-black uppercase tracking-[0.14em] text-[(--inverse-text)] opacity-70"
+              className="flex h-11 w-full items-center justify-center rounded-[13px] bg-inverse px-4 font-mono text-xs font-black uppercase tracking-[0.14em] text-inverse-text opacity-70"
               type="button"
             >
               Wallet
@@ -32,7 +32,7 @@ export default function WalletConnectControl() {
         if (!connected) {
           return (
             <button
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-[13px] bg-[(--inverse)] px-4 font-mono text-xs font-black uppercase tracking-[0.14em] text-[(--inverse-text)] transition-opacity hover:opacity-85"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-[13px] bg-inverse px-4 font-mono text-xs font-black uppercase tracking-[0.14em] text-inverse-text transition-opacity hover:opacity-85"
               onClick={openConnectModal}
               type="button"
             >
@@ -57,7 +57,7 @@ export default function WalletConnectControl() {
 
         return (
           <button
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-[13px] border border-[(--border)] bg-[(--surface-muted)] px-4 font-mono text-xs font-black text-[(--foreground)] transition-colors hover:bg-[(--surface-hover)]"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-[13px] border border-border bg-surface-muted px-4 font-mono text-xs font-black text-foreground transition-colors hover:bg-surface-hover"
             onClick={openAccountModal}
             type="button"
           >

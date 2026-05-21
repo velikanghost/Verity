@@ -108,7 +108,7 @@ export default function MarketCard({
 
   return (
     <article
-      className={`rounded-[10px] border border-[(--border)] bg-[(--surface)] p-4 shadow-sm transition-colors hover:bg-[(--surface-solid)] ${
+      className={`rounded-[10px] border border-border bg-surface p-4 shadow-sm transition-colors hover:bg-surface-solid ${
         isDetail ? '' : 'cursor-pointer'
       }`}
       onClick={openDetails}
@@ -123,53 +123,53 @@ export default function MarketCard({
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-[17px] font-bold leading-snug text-[(--foreground)] sm:text-lg">
+          <h3 className="text-[17px] font-bold leading-snug text-foreground sm:text-lg">
             {question}
           </h3>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[(--muted)]">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted">
             <span>by</span>
-            <span className="font-mono text-[(--foreground)]">
+            <span className="font-mono text-foreground">
               {creatorLabel}
             </span>
-            <span className="font-mono text-[(--muted)]">{'\u00B7'}</span>
+            <span className="font-mono text-muted">{'\u00B7'}</span>
             <span className="font-mono">{time}</span>
           </div>
         </div>
 
         <span
-          className={`shrink-0 pt-0.5 font-mono text-[11px] font-bold uppercase tracking-wider ${isClosed ? 'text-[(--muted)]' : 'text-[(--color-brand-secondary)]'}`}
+          className={`shrink-0 pt-0.5 font-mono text-[11px] font-bold uppercase tracking-wider ${isClosed ? 'text-muted' : 'text-brand-secondary'}`}
         >
           {status.replaceAll('_', ' ')}
         </span>
       </div>
 
       {postContent && postContent !== question && (
-        <p className="mb-3 line-clamp-2 whitespace-pre-wrap text-sm leading-relaxed text-[(--muted)]">
+        <p className="mb-3 line-clamp-2 whitespace-pre-wrap text-sm leading-relaxed text-muted">
           {postContent}
         </p>
       )}
 
       <div className="mb-2 flex flex-wrap gap-2">
-        <span className="rounded-[3px] border border-[(--border)] bg-[(--surface-solid)] px-2 py-0.5 font-mono text-[11px] text-[(--muted)]">
+        <span className="rounded-[3px] border border-border bg-surface-solid px-2 py-0.5 font-mono text-[11px] text-muted">
           {category}
         </span>
       </div>
 
-      <div className="mb-3 rounded-[7px] bg-[(--surface-muted)] p-3">
-        <div className="mb-3 font-mono text-[11px] font-bold uppercase text-[(--foreground)]">
+      <div className="mb-3 rounded-[7px] bg-surface-muted p-3">
+        <div className="mb-3 font-mono text-[11px] font-bold uppercase text-foreground">
           Vote sentiment
         </div>
         <div className="flex h-1.5 overflow-hidden rounded-full bg-zinc-200">
           <div
-            className="h-full bg-[(--color-brand-secondary)] transition-all"
+            className="h-full bg-brand-secondary transition-all"
             style={{ width: `${displayYesPercent}%` }}
           />
           <div
-            className="h-full bg-[(--color-brand-accent)] transition-all"
+            className="h-full bg-brand-accent transition-all"
             style={{ width: `${noPercent}%` }}
           />
         </div>
-        <div className="mt-2 flex justify-between font-mono text-[11px] text-[(--muted)]">
+        <div className="mt-2 flex justify-between font-mono text-[11px] text-muted">
           {totalVotes > 0 ? (
             <>
               <span>{displayYesPercent.toFixed(1)}% Yes</span>
@@ -181,7 +181,7 @@ export default function MarketCard({
         </div>
       </div>
 
-      <div className="mb-3 rounded-[7px] border border-dashed border-[(--border)] bg-[(--surface-muted)] p-3 font-mono text-[11px] text-[(--muted)]">
+      <div className="mb-3 rounded-[7px] border border-dashed border-border bg-surface-muted p-3 font-mono text-[11px] text-muted">
         <div className="mb-2 flex flex-wrap justify-between gap-2">
           <span>{totalVotes} votes cast</span>
           <span>
@@ -190,9 +190,9 @@ export default function MarketCard({
               : `${votesToReview} to review`}
           </span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-[(--surface-solid)]">
+        <div className="h-1.5 overflow-hidden rounded-full bg-surface-solid">
           <div
-            className="h-full bg-[(--color-brand-secondary)]"
+            className="h-full bg-brand-secondary"
             style={{ width: `${qualificationProgress}%` }}
           />
         </div>
@@ -204,13 +204,13 @@ export default function MarketCard({
       {isTradable ? (
         <div className="mb-3 grid grid-cols-2 gap-2" onClick={stopClick}>
           <button
-            className="h-9 rounded-[6px] border border-[(--color-brand-secondary)] bg-[(--color-brand-secondary)]/10 text-sm font-bold text-[(--foreground)]"
+            className="h-9 rounded-[6px] border border-brand-secondary bg-brand-secondary/10 text-sm font-bold text-foreground"
             type="button"
           >
             Back YES with USDC
           </button>
           <button
-            className="h-9 rounded-[6px] border border-[(--color-brand-accent)] bg-[(--color-brand-accent)]/10 text-sm font-bold text-[(--foreground)]"
+            className="h-9 rounded-[6px] border border-brand-accent bg-brand-accent/10 text-sm font-bold text-foreground"
             type="button"
           >
             Back NO with USDC
@@ -219,13 +219,13 @@ export default function MarketCard({
       ) : canFreeVote ? (
         <div className="mb-3" onClick={stopClick}>
           {isQualified && (
-            <p className="mb-3 rounded-[7px] border border-[(--color-brand-secondary)]/30 bg-[(--color-brand-secondary)]/10 p-3 text-sm font-semibold text-[(--foreground)]">
+            <p className="mb-3 rounded-[7px] border border-brand-secondary/30 bg-brand-secondary/10 p-3 text-sm font-semibold text-foreground">
               Qualified for USDC trading review
             </p>
           )}
           <div className="mb-2 grid grid-cols-2 gap-2">
             <button
-              className="flex h-8 items-center justify-center gap-1 rounded-[5px] border border-[(--color-brand-secondary)] bg-[(--color-brand-secondary)]/10 text-sm font-medium text-[(--foreground)] transition-colors hover:bg-[(--color-brand-secondary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-8 items-center justify-center gap-1 rounded-[5px] border border-brand-secondary bg-brand-secondary/10 text-sm font-medium text-foreground transition-colors hover:bg-brand-secondary/20 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
               onClick={() => onVote?.('YES')}
               title={yesCondition}
@@ -234,7 +234,7 @@ export default function MarketCard({
               Upvote
             </button>
             <button
-              className="flex h-8 items-center justify-center gap-1 rounded-[5px] border border-[(--color-brand-accent)] bg-[(--color-brand-accent)]/10 text-sm font-medium text-[(--foreground)] transition-colors hover:bg-[(--color-brand-accent)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-8 items-center justify-center gap-1 rounded-[5px] border border-brand-accent bg-brand-accent/10 text-sm font-medium text-foreground transition-colors hover:bg-brand-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
               onClick={() => onVote?.('NO')}
               title={noCondition}
@@ -244,18 +244,18 @@ export default function MarketCard({
             </button>
           </div>
           {votingDisabledMessage && (
-            <p className="font-mono text-[11px] text-[(--color-brand-accent)]">
+            <p className="font-mono text-[11px] text-brand-accent">
               {votingDisabledMessage}
             </p>
           )}
         </div>
       ) : (
-        <p className="mb-3 rounded-[7px] border border-[(--border)] bg-[(--surface-muted)] p-3 text-sm font-semibold text-[(--muted)]">
+        <p className="mb-3 rounded-[7px] border border-border bg-surface-muted p-3 text-sm font-semibold text-muted">
           This market is not open for free voting.
         </p>
       )}
 
-      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] text-[(--muted)]">
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] text-muted">
         {isTradable && (
           <span>
             Liquidity $
@@ -274,14 +274,14 @@ export default function MarketCard({
       </div>
 
       {isDetail && (
-        <div className="mb-3 grid gap-2 rounded-[7px] border border-dashed border-[(--border)] bg-[(--surface-muted)] p-3 font-mono text-[11px] text-[(--muted)]">
+        <div className="mb-3 grid gap-2 rounded-[7px] border border-dashed border-border bg-surface-muted p-3 font-mono text-[11px] text-muted">
           {yesCondition && (
-            <span className="text-[(--color-brand-secondary)]">
+            <span className="text-brand-secondary">
               YES: {yesCondition}
             </span>
           )}
           {noCondition && (
-            <span className="text-[(--color-brand-accent)]">
+            <span className="text-brand-accent">
               NO: {noCondition}
             </span>
           )}
@@ -289,16 +289,16 @@ export default function MarketCard({
       )}
 
       <div
-        className="flex max-w-[425px] items-center justify-between border-t border-dashed border-[(--border)] pt-1.5 text-[(--muted)]"
+        className="flex max-w-[425px] items-center justify-between border-t border-dashed border-border pt-1.5 text-muted"
         onClick={stopClick}
       >
         <button
           aria-label={`Comment on ${question}`}
-          className="group flex items-center gap-2 transition-colors hover:text-[(--foreground)]"
+          className="group flex items-center gap-2 transition-colors hover:text-foreground"
           onClick={onComment}
           type="button"
         >
-          <span className="rounded-full p-2 transition-colors group-hover:bg-[(--surface-hover)]">
+          <span className="rounded-full p-2 transition-colors group-hover:bg-surface-hover">
             <MessageCircle className="h-4 w-4" />
           </span>
           <span className="text-xs">{comments}</span>
@@ -307,11 +307,11 @@ export default function MarketCard({
         <button
           aria-label={`Reshare ${question}`}
           aria-pressed={reshared}
-          className={`group flex items-center gap-2 transition-colors hover:text-[(--foreground)] ${reshared ? 'text-[(--color-brand-secondary)]' : ''}`}
+          className={`group flex items-center gap-2 transition-colors hover:text-foreground ${reshared ? 'text-brand-secondary' : ''}`}
           onClick={onReshare}
           type="button"
         >
-          <span className="rounded-full p-2 transition-colors group-hover:bg-[(--surface-hover)]">
+          <span className="rounded-full p-2 transition-colors group-hover:bg-surface-hover">
             <Repeat2 className="h-4 w-4" />
           </span>
           <span className="text-xs">{reshares}</span>
@@ -320,14 +320,14 @@ export default function MarketCard({
         <button
           aria-label={`Upvote ${question}`}
           aria-pressed={viewerVote === 'YES'}
-          className={`group flex items-center gap-2 transition-colors hover:text-[(--color-brand-secondary)] ${
-            viewerVote === 'YES' ? 'text-[(--color-brand-secondary)]' : ''
+          className={`group flex items-center gap-2 transition-colors hover:text-brand-secondary ${
+            viewerVote === 'YES' ? 'text-brand-secondary' : ''
           }`}
           disabled={voteDisabled}
           onClick={() => onVote?.('YES')}
           type="button"
         >
-          <span className="rounded-full p-2 transition-colors group-hover:bg-[(--color-brand-secondary)]/10">
+          <span className="rounded-full p-2 transition-colors group-hover:bg-brand-secondary/10">
             <ArrowUp className="h-4 w-4" />
           </span>
           <span className="text-xs">{freeYesVotes}</span>
@@ -336,14 +336,14 @@ export default function MarketCard({
         <button
           aria-label={`Downvote ${question}`}
           aria-pressed={viewerVote === 'NO'}
-          className={`group flex items-center gap-2 transition-colors hover:text-[(--color-brand-accent)] ${
-            viewerVote === 'NO' ? 'text-[(--color-brand-accent)]' : ''
+          className={`group flex items-center gap-2 transition-colors hover:text-brand-accent ${
+            viewerVote === 'NO' ? 'text-brand-accent' : ''
           }`}
           disabled={voteDisabled}
           onClick={() => onVote?.('NO')}
           type="button"
         >
-          <span className="rounded-full p-2 transition-colors group-hover:bg-[(--color-brand-accent)]/10">
+          <span className="rounded-full p-2 transition-colors group-hover:bg-brand-accent/10">
             <ArrowDown className="h-4 w-4" />
           </span>
           <span className="text-xs">{freeNoVotes}</span>
@@ -351,11 +351,11 @@ export default function MarketCard({
 
         <button
           aria-label={`Share ${question}`}
-          className="group flex items-center gap-2 transition-colors hover:text-[(--foreground)]"
+          className="group flex items-center gap-2 transition-colors hover:text-foreground"
           onClick={onShare}
           type="button"
         >
-          <span className="rounded-full p-2 transition-colors group-hover:bg-[(--surface-hover)]">
+          <span className="rounded-full p-2 transition-colors group-hover:bg-surface-hover">
             <Share className="h-4 w-4" />
           </span>
         </button>

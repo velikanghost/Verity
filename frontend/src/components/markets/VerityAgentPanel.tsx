@@ -36,28 +36,28 @@ export default function VerityAgentPanel({
     <section
       className={`rounded-[10px] border ${
         agentReview.approved
-          ? 'border-[(--color-brand-secondary)]/30 bg-[(--color-brand-secondary)]/10'
-          : 'border-[(--color-brand-accent)]/30 bg-[(--color-brand-accent)]/10'
+          ? 'border-brand-secondary/30 bg-brand-secondary/10'
+          : 'border-brand-accent/30 bg-brand-accent/10'
       } ${compact ? 'p-3' : 'p-4'}`}
     >
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-[(--foreground)]" />
-          <h2 className="font-mono text-[11px] font-black uppercase tracking-[0.14em] text-[(--foreground)]">
+          <Bot className="h-4 w-4 text-foreground" />
+          <h2 className="font-mono text-[11px] font-black uppercase tracking-[0.14em] text-foreground">
             Verity AI Agent
           </h2>
         </div>
-        <span className="font-mono text-xs font-black text-[(--foreground)]">
+        <span className="font-mono text-xs font-black text-foreground">
           {agentReview.score}/100
         </span>
       </div>
       <div className="flex gap-2">
         <Icon
-          className={`mt-0.5 h-4 w-4 shrink-0 ${agentReview.approved ? 'text-[(--color-brand-secondary)]' : 'text-[(--color-brand-accent)]'}`}
+          className={`mt-0.5 h-4 w-4 shrink-0 ${agentReview.approved ? 'text-brand-secondary' : 'text-brand-accent'}`}
         />
         <div className="min-w-0">
           <p
-            className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-[(--foreground)]`}
+            className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-foreground`}
           >
             {agentReview.summary}
           </p>
@@ -67,10 +67,10 @@ export default function VerityAgentPanel({
                 <p
                   className={`text-xs ${
                     finding.severity === 'blocker'
-                      ? 'text-[(--color-brand-accent)]'
+                      ? 'text-brand-accent'
                       : finding.severity === 'warning'
-                        ? 'text-[(--muted)]'
-                        : 'text-[(--color-brand-secondary)]'
+                        ? 'text-muted'
+                        : 'text-brand-secondary'
                   }`}
                   key={finding.message}
                 >
