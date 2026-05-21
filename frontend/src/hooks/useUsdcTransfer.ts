@@ -1,13 +1,8 @@
 "use client";
 
 import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi";
-import { arcTestnet } from "@/lib/arc";
-import {
-  erc20TransferAbi,
-  getTreasuryAddress,
-  getUsdcTokenAddress,
-  parseUsdcAmount,
-} from "@/lib/usdc";
+import { type Address } from "viem";
+import { arcTestnet, arcUsdcAddress, erc20Abi } from "@/lib/arc";
 
 export function useUsdcTransfer() {
   const { address, isConnected } = useAccount();
@@ -28,20 +23,17 @@ export function useUsdcTransfer() {
       throw new Error("Arc RPC client is not ready.");
     }
 
-    const treasuryAddress = getTreasuryAddress();
+    const treasuryAddress = process.env.NEXT_PUBLIC_VERITY_TREASURY_ADDRESS as Address;
     if (!treasuryAddress) {
-      throw new Error("Set NEXT_PUBLIC_VERITY_TREASURY_ADDRESS in .env.local before paid USDC actions.");
+      throw new Error("Set NEXT_PUBLIC_VERITY_TREASURY_ADDRESS in .env before paid USDC actions.");
     }
 
-    const usdcAddress = getUsdcTokenAddress();
-    if (!usdcAddress) {
-      throw new Error("Arc USDC token address is not configured.");
-    }
+    const rawAmount = BigInt(Math.round(amount * 1e6));
 
     const hash = await writeContractAsync({
-      abi: erc20TransferAbi,
-      address: usdcAddress,
-      args: [treasuryAddress, parseUsdcAmount(amount)],
+      abi: erc20Abi,
+      address: arcUsdcAddress,
+      args: [treasuryAddress, rawAmount],
       chainId: arcTestnet.id,
       functionName: "transfer",
     });

@@ -1,55 +1,48 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
-import { getDevProfile, getOrCreateProfile, type Profile } from "@/lib/verity";
-import { hasApiConfig } from "@/api/client";
+import { useQuery } from '@tanstack/react-query'
+import { useAccount } from 'wagmi'
+import { apiRequest } from '@/store/apiClient'
+import { useEffect } from 'react'
 
 export function useWalletProfile() {
-  const { address, isConnected } = useAccount();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { address, isConnected } = useAccount()
 
-  useEffect(() => {
-    let active = true;
-
-    async function load() {
-      if (!hasApiConfig()) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
+  const {
+    data: profile,
+    refetch,
+    isLoading,
+  } = useQuery({
+    queryKey: ['wallet-profile', address] as const,
+    queryFn: async () => {
+      if (!address) return null
       try {
-        const nextProfile = address && isConnected ? await getOrCreateProfile(address) : await getDevProfile();
-        if (active) setProfile(nextProfile);
-      } catch (caught) {
-        if (active) {
-          setError(caught instanceof Error ? caught.message : "Unable to load profile.");
-          setProfile(null);
+        const res = await apiRequest<any>(`/users/wallet/${address}`)
+        if (!res) return null
+        if (res.token) {
+          localStorage.setItem('verity_auth_token', res.token)
         }
-      } finally {
-        if (active) setLoading(false);
+        // If the API response contains a nested user object, use it; otherwise, use the response object itself.
+        const userProfile = res.user !== undefined ? res.user : res
+        return userProfile || null
+      } catch (err) {
+        console.error('Error fetching wallet profile:', err)
+        return null
       }
+    },
+    enabled: isConnected && Boolean(address),
+  })
+
+  // Handle localstorage cleanup when disconnected
+  useEffect(() => {
+    if (!isConnected) {
+      localStorage.removeItem('verity_auth_token')
     }
-
-    load();
-
-    return () => {
-      active = false;
-    };
-  }, [address, isConnected]);
+  }, [isConnected])
 
   return {
-    address,
-    isConnected: isConnected || Boolean(profile),
-    profile,
-    setProfile,
-    loading,
-    error,
-  };
+    profile: profile || null,
+    isLoading,
+    refetch,
+  }
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, NotImplementedException, Inject, forwardRef, BadRequestException } from "@nestjs/common";
+import { Injectable, NotFoundException, ConflictException, NotImplementedException, Inject, forwardRef, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types, SortOrder } from "mongoose";
 import {
@@ -313,9 +313,46 @@ export class MarketsService {
       throw new ConflictException("Only qualified markets can be approved for USDC trading.");
     }
 
+    // Look up creator wallet address
+    const creator = await this.userModel.findById(market.authorId);
+    if (!creator || !creator.walletAddress) {
+      throw new BadRequestException("Market creator does not have a linked wallet address.");
+    }
+
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const fundingDeadline = market.deadline < sevenDaysFromNow ? market.deadline : sevenDaysFromNow;
+
+    const deadlineUnix = Math.floor(market.deadline.getTime() / 1000);
+    const fundingDeadlineUnix = Math.floor(fundingDeadline.getTime() / 1000);
+
+    // Register market on-chain so depositPreMarketLiquidity won't revert
+    try {
+      if (market.isPythMarket && market.priceFeedId && market.targetPrice != null) {
+        await this.blockchainService.registerPythMarket(
+          marketId,
+          creator.walletAddress,
+          deadlineUnix,
+          fundingDeadlineUnix,
+          market.priceFeedId,
+          market.targetPrice,
+          market.resolveAbove ?? true,
+        );
+      } else {
+        await this.blockchainService.registerMarket(
+          marketId,
+          creator.walletAddress,
+          deadlineUnix,
+          fundingDeadlineUnix,
+        );
+      }
+    } catch (error) {
+      // If already registered on-chain, ignore the error and continue
+      const msg = error?.message || "";
+      if (!msg.includes("MarketAlreadyRegistered")) {
+        throw error;
+      }
+    }
 
     const updatedMarket = await this.marketModel.findByIdAndUpdate(
       marketId,
@@ -327,6 +364,71 @@ export class MarketsService {
   }
 
   async fetchMarketPositions(marketId: string, profileId: string): Promise<MarketPositionResponse[]> {
+    const user = await this.userModel.findById(profileId);
+    if (user && user.walletAddress) {
+      try {
+        const onChain = await this.blockchainService.getUserOnChainBalances(marketId, user.walletAddress);
+
+        // Sync YES Position
+        if (onChain.yesBalance > 0) {
+          await this.marketPositionModel.updateOne(
+            {
+              marketId: new Types.ObjectId(marketId),
+              userId: new Types.ObjectId(profileId),
+              side: "YES",
+            },
+            {
+              $set: {
+                shares: onChain.yesBalance,
+              },
+              $setOnInsert: {
+                avgPrice: 0.5,
+                investedUsdc: onChain.yesBalance * 0.5,
+                realizedPnl: 0,
+              },
+            },
+            { upsert: true }
+          );
+        } else {
+          await this.marketPositionModel.deleteOne({
+            marketId: new Types.ObjectId(marketId),
+            userId: new Types.ObjectId(profileId),
+            side: "YES",
+          });
+        }
+
+        // Sync NO Position
+        if (onChain.noBalance > 0) {
+          await this.marketPositionModel.updateOne(
+            {
+              marketId: new Types.ObjectId(marketId),
+              userId: new Types.ObjectId(profileId),
+              side: "NO",
+            },
+            {
+              $set: {
+                shares: onChain.noBalance,
+              },
+              $setOnInsert: {
+                avgPrice: 0.5,
+                investedUsdc: onChain.noBalance * 0.5,
+                realizedPnl: 0,
+              },
+            },
+            { upsert: true }
+          );
+        } else {
+          await this.marketPositionModel.deleteOne({
+            marketId: new Types.ObjectId(marketId),
+            userId: new Types.ObjectId(profileId),
+            side: "NO",
+          });
+        }
+      } catch (err) {
+        // Fallback to DB if RPC call fails
+      }
+    }
+
     const positions = await this.marketPositionModel.find({
       marketId: new Types.ObjectId(marketId),
       userId: new Types.ObjectId(profileId),
@@ -464,5 +566,37 @@ export class MarketsService {
     await market.save();
 
     return this.postsService.serializeMarket(market);
+  }
+
+  async devQualify(marketId: string): Promise<MarketResponse> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Dev-qualify is not available in production.');
+    }
+
+    const market = await this.marketModel.findById(marketId);
+    if (!market) {
+      throw new NotFoundException('Market not found.');
+    }
+    if (market.status !== 'open_for_votes') {
+      throw new ConflictException(`Market is already in '${market.status}' status.`);
+    }
+
+    market.status = 'qualified';
+    market.totalFreeVotes = market.qualificationThreshold;
+    market.uniqueVotersCount = market.uniqueVoterThreshold;
+    market.freeYesVotes = Math.ceil(market.qualificationThreshold * 0.6);
+    market.freeNoVotes = Math.floor(market.qualificationThreshold * 0.4);
+    await market.save();
+
+    return this.postsService.serializeMarket(market);
+  }
+
+  async fetchAllUserPositions(userId: string): Promise<MarketPositionResponse[]> {
+    const positions = await this.marketPositionModel.find({
+      userId: new Types.ObjectId(userId),
+      shares: { $gt: 0 },
+    }).sort({ updatedAt: -1 });
+
+    return positions.map((p) => this.serializePosition(p));
   }
 }

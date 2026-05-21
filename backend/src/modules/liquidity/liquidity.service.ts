@@ -222,14 +222,36 @@ export class LiquidityService {
     try {
       const onChainState = await this.blockchainService.readPoolBalances(marketId as `0x${string}`);
 
-      pool.yesBalance = Number(onChainState.yesBalance) / 1e6;
-      pool.noBalance = Number(onChainState.noBalance) / 1e6;
-      pool.totalLPShares = Number(onChainState.totalLPShares) / 1e6;
-      pool.currentPoolBalance = Number(onChainState.totalDeposited) / 1e6;
-
       if (onChainState.active) {
-        pool.status = "active";
-      } else if (onChainState.resolved) {
+        pool.yesBalance = Number(onChainState.yesBalance) / 1e6;
+        pool.noBalance = Number(onChainState.noBalance) / 1e6;
+        pool.totalLPShares = Number(onChainState.totalLPShares) / 1e6;
+        pool.currentPoolBalance = Number(onChainState.totalDeposited) / 1e6;
+        pool.status = onChainState.resolved ? "resolved" : "active";
+
+        if (!onChainState.resolved) {
+          // Sync LP positions from chain for all depositors
+          const positions = await this.lpPositionModel.find({ poolId: pool._id });
+          for (const pos of positions) {
+            try {
+              const shares = await this.blockchainService.readLPShares(marketId, pos.walletAddress);
+              pos.lpShares = Number(shares) / 1e6;
+              await pos.save();
+            } catch (err) {
+              // Ignore individual sync failures
+            }
+          }
+        }
+      } else {
+        const escrowBalance = await this.blockchainService.readEscrowBalance(marketId as `0x${string}`);
+        pool.yesBalance = 0;
+        pool.noBalance = 0;
+        pool.totalLPShares = 0;
+        pool.currentPoolBalance = Number(escrowBalance) / 1e6;
+        pool.status = "funding";
+      }
+
+      if (onChainState.resolved) {
         pool.status = "resolved";
       }
 
@@ -238,11 +260,16 @@ export class LiquidityService {
       // Sync Market Status
       const market = await this.marketModel.findById(marketId);
       if (market) {
-        if (onChainState.active && market.status !== "tradable") {
+        if (onChainState.resolved) {
+          if (market.status !== "resolved") {
+            const onChainMarket = await this.blockchainService.readOnChainMarketState(marketId);
+            market.status = "resolved";
+            market.resolvedOutcome = onChainMarket.winningIsYes ? "YES" : "NO";
+            market.resolvedByAdmin = "0xKeeper";
+            await market.save();
+          }
+        } else if (onChainState.active && market.status !== "tradable") {
           market.status = "tradable";
-          await market.save();
-        } else if (onChainState.resolved && market.status !== "resolved") {
-          market.status = "resolved";
           await market.save();
         }
       }
@@ -260,6 +287,9 @@ export class LiquidityService {
   }
 
   async getPoolState(marketId: string) {
+    // Automatically self-heal and sync pool/market state from chain
+    await this.syncPoolFromChain(marketId);
+
     const pool = await this.liquidityPoolModel.findOne({ marketId: new Types.ObjectId(marketId) });
     if (!pool) {
       throw new NotFoundException("Pool not found.");

@@ -22,6 +22,13 @@ export class MarketsController {
     });
   }
 
+  @Get("user-positions/:userId")
+  @ApiOperation({ summary: "Fetch all trading positions for a user across all markets" })
+  @ApiParam({ name: "userId", description: "User profile ID" })
+  async fetchAllUserPositions(@Param("userId") userId: string) {
+    return this.marketsService.fetchAllUserPositions(userId);
+  }
+
   @Get(":marketId")
   @ApiOperation({ summary: "Get detailed information about a single prediction market" })
   @ApiParam({ name: "marketId", description: "Market ID (MongoDB ObjectId or unique string)", example: "60d0fe4f5311236168a109ca" })
@@ -115,6 +122,15 @@ export class MarketsController {
     @Body() dto: ResolveMarketDto,
   ) {
     return this.marketsService.resolveMarket(marketId, dto.winningOutcome, dto.txHash, dto.adminAddress);
+  }
+
+  @Post(":marketId/dev-qualify")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Dev: Skip vote qualification and set market to qualified (non-production only)" })
+  @ApiParam({ name: "marketId", description: "Market ID", example: "60d0fe4f5311236168a109ca" })
+  @ApiResponse({ status: 200, description: "Market fast-tracked to qualified status." })
+  async devQualify(@Param("marketId") marketId: string) {
+    return this.marketsService.devQualify(marketId);
   }
 }
 

@@ -1,16 +1,22 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { createPublicClient, createWalletClient, http, PublicClient, WalletClient, defineChain } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import fpmmAbi from "./abi/VerityFPMM.json";
-import factoryAbi from "./abi/VerityMarketFactory.json";
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  PublicClient,
+  defineChain,
+} from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import fpmmAbi from './abi/VerityFPMM.json';
+import factoryAbi from './abi/VerityMarketFactory.json';
 
 export const arcTestnet = defineChain({
   id: 5042002,
-  name: "Arc Testnet",
-  nativeCurrency: { name: "Arc", symbol: "ARC", decimals: 18 },
+  name: 'Arc Testnet',
+  nativeCurrency: { name: 'Arc', symbol: 'ARC', decimals: 18 },
   rpcUrls: {
-    default: { http: ["https://rpc.testnet.arc.network"] },
+    default: { http: ['https://rpc.testnet.arc.network'] },
   },
 });
 
@@ -32,21 +38,36 @@ export class BlockchainService implements OnModuleInit {
   constructor(private configService: ConfigService) {}
 
   onModuleInit() {
-    const rpcUrl = this.configService.get<string>("ARC_RPC_URL") || "https://rpc.testnet.arc.network";
-    this.fpmmAddress = this.configService.get<string>("FPMM_ADDRESS") as `0x${string}`;
-    this.factoryAddress = this.configService.get<string>("FACTORY_ADDRESS") as `0x${string}`;
-    this.usdcAddress = this.configService.get<string>("USDC_ADDRESS") as `0x${string}`;
-    this.pythAddress = (this.configService.get<string>("PYTH_ADDRESS") || "0x2880aB155794e7179c9eE2e38200202908C17B43") as `0x${string}`;
-    this.resolverAddress = (this.configService.get<string>("RESOLVER_ADDRESS") || "0x0000000000000000000000000000000000000000") as `0x${string}`;
+    const rpcUrl =
+      this.configService.get<string>('ARC_RPC_URL') ||
+      'https://rpc.testnet.arc.network';
+    this.fpmmAddress = this.configService.get<string>(
+      'FPMM_ADDRESS',
+    ) as `0x${string}`;
+    this.factoryAddress = this.configService.get<string>(
+      'FACTORY_ADDRESS',
+    ) as `0x${string}`;
+    this.usdcAddress = this.configService.get<string>(
+      'USDC_ADDRESS',
+    ) as `0x${string}`;
+    this.pythAddress = (this.configService.get<string>('PYTH_ADDRESS') ||
+      '0x2880aB155794e7179c9eE2e38200202908C17B43') as `0x${string}`;
+    this.resolverAddress = (this.configService.get<string>(
+      'RESOLVER_ADDRESS',
+    ) || '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
     this.publicClient = createPublicClient({
       chain: arcTestnet,
       transport: http(rpcUrl),
     }) as PublicClient;
 
-    const rawPrivateKey = this.configService.get<string>("TEST_PRIVATE_KEY") || this.configService.get<string>("KEEPER_PRIVATE_KEY");
+    const rawPrivateKey =
+      this.configService.get<string>('TEST_PRIVATE_KEY') ||
+      this.configService.get<string>('KEEPER_PRIVATE_KEY');
     if (rawPrivateKey) {
-      const privateKey = (rawPrivateKey.startsWith("0x") ? rawPrivateKey : `0x${rawPrivateKey}`) as `0x${string}`;
+      const privateKey = (
+        rawPrivateKey.startsWith('0x') ? rawPrivateKey : `0x${rawPrivateKey}`
+      ) as `0x${string}`;
       this.account = privateKeyToAccount(privateKey);
       this.walletClient = createWalletClient({
         account: this.account,
@@ -62,28 +83,28 @@ export class BlockchainService implements OnModuleInit {
     // Standard ERC20 minimal ABI for USDC
     this.usdcAbi = [
       {
-        type: "function",
-        name: "balanceOf",
-        inputs: [{ name: "account", type: "address" }],
-        outputs: [{ name: "", type: "uint256" }],
-        stateMutability: "view",
+        type: 'function',
+        name: 'balanceOf',
+        inputs: [{ name: 'account', type: 'address' }],
+        outputs: [{ name: '', type: 'uint256' }],
+        stateMutability: 'view',
       },
       {
-        type: "function",
-        name: "allowance",
+        type: 'function',
+        name: 'allowance',
         inputs: [
-          { name: "owner", type: "address" },
-          { name: "spender", type: "address" },
+          { name: 'owner', type: 'address' },
+          { name: 'spender', type: 'address' },
         ],
-        outputs: [{ name: "", type: "uint256" }],
-        stateMutability: "view",
+        outputs: [{ name: '', type: 'uint256' }],
+        stateMutability: 'view',
       },
     ];
   }
 
   private formatMarketId(marketId: string): `0x${string}` {
-    const clean = marketId.replace(/^0x/, "");
-    return `0x${clean.padEnd(64, "0")}` as `0x${string}`;
+    const clean = marketId.replace(/^0x/, '');
+    return `0x${clean.padEnd(64, '0')}` as `0x${string}`;
   }
 
   async readPoolBalances(marketId: string) {
@@ -92,17 +113,17 @@ export class BlockchainService implements OnModuleInit {
       const result = await this.publicClient.readContract({
         address: this.fpmmAddress,
         abi: this.fpmmAbi,
-        functionName: "getPoolBalances",
+        functionName: 'getPoolBalances',
         args: [formattedMarketId],
       });
-      const [yesBalance, noBalance, totalLPShares, totalDeposited, active, resolved] = result as [
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        boolean,
-        boolean,
-      ];
+      const [
+        yesBalance,
+        noBalance,
+        totalLPShares,
+        totalDeposited,
+        active,
+        resolved,
+      ] = result as [bigint, bigint, bigint, bigint, boolean, boolean];
       return {
         yesBalance,
         noBalance,
@@ -112,7 +133,9 @@ export class BlockchainService implements OnModuleInit {
         resolved,
       };
     } catch (error) {
-      throw new Error(`Failed to read pool balances for market ${marketId}: ${error.message}`);
+      throw new Error(
+        `Failed to read pool balances for market ${marketId}: ${error.message}`,
+      );
     }
   }
 
@@ -122,12 +145,14 @@ export class BlockchainService implements OnModuleInit {
       const result = await this.publicClient.readContract({
         address: this.fpmmAddress,
         abi: this.fpmmAbi,
-        functionName: "lpShares",
+        functionName: 'lpShares',
         args: [formattedMarketId, userAddress as `0x${string}`],
       });
       return result as bigint;
     } catch (error) {
-      throw new Error(`Failed to read LP shares for market ${marketId}, user ${userAddress}: ${error.message}`);
+      throw new Error(
+        `Failed to read LP shares for market ${marketId}, user ${userAddress}: ${error.message}`,
+      );
     }
   }
 
@@ -137,14 +162,14 @@ export class BlockchainService implements OnModuleInit {
       const yesPriceResult = await this.publicClient.readContract({
         address: this.fpmmAddress,
         abi: this.fpmmAbi,
-        functionName: "getYesPrice",
+        functionName: 'getYesPrice',
         args: [formattedMarketId],
       });
 
       const noPriceResult = await this.publicClient.readContract({
         address: this.fpmmAddress,
         abi: this.fpmmAbi,
-        functionName: "getNoPrice",
+        functionName: 'getNoPrice',
         args: [formattedMarketId],
       });
 
@@ -161,9 +186,13 @@ export class BlockchainService implements OnModuleInit {
 
   async getTransactionReceipt(txHash: `0x${string}`) {
     try {
-      return await this.publicClient.waitForTransactionReceipt({ hash: txHash });
+      return await this.publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
     } catch (error) {
-      throw new Error(`Transaction verification failed for hash ${txHash}: ${error.message}`);
+      throw new Error(
+        `Transaction verification failed for hash ${txHash}: ${error.message}`,
+      );
     }
   }
 
@@ -173,22 +202,27 @@ export class BlockchainService implements OnModuleInit {
       const result = await this.publicClient.readContract({
         address: this.factoryAddress,
         abi: this.factoryAbi,
-        functionName: "escrowBalances",
+        functionName: 'escrowBalances',
         args: [formattedMarketId],
       });
       return result as bigint;
     } catch (error) {
-      throw new Error(`Failed to read escrow balance for market ${marketId}: ${error.message}`);
+      throw new Error(
+        `Failed to read escrow balance for market ${marketId}: ${error.message}`,
+      );
     }
   }
 
-  async canRemoveLiquidity(marketId: string, walletAddress: string): Promise<boolean> {
+  async canRemoveLiquidity(
+    marketId: string,
+    walletAddress: string,
+  ): Promise<boolean> {
     const formattedMarketId = this.formatMarketId(marketId);
     try {
       const result = await this.publicClient.readContract({
         address: this.fpmmAddress,
         abi: this.fpmmAbi,
-        functionName: "canRemoveLiquidity",
+        functionName: 'canRemoveLiquidity',
         args: [formattedMarketId, walletAddress as `0x${string}`],
       });
       return result as boolean;
@@ -197,14 +231,19 @@ export class BlockchainService implements OnModuleInit {
     }
   }
 
-  async resolveMarketWithPyth(marketId: string, priceUpdate: string[]): Promise<string> {
+  async resolveMarketWithPyth(
+    marketId: string,
+    priceUpdate: string[],
+  ): Promise<string> {
     if (!this.walletClient) {
-      throw new Error("Wallet client not initialized (missing TEST_PRIVATE_KEY or KEEPER_PRIVATE_KEY)");
+      throw new Error(
+        'Wallet client not initialized (missing TEST_PRIVATE_KEY or KEEPER_PRIVATE_KEY)',
+      );
     }
 
     const formattedMarketId = this.formatMarketId(marketId);
     const formattedPriceUpdate = priceUpdate.map(
-      (x) => (x.startsWith("0x") ? x : `0x${x}`) as `0x${string}`,
+      (x) => (x.startsWith('0x') ? x : `0x${x}`) as `0x${string}`,
     );
 
     // Get the required update fee from Pyth contract if we have pythAddress
@@ -215,14 +254,14 @@ export class BlockchainService implements OnModuleInit {
           address: this.pythAddress,
           abi: [
             {
-              type: "function",
-              name: "getUpdateFee",
-              inputs: [{ name: "updateData", type: "bytes[]" }],
-              outputs: [{ name: "fee", type: "uint256" }],
-              stateMutability: "view",
+              type: 'function',
+              name: 'getUpdateFee',
+              inputs: [{ name: 'updateData', type: 'bytes[]' }],
+              outputs: [{ name: 'fee', type: 'uint256' }],
+              stateMutability: 'view',
             },
           ],
-          functionName: "getUpdateFee",
+          functionName: 'getUpdateFee',
           args: [formattedPriceUpdate],
         })) as bigint;
       }
@@ -235,7 +274,7 @@ export class BlockchainService implements OnModuleInit {
       const txHash = await this.walletClient.writeContract({
         address: this.factoryAddress,
         abi: this.factoryAbi,
-        functionName: "resolveMarketWithPyth",
+        functionName: 'resolveMarketWithPyth',
         args: [formattedMarketId, formattedPriceUpdate],
         value: fee,
         chain: arcTestnet,
@@ -243,7 +282,44 @@ export class BlockchainService implements OnModuleInit {
 
       return txHash;
     } catch (error) {
-      throw new Error(`Failed to resolve market ${marketId} with Pyth: ${error.message}`);
+      throw new Error(
+        `Failed to resolve market ${marketId} with Pyth: ${error.message}`,
+      );
+    }
+  }
+
+  async registerMarket(
+    marketId: string,
+    creator: string,
+    deadline: number,
+    fundingDeadline: number,
+  ): Promise<string> {
+    if (!this.walletClient) {
+      throw new Error(
+        'Wallet client not initialized (missing TEST_PRIVATE_KEY or KEEPER_PRIVATE_KEY)',
+      );
+    }
+
+    const formattedMarketId = this.formatMarketId(marketId);
+
+    try {
+      const txHash = await this.walletClient.writeContract({
+        address: this.factoryAddress,
+        abi: this.factoryAbi,
+        functionName: 'registerMarket',
+        args: [
+          formattedMarketId,
+          creator as `0x${string}`,
+          BigInt(deadline),
+          BigInt(fundingDeadline),
+        ],
+        chain: arcTestnet,
+      });
+      return txHash;
+    } catch (error) {
+      throw new Error(
+        `Failed to register market ${marketId}: ${error.message}`,
+      );
     }
   }
 
@@ -257,17 +333,19 @@ export class BlockchainService implements OnModuleInit {
     resolveAbove: boolean,
   ): Promise<string> {
     if (!this.walletClient) {
-      throw new Error("Wallet client not initialized");
+      throw new Error('Wallet client not initialized');
     }
 
     const formattedMarketId = this.formatMarketId(marketId);
-    const formattedPriceFeedId = (priceFeedId.startsWith("0x") ? priceFeedId : `0x${priceFeedId}`) as `0x${string}`;
+    const formattedPriceFeedId = (
+      priceFeedId.startsWith('0x') ? priceFeedId : `0x${priceFeedId}`
+    ) as `0x${string}`;
 
     try {
       const txHash = await this.walletClient.writeContract({
         address: this.factoryAddress,
         abi: this.factoryAbi,
-        functionName: "registerPythMarket",
+        functionName: 'registerPythMarket',
         args: [
           formattedMarketId,
           creator as `0x${string}`,
@@ -281,7 +359,9 @@ export class BlockchainService implements OnModuleInit {
       });
       return txHash;
     } catch (error) {
-      throw new Error(`Failed to register Pyth market ${marketId}: ${error.message}`);
+      throw new Error(
+        `Failed to register Pyth market ${marketId}: ${error.message}`,
+      );
     }
   }
 
@@ -289,38 +369,132 @@ export class BlockchainService implements OnModuleInit {
     const formattedMarketId = this.formatMarketId(marketId);
     try {
       const result = await this.publicClient.readContract({
-        address: this.configService.get<string>("CONDITIONAL_TOKEN_VAULT_ADDRESS") as `0x${string}`,
+        address: this.configService.get<string>(
+          'CONDITIONAL_TOKEN_VAULT_ADDRESS',
+        ) as `0x${string}`,
         abi: [
           {
-            type: "function",
-            name: "markets",
-            inputs: [{ name: "", type: "bytes32" }],
+            type: 'function',
+            name: 'markets',
+            inputs: [{ name: '', type: 'bytes32' }],
             outputs: [
-              { name: "resolved", type: "bool" },
-              { name: "winningIsYes", type: "bool" },
-              { name: "totalCollateral", type: "uint256" },
+              { name: 'resolved', type: 'bool' },
+              { name: 'winningIsYes', type: 'bool' },
+              { name: 'totalCollateral', type: 'uint256' },
             ],
-            stateMutability: "view",
+            stateMutability: 'view',
           },
         ],
-        functionName: "markets",
+        functionName: 'markets',
         args: [formattedMarketId],
       });
-      const [resolved, winningIsYes, totalCollateral] = result as [boolean, boolean, bigint];
+      const [resolved, winningIsYes, totalCollateral] = result as [
+        boolean,
+        boolean,
+        bigint,
+      ];
       return { resolved, winningIsYes, totalCollateral };
     } catch (error) {
-      throw new Error(`Failed to read on-chain market state for ${marketId}: ${error.message}`);
+      throw new Error(
+        `Failed to read on-chain market state for ${marketId}: ${error.message}`,
+      );
     }
   }
 
-  async approveUsdcIfNecessary(spender: string, amount: bigint): Promise<string | null> {
+  async getUserOnChainBalances(marketId: string, userAddress: string) {
+    const formattedMarketId = this.formatMarketId(marketId);
+    const vaultAddress = this.configService.get<string>(
+      'CONDITIONAL_TOKEN_VAULT_ADDRESS',
+    ) as `0x${string}`;
+    try {
+      // 1. Get YES/NO token IDs
+      const yesId = await this.publicClient.readContract({
+        address: vaultAddress,
+        abi: [
+          {
+            type: 'function',
+            name: 'yesTokenId',
+            inputs: [{ name: 'marketId', type: 'bytes32' }],
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'pure',
+          },
+        ],
+        functionName: 'yesTokenId',
+        args: [formattedMarketId],
+      });
+
+      const noId = await this.publicClient.readContract({
+        address: vaultAddress,
+        abi: [
+          {
+            type: 'function',
+            name: 'noTokenId',
+            inputs: [{ name: 'marketId', type: 'bytes32' }],
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'pure',
+          },
+        ],
+        functionName: 'noTokenId',
+        args: [formattedMarketId],
+      });
+
+      // 2. Query balanceOf for both YES and NO token IDs
+      const yesBalance = await this.publicClient.readContract({
+        address: vaultAddress,
+        abi: [
+          {
+            type: 'function',
+            name: 'balanceOf',
+            inputs: [
+              { name: 'account', type: 'address' },
+              { name: 'id', type: 'uint256' },
+            ],
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'view',
+          },
+        ],
+        functionName: 'balanceOf',
+        args: [userAddress as `0x${string}`, yesId],
+      });
+
+      const noBalance = await this.publicClient.readContract({
+        address: vaultAddress,
+        abi: [
+          {
+            type: 'function',
+            name: 'balanceOf',
+            inputs: [
+              { name: 'account', type: 'address' },
+              { name: 'id', type: 'uint256' },
+            ],
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'view',
+          },
+        ],
+        functionName: 'balanceOf',
+        args: [userAddress as `0x${string}`, noId],
+      });
+
+      return {
+        yesBalance: Number(yesBalance) / 1e6,
+        noBalance: Number(noBalance) / 1e6,
+      };
+    } catch (error) {
+      return { yesBalance: 0, noBalance: 0 };
+    }
+  }
+
+  async approveUsdcIfNecessary(
+    spender: string,
+    amount: bigint,
+  ): Promise<string | null> {
     if (!this.walletClient) {
-      throw new Error("Wallet client not initialized");
+      throw new Error('Wallet client not initialized');
     }
     const allowance = (await this.publicClient.readContract({
       address: this.usdcAddress,
       abi: this.usdcAbi,
-      functionName: "allowance",
+      functionName: 'allowance',
       args: [this.account.address, spender as `0x${string}`],
     })) as bigint;
 
@@ -333,17 +507,17 @@ export class BlockchainService implements OnModuleInit {
       address: this.usdcAddress,
       abi: [
         {
-          type: "function",
-          name: "approve",
+          type: 'function',
+          name: 'approve',
           inputs: [
-            { name: "spender", type: "address" },
-            { name: "amount", type: "uint256" },
+            { name: 'spender', type: 'address' },
+            { name: 'amount', type: 'uint256' },
           ],
-          outputs: [{ name: "", type: "bool" }],
-          stateMutability: "nonpayable",
+          outputs: [{ name: '', type: 'bool' }],
+          stateMutability: 'nonpayable',
         },
       ],
-      functionName: "approve",
+      functionName: 'approve',
       args: [spender as `0x${string}`, amount],
       chain: arcTestnet,
     });
@@ -359,14 +533,14 @@ export class BlockchainService implements OnModuleInit {
         address: this.resolverAddress,
         abi: [
           {
-            type: "function",
-            name: "resolutionBond",
+            type: 'function',
+            name: 'resolutionBond',
             inputs: [],
-            outputs: [{ name: "", type: "uint256" }],
-            stateMutability: "view",
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'view',
           },
         ],
-        functionName: "resolutionBond",
+        functionName: 'resolutionBond',
         args: [],
       });
       return result as bigint;
@@ -383,31 +557,31 @@ export class BlockchainService implements OnModuleInit {
         address: this.resolverAddress,
         abi: [
           {
-            type: "function",
-            name: "proposals",
-            inputs: [{ name: "", type: "bytes32" }],
+            type: 'function',
+            name: 'proposals',
+            inputs: [{ name: '', type: 'bytes32' }],
             outputs: [
-              { name: "proposer", type: "address" },
-              { name: "proposedWinningOutcome", type: "bool" },
-              { name: "proposalTime", type: "uint256" },
-              { name: "disputed", type: "bool" },
-              { name: "disputer", type: "address" },
-              { name: "finalized", type: "bool" },
+              { name: 'proposer', type: 'address' },
+              { name: 'proposedWinningOutcome', type: 'bool' },
+              { name: 'proposalTime', type: 'uint256' },
+              { name: 'disputed', type: 'bool' },
+              { name: 'disputer', type: 'address' },
+              { name: 'finalized', type: 'bool' },
             ],
-            stateMutability: "view",
+            stateMutability: 'view',
           },
         ],
-        functionName: "proposals",
+        functionName: 'proposals',
         args: [formattedMarketId],
       });
-      const [proposer, proposedWinningOutcome, proposalTime, disputed, disputer, finalized] = result as [
-        string,
-        boolean,
-        bigint,
-        boolean,
-        string,
-        boolean,
-      ];
+      const [
+        proposer,
+        proposedWinningOutcome,
+        proposalTime,
+        disputed,
+        disputer,
+        finalized,
+      ] = result as [string, boolean, bigint, boolean, string, boolean];
       return {
         proposer,
         proposedWinningOutcome,
@@ -417,13 +591,18 @@ export class BlockchainService implements OnModuleInit {
         finalized,
       };
     } catch (error) {
-      throw new Error(`Failed to read proposal for market ${marketId}: ${error.message}`);
+      throw new Error(
+        `Failed to read proposal for market ${marketId}: ${error.message}`,
+      );
     }
   }
 
-  async proposeResolution(marketId: string, proposedOutcome: boolean): Promise<string> {
+  async proposeResolution(
+    marketId: string,
+    proposedOutcome: boolean,
+  ): Promise<string> {
     if (!this.walletClient) {
-      throw new Error("Wallet client not initialized");
+      throw new Error('Wallet client not initialized');
     }
     const bondAmount = await this.getResolutionBond();
     await this.approveUsdcIfNecessary(this.resolverAddress, bondAmount);
@@ -434,29 +613,31 @@ export class BlockchainService implements OnModuleInit {
         address: this.resolverAddress,
         abi: [
           {
-            type: "function",
-            name: "proposeResolution",
+            type: 'function',
+            name: 'proposeResolution',
             inputs: [
-              { name: "marketId", type: "bytes32" },
-              { name: "proposedOutcome", type: "bool" },
+              { name: 'marketId', type: 'bytes32' },
+              { name: 'proposedOutcome', type: 'bool' },
             ],
             outputs: [],
-            stateMutability: "nonpayable",
+            stateMutability: 'nonpayable',
           },
         ],
-        functionName: "proposeResolution",
+        functionName: 'proposeResolution',
         args: [formattedMarketId, proposedOutcome],
         chain: arcTestnet,
       });
       return txHash;
     } catch (error) {
-      throw new Error(`Failed to propose resolution for market ${marketId}: ${error.message}`);
+      throw new Error(
+        `Failed to propose resolution for market ${marketId}: ${error.message}`,
+      );
     }
   }
 
   async disputeResolution(marketId: string): Promise<string> {
     if (!this.walletClient) {
-      throw new Error("Wallet client not initialized");
+      throw new Error('Wallet client not initialized');
     }
     const bondAmount = await this.getResolutionBond();
     await this.approveUsdcIfNecessary(this.resolverAddress, bondAmount);
@@ -467,26 +648,28 @@ export class BlockchainService implements OnModuleInit {
         address: this.resolverAddress,
         abi: [
           {
-            type: "function",
-            name: "disputeResolution",
-            inputs: [{ name: "marketId", type: "bytes32" }],
+            type: 'function',
+            name: 'disputeResolution',
+            inputs: [{ name: 'marketId', type: 'bytes32' }],
             outputs: [],
-            stateMutability: "nonpayable",
+            stateMutability: 'nonpayable',
           },
         ],
-        functionName: "disputeResolution",
+        functionName: 'disputeResolution',
         args: [formattedMarketId],
         chain: arcTestnet,
       });
       return txHash;
     } catch (error) {
-      throw new Error(`Failed to dispute resolution for market ${marketId}: ${error.message}`);
+      throw new Error(
+        `Failed to dispute resolution for market ${marketId}: ${error.message}`,
+      );
     }
   }
 
   async finalizeResolution(marketId: string): Promise<string> {
     if (!this.walletClient) {
-      throw new Error("Wallet client not initialized");
+      throw new Error('Wallet client not initialized');
     }
     const formattedMarketId = this.formatMarketId(marketId);
     try {
@@ -494,26 +677,31 @@ export class BlockchainService implements OnModuleInit {
         address: this.resolverAddress,
         abi: [
           {
-            type: "function",
-            name: "finalizeResolution",
-            inputs: [{ name: "marketId", type: "bytes32" }],
+            type: 'function',
+            name: 'finalizeResolution',
+            inputs: [{ name: 'marketId', type: 'bytes32' }],
             outputs: [],
-            stateMutability: "nonpayable",
+            stateMutability: 'nonpayable',
           },
         ],
-        functionName: "finalizeResolution",
+        functionName: 'finalizeResolution',
         args: [formattedMarketId],
         chain: arcTestnet,
       });
       return txHash;
     } catch (error) {
-      throw new Error(`Failed to finalize resolution for market ${marketId}: ${error.message}`);
+      throw new Error(
+        `Failed to finalize resolution for market ${marketId}: ${error.message}`,
+      );
     }
   }
 
-  async resolveDisputedMarket(marketId: string, winningIsYes: boolean): Promise<string> {
+  async resolveDisputedMarket(
+    marketId: string,
+    winningIsYes: boolean,
+  ): Promise<string> {
     if (!this.walletClient) {
-      throw new Error("Wallet client not initialized");
+      throw new Error('Wallet client not initialized');
     }
     const formattedMarketId = this.formatMarketId(marketId);
     try {
@@ -521,23 +709,25 @@ export class BlockchainService implements OnModuleInit {
         address: this.resolverAddress,
         abi: [
           {
-            type: "function",
-            name: "resolveDisputedMarket",
+            type: 'function',
+            name: 'resolveDisputedMarket',
             inputs: [
-              { name: "marketId", type: "bytes32" },
-              { name: "winningIsYes", type: "bool" },
+              { name: 'marketId', type: 'bytes32' },
+              { name: 'winningIsYes', type: 'bool' },
             ],
             outputs: [],
-            stateMutability: "nonpayable",
+            stateMutability: 'nonpayable',
           },
         ],
-        functionName: "resolveDisputedMarket",
+        functionName: 'resolveDisputedMarket',
         args: [formattedMarketId, winningIsYes],
         chain: arcTestnet,
       });
       return txHash;
     } catch (error) {
-      throw new Error(`Failed to resolve disputed market ${marketId}: ${error.message}`);
+      throw new Error(
+        `Failed to resolve disputed market ${marketId}: ${error.message}`,
+      );
     }
   }
 }

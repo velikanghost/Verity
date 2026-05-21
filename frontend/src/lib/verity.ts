@@ -1,7 +1,4 @@
 import { formatDistanceToNow } from "date-fns";
-import { calculateTradingFee } from "@/lib/fees";
-import * as usersApi from "@/api/users";
-import * as verityApi from "@/api/verity";
 
 export type PostType = "normal" | "market";
 export type VoteSide = "YES" | "NO";
@@ -61,6 +58,24 @@ export interface MarketPost {
   feeCollectorAddress?: string | null;
   fee_collector_address?: string | null;
   trading_fee_bps?: number;
+  resolvedOutcome?: string | null;
+  resolved_outcome?: string | null;
+  resolvedByAdmin?: string | null;
+  resolved_by_admin?: string | null;
+  isPythMarket?: boolean;
+  is_pyth_market?: boolean;
+  priceFeedId?: string | null;
+  price_feed_id?: string | null;
+  targetPrice?: number | null;
+  target_price?: number | null;
+  resolveAbove?: boolean;
+  resolve_above?: boolean;
+  proposalReasoning?: string | null;
+  proposalCitations?: string[] | null;
+  proposalProposer?: string | null;
+  proposalDisputer?: string | null;
+  disputed?: boolean;
+  proposedOutcome?: boolean | null;
   created_at: string;
   createdAt?: string;
   updatedAt?: string;
@@ -133,6 +148,9 @@ export interface MarketInput {
   noCondition: string;
   creationFeeTxHash?: string;
   feeCollectorAddress?: string;
+  priceFeedId?: string;
+  targetPrice?: number;
+  resolveAbove?: boolean;
 }
 
 export function displayName(profile?: Profile | null) {
@@ -153,21 +171,20 @@ export function relativeTime(value: string) {
   }
 }
 
-export const getOrCreateProfile = usersApi.getOrCreateProfile;
-export const getDevProfile = usersApi.getDevProfile;
-export const updateProfile = usersApi.updateProfile;
-export const fetchFeed = verityApi.fetchFeed;
-export const createNormalPost = verityApi.createNormalPost;
-export const createMarketPost = verityApi.createMarketPost;
-export const toggleLike = verityApi.toggleLike;
-export const toggleReshare = verityApi.toggleReshare;
-export const addComment = verityApi.addComment;
-export const fetchPostComments = verityApi.fetchPostComments;
-export const fetchMarketPositions = verityApi.fetchMarketPositions;
-export const fetchMarketTrades = verityApi.fetchMarketTrades;
-export const castFreeVote = verityApi.castFreeVote;
-export const approveMarketForTrading = verityApi.approveMarketForTrading;
-export const executeMarketTrade = verityApi.executeMarketTrade;
+export const MARKET_CREATION_FEE_USDC = 1;
+export const TRADING_FEE_BPS = 200;
+
+export function formatTradingFee(bps = TRADING_FEE_BPS) {
+  return `${(bps / 100).toFixed(1)}%`;
+}
+
+export function calculateTradingFee(amount: number, bps = TRADING_FEE_BPS) {
+  return amount * (bps / 10_000);
+}
+
+export function calculateGrossUsdc(amount: number, bps = TRADING_FEE_BPS) {
+  return amount + calculateTradingFee(amount, bps);
+}
 
 const MIN_MARKET_PRICE = 0.01;
 const MAX_MARKET_PRICE = 0.99;
@@ -185,31 +202,10 @@ export function getMarketPrice(market: Pick<MarketPost, "usdc_yes_amount" | "usd
   return clampMarketPrice(side === "YES" ? yesPrice : 1 - yesPrice);
 }
 
-export async function castUsdcVote({
-  market,
-  profileId,
-  side,
-  amount,
-  feeAmount,
-  grossAmount,
-  txHash,
-}: {
-  market: MarketPost;
-  profileId: string;
-  side: VoteSide;
-  amount: number;
-  feeAmount: number;
-  grossAmount: number;
-  txHash: string;
-}) {
-  await executeMarketTrade({
-    market,
-    profileId,
-    side,
-    action: "BUY",
-    amount,
-    feeAmount: feeAmount ?? calculateTradingFee(amount, market.trading_fee_bps),
-    grossAmount,
-    txHash,
-  });
+export function calculateYesPercent(market: Pick<MarketPost, "usdc_yes_amount" | "usdc_no_amount">) {
+  const yes = Number(market.usdc_yes_amount);
+  const no = Number(market.usdc_no_amount);
+  const total = yes + no;
+  if (total === 0) return 50;
+  return Math.round((yes / total) * 100);
 }

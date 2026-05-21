@@ -4,7 +4,7 @@ This directory contains the smart contracts for the Verity prediction market pla
 
 ## Contract Architecture
 
-The core of Verity's prediction market is composed of three primary smart contracts:
+The core of Verity's prediction market is composed of four primary smart contracts:
 
 1. **`ConditionalTokenVault.sol`**:
    - Manages escrowed collateral (USDC).
@@ -16,11 +16,18 @@ The core of Verity's prediction market is composed of three primary smart contra
    - Enforces market creation fee collection.
    - Holds pre-market liquidity escrow deposits.
    - Automatically deploys and initializes the corresponding `VerityFPMM` market pool once the 40 USDC funding threshold is crossed.
+   - Provides callback pathways (`resolveMarketFromResolver`) allowing resolution from external resolution contracts.
 
 3. **`VerityFPMM.sol`**:
    - The Fixed Product Market Maker (AMM) contract.
    - Allows users to buy/sell YES and NO outcome tokens using USDC.
-   - Manages LP positions, share minting/burning, and 24-hour LP lock-up rules.
+   - Manages LP positions, share minting/burning, and LP lock-up rules.
+
+4. **`VerityOptimisticResolver.sol`**:
+   - Manages subjective prediction market resolution.
+   - Anyone can propose an outcome by staking a 10 USDC proposer bond.
+   - Staking a 10 USDC dispute bond flags the proposal as disputed and forwards decision-making to the `arbitrator`.
+   - Finalizes undisputed proposals after the configured dispute window (e.g. 2 minutes for testing, 2 hours on prod) and resolves the market on-chain.
 
 ---
 
@@ -42,7 +49,7 @@ forge build
 The compiled JSON artifacts will be placed in the `out/` directory.
 
 ### Run Tests
-Execute the Solidity unit test suite:
+Execute the Solidity unit and integration test suite:
 ```bash
 forge test
 ```
@@ -55,12 +62,16 @@ forge test -vvvv
 ### Deploying to Arc Testnet
 A deployment script is provided at `script/Deploy.s.sol`. To execute a live deployment to Arc Testnet:
 
-1. Setup environment variables or pass options inline:
+1. Run the script using forge:
 ```bash
-forge script script/Deploy.s.sol:DeployScript \
+forge script script/Deploy.s.sol:Deploy \
   --rpc-url https://rpc.testnet.arc.network \
   --private-key <your_private_key> \
   --broadcast
 ```
 
-2. Note the deployed contract addresses printed to the terminal. You will need to add these to your backend `.env` configuration file.
+2. Note the deployed contract addresses printed in the deployment summary. Update your backend `.env` file with these values:
+   - `CONDITIONAL_TOKEN_VAULT_ADDRESS`
+   - `FPMM_ADDRESS`
+   - `FACTORY_ADDRESS`
+   - `RESOLVER_ADDRESS`

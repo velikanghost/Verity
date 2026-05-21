@@ -1,41 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { fetchFeed, type FeedPost } from "@/lib/verity";
-import { hasApiConfig } from "@/api/client";
+import { useFeedQuery } from "@/store/verity/verityQueries";
 
 export function useFeed(profileId?: string, onlyMarkets = false) {
-  const [items, setItems] = useState<FeedPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, isError, error, refetch } = useFeedQuery(
+    profileId,
+    onlyMarkets
+  );
 
-  const reload = useCallback(async () => {
-    if (!hasApiConfig()) {
-      setItems([]);
-      setError("Add the API environment variable to load live Verity data.");
-      setLoading(false);
-      return;
-    }
+  const errorMessage = isError
+    ? (error as any)?.message || "Unable to load feed."
+    : null;
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      setItems(await fetchFeed(profileId, onlyMarkets));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to load feed.");
-    } finally {
-      setLoading(false);
-    }
-  }, [onlyMarkets, profileId]);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      void reload();
-    }, 0);
-
-    return () => window.clearTimeout(timeout);
-  }, [reload]);
-
-  return { items, loading, error, reload };
+  return {
+    items: data || [],
+    loading: isLoading,
+    error: errorMessage,
+    reload: refetch,
+  };
 }

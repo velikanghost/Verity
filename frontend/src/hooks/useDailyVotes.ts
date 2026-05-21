@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { fetchDailyVotes } from "@/api/users";
+import { useDailyVotesQuery } from "@/store/verity/verityQueries";
 
 export interface DailyVotes {
   votesLimit: number;
@@ -18,47 +17,11 @@ const EMPTY_DAILY_VOTES: DailyVotes = {
 };
 
 export function useDailyVotes(userId?: string) {
-  const [dailyVotes, setDailyVotes] = useState<DailyVotes>(EMPTY_DAILY_VOTES);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, refetch } = useDailyVotesQuery(userId || "");
 
-  const reload = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      setDailyVotes(await fetchDailyVotes(userId));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to load daily votes.");
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    let active = true;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const nextDailyVotes = await fetchDailyVotes(userId!);
-        if (active) setDailyVotes(nextDailyVotes);
-      } catch (caught) {
-        if (active) setError(caught instanceof Error ? caught.message : "Unable to load daily votes.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    void load();
-
-    return () => {
-      active = false;
-    };
-  }, [userId]);
-
-  return { dailyVotes, setDailyVotes, loading, error, reload };
+  return {
+    dailyVotes: data || EMPTY_DAILY_VOTES,
+    isLoading,
+    refetch,
+  };
 }

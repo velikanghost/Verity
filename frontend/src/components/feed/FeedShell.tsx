@@ -10,17 +10,20 @@ import { useDailyVotes } from "@/hooks/useDailyVotes";
 import { useFeed } from "@/hooks/useFeed";
 import { useWalletProfile } from "@/hooks/useWalletProfile";
 import {
-  addComment,
-  castFreeVote,
   displayHandle,
   displayName,
   relativeTime,
-  toggleLike,
-  toggleReshare,
   type FeedPost,
   type MarketPost,
   type VoteSide,
 } from "@/lib/verity";
+import {
+  useAddCommentMutation,
+  useToggleLikeMutation,
+  useToggleReshareMutation,
+  useCastFreeVoteMutation,
+} from "@/store/verity/verityQueries";
+import { toast } from "react-hot-toast";
 
 const FEED_CATEGORIES = [
   "Crypto",
@@ -38,9 +41,13 @@ export default function FeedShell() {
   const [activeTab, setActiveTab] = useState<FeedTabId>("for-you");
   const [activeCategory, setActiveCategory] = useState<FeedCategory | null>(null);
   const { profile } = useWalletProfile();
-  const { dailyVotes, reload: reloadDailyVotes } = useDailyVotes(profile?.id);
+  const { dailyVotes, refetch: reloadDailyVotes } = useDailyVotes(profile?.id);
   const { items, loading, error, reload } = useFeed(profile?.id, activeTab === "markets");
-  const [actionError, setActionError] = useState<string | null>(null);
+
+  const { mutateAsync: addComment } = useAddCommentMutation();
+  const { mutateAsync: toggleLike } = useToggleLikeMutation();
+  const { mutateAsync: toggleReshare } = useToggleReshareMutation();
+  const { mutateAsync: castFreeVote } = useCastFreeVoteMutation();
 
   const visibleItems = useMemo(() => {
     if (!activeCategory) return items;
@@ -49,24 +56,22 @@ export default function FeedShell() {
 
   async function runAction(action: () => Promise<unknown>) {
     if (!profile) {
-      setActionError("Connect a wallet before taking that action.");
+      toast.error("Connect a wallet before taking that action.");
       return;
     }
-
-    setActionError(null);
 
     try {
       await action();
       await Promise.all([reload(), reloadDailyVotes()]);
     } catch (caught) {
-      setActionError(caught instanceof Error ? caught.message : "Action failed.");
+      toast.error(caught instanceof Error ? caught.message : "Action failed.");
     }
   }
 
   async function commentOn(post: FeedPost) {
     const content = window.prompt("Add a comment");
     if (!content) return;
-    await runAction(() => addComment(post.id, profile!.id, content));
+    await runAction(() => addComment({ postId: post.id, authorId: profile!.id, content }));
   }
 
   async function sharePost(post: FeedPost) {
@@ -79,12 +84,13 @@ export default function FeedShell() {
     }
 
     await navigator.clipboard.writeText(`${text}\n${url}`);
+    toast.success("Link copied to clipboard!");
   }
 
   return (
     <div className="flex flex-col gap-3 py-3">
-      <div className="rounded-[18px] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm">
-        <div className="mb-2 text-xs font-black text-[var(--foreground)]">Category</div>
+      <div className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-3 shadow-sm">
+        <div className="mb-2 text-xs font-black text-[(--foreground)]">Category</div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {FEED_CATEGORIES.map((category) => {
             const isActive = activeCategory === category;
@@ -94,8 +100,8 @@ export default function FeedShell() {
                 aria-pressed={isActive}
                 className={`h-9 shrink-0 rounded-[8px] border px-4 text-sm transition-colors ${
                   isActive
-                    ? "border-[var(--border-strong)] bg-[var(--surface-muted)] text-[var(--foreground)]"
-                    : "border-[var(--border)] bg-[var(--surface-solid)] text-[var(--foreground)] hover:border-[var(--border-strong)]"
+                    ? "border-[(--border-strong)] bg-[(--surface-muted)] text-[(--foreground)]"
+                    : "border-[(--border)] bg-[(--surface-solid)] text-[(--foreground)] hover:border-[(--border-strong)]"
                 }`}
                 key={category}
                 onClick={() => setActiveCategory(isActive ? null : category)}
@@ -111,9 +117,9 @@ export default function FeedShell() {
       <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
       <ComposeBox onCreated={reload} profile={profile} />
 
-      {(error || actionError) && (
-        <div className="rounded-[18px] border border-downvote/30 bg-downvote/10 p-4 text-sm font-medium text-[var(--foreground)]">
-          {actionError || error}
+      {error && (
+        <div className="rounded-[18px] border border-[(--color-brand-accent)]/30 bg-[(--color-brand-accent)]/10 p-4 text-sm font-medium text-[(--foreground)]">
+          {error}
         </div>
       )}
 
@@ -125,7 +131,7 @@ export default function FeedShell() {
         role="tabpanel"
       >
         {loading ? (
-          <div className="rounded-[18px] border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm font-medium text-[var(--muted)] shadow-sm">
+          <div className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-8 text-center text-sm font-medium text-[(--muted)] shadow-sm">
             Loading feed...
           </div>
         ) : visibleItems.length > 0 ? (
@@ -135,16 +141,16 @@ export default function FeedShell() {
               key={item.id}
               dailyVotesRemaining={dailyVotes.votesRemaining}
               onComment={() => commentOn(item)}
-              onLike={() => runAction(() => toggleLike(item.id, profile!.id, item.viewerLiked))}
+              onLike={() => runAction(() => toggleLike({ postId: item.id, profileId: profile!.id, currentlyLiked: item.viewerLiked }))}
               onOpenMarket={(market) => router.push(`/markets/${market.id}`)}
-              onReshare={() => runAction(() => toggleReshare(item.id, profile!.id, item.viewerReshared))}
+              onReshare={() => runAction(() => toggleReshare({ postId: item.id, profileId: profile!.id, currentlyReshared: item.viewerReshared }))}
               onShare={() => sharePost(item)}
-              onUsdcVote={() => setActionError("USDC trading is pending review and not active in this phase.")}
-              onVote={(market, side) => runAction(() => castFreeVote(market, profile!.id, side))}
+              onUsdcVote={(market) => router.push(`/markets/${market.id}`)}
+              onVote={(market, side) => runAction(() => castFreeVote({ marketId: market.id, userId: profile!.id, side }))}
             />
           ))
         ) : (
-          <div className="rounded-[18px] border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm font-medium text-[var(--muted)] shadow-sm">
+          <div className="rounded-[18px] border border-[(--border)] bg-[(--surface)] p-8 text-center text-sm font-medium text-[(--muted)] shadow-sm">
             No feed items yet.
           </div>
         )}
