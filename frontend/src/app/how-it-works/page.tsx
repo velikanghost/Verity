@@ -28,7 +28,7 @@ const STEPS = [
   },
   {
     title: 'Pool Funding',
-    body: 'Qualified markets gather launch-pool USDC. Funding the pool helps open trading and may earn liquidity rewards when the market trades.',
+    body: 'Qualified markets gather launch-pool USDC. If the market completes bonding and opens, creators and liquidity providers may earn fees and rewards from market activity.',
     icon: CircleDollarSign,
     color: 'bg-meadow-green/10 text-meadow-green',
   },
@@ -59,12 +59,12 @@ const GLOSSARY = [
   {
     term: 'Liquidity',
     detail:
-      'USDC available in a market pool. Liquidity providers help trades execute and may earn rewards from market activity.',
+      'USDC available in a market pool. Liquidity providers help trades execute and may earn fees or rewards after a market completes bonding and trades.',
   },
   {
     term: 'Pool Funding',
     detail:
-      'USDC contributions that help a qualified market reach its launch threshold and can become reward-earning liquidity.',
+      'USDC contributions that help a qualified market reach its launch threshold. If bonding completes, those contributions can become reward-earning liquidity.',
   },
   {
     term: 'Resolution',
@@ -222,11 +222,15 @@ export default function HowItWorksPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           <ResolutionCard
             label="Fund pools"
-            text="Contribute USDC before a market opens to help it reach launch liquidity and participate in potential liquidity rewards."
+            text="Contribute USDC before a market opens. If the market completes bonding, funders can participate in potential liquidity rewards."
           />
           <ResolutionCard
             label="Provide liquidity"
-            text="Add liquidity to active markets so traders can buy and sell more smoothly. Liquidity providers may earn from trading activity."
+            text="Add liquidity to active markets so traders can buy and sell more smoothly. Liquidity providers may earn fees and rewards from trading activity."
+          />
+          <ResolutionCard
+            label="Create markets"
+            text="Creators who launch markets that complete bonding may share in fees or rewards when those markets attract trading activity."
           />
         </div>
       </section>
