@@ -46,7 +46,7 @@ export default function PostCard({
 }: PostCardProps) {
   return (
     <article
-      className="verity-card verity-card-hover flex cursor-pointer gap-4 p-5"
+      className="verity-card verity-card-hover flex cursor-pointer gap-3 p-4 sm:gap-4 sm:p-5"
       onClick={onOpenDetails}
       onKeyDown={(event) => {
         if (onOpenDetails && (event.key === 'Enter' || event.key === ' ')) {
@@ -116,7 +116,7 @@ export default function PostCard({
         </p>
 
         <div
-          className="flex max-w-[360px] items-center justify-between border-t border-dashed border-stone-surface pt-2 text-ash"
+          className="flex max-w-full items-center justify-between border-t border-dashed border-stone-surface pt-2 text-ash sm:max-w-[360px]"
           onClick={(event) => event.stopPropagation()}
         >
           <button

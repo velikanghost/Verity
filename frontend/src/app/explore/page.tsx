@@ -40,7 +40,7 @@ export default function ExplorePage() {
         </div>
       </section>
 
-      <section className="verity-card p-5">
+      <section className="verity-card p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-charcoal-primary">
           <Sparkles className="h-4 w-4 text-sunburst-yellow" />
           Topics
@@ -61,7 +61,7 @@ export default function ExplorePage() {
       <PeopleDiscovery />
 
       <section className="verity-card overflow-hidden">
-        <div className="border-b border-dashed border-stone-surface p-5">
+        <div className="border-b border-dashed border-stone-surface p-4 sm:p-5">
           <h2 className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-charcoal-primary">
             <TrendingUp className="h-4 w-4 text-meadow-green" />
             Moving Now
@@ -69,7 +69,7 @@ export default function ExplorePage() {
         </div>
         {DISCOVERIES.map((item) => (
           <article
-            className="border-b border-dashed border-stone-surface p-5 transition-colors last:border-b-0 hover:bg-parchment-card"
+            className="border-b border-dashed border-stone-surface p-4 transition-colors last:border-b-0 hover:bg-parchment-card sm:p-5"
             key={item.title}
           >
             <div className="flex items-start justify-between gap-4">

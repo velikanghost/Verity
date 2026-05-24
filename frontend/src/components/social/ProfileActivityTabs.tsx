@@ -145,7 +145,7 @@ function CommentActivityRow({
   const title = item.market?.question || item.content
 
   return (
-    <article className="verity-card p-5">
+    <article className="verity-card p-4 sm:p-5">
       <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ash">
         Comment activity
       </p>

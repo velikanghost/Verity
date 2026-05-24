@@ -32,12 +32,12 @@ export default function CommentsThread({
 
   return (
     <section className="verity-card overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-dashed border-stone-surface p-5">
+      <div className="flex flex-col gap-3 border-b border-dashed border-stone-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <h2 className="flex items-center gap-2 text-[23px] font-semibold leading-[1.2] tracking-[-0.44px] text-charcoal-primary">
           <MessageCircle className="h-5 w-5 text-sky-blue" />
           {title}
         </h2>
-        <div className="grid grid-cols-2 rounded-[32px] bg-parchment-card p-1 shadow-[var(--shadow-subtle)]">
+        <div className="grid w-full grid-cols-2 rounded-[32px] bg-parchment-card p-1 shadow-[var(--shadow-subtle)] sm:w-auto">
           {(['relevant', 'newest'] as const).map((nextSort) => (
             <button
               className={`verity-pill h-8 px-3 text-xs font-semibold capitalize tracking-[-0.14px] transition-colors ${
@@ -56,7 +56,7 @@ export default function CommentsThread({
       </div>
 
       <div className="border-b border-dashed border-stone-surface p-4">
-        <div className="flex gap-3 rounded-[12px] bg-parchment-card p-3 shadow-[var(--shadow-subtle)]">
+        <div className="flex gap-2 rounded-[12px] bg-parchment-card p-3 shadow-[var(--shadow-subtle)] sm:gap-3">
           <input
             className="min-w-0 flex-1 bg-transparent text-sm tracking-[-0.18px] text-charcoal-primary outline-none placeholder:text-ash"
             onChange={(event) => setDraft(event.target.value)}

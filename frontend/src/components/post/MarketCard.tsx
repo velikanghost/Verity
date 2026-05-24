@@ -125,7 +125,7 @@ export default function MarketCard({
 
   return (
     <article
-      className={`verity-card verity-card-hover p-5 ${
+      className={`verity-card verity-card-hover p-4 sm:p-5 ${
         isDetail ? '' : 'cursor-pointer'
       }`}
       onClick={openDetails}
@@ -138,7 +138,7 @@ export default function MarketCard({
       role={isDetail ? undefined : 'link'}
       tabIndex={isDetail ? undefined : 0}
     >
-      <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h3 className="text-[19px] font-semibold leading-[1.22] tracking-[-0.25px] text-midnight sm:text-[21px]">
             {question}
@@ -164,7 +164,7 @@ export default function MarketCard({
         </div>
 
         <span
-          className={`verity-pill shrink-0 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusTone}`}
+          className={`verity-pill w-fit shrink-0 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusTone}`}
         >
           {status.replaceAll('_', ' ')}
         </span>
@@ -410,7 +410,7 @@ export default function MarketCard({
       )}
 
       <div
-        className="flex max-w-[425px] items-center justify-between border-t border-dashed border-stone-surface pt-2 text-ash"
+        className="flex max-w-full items-center justify-between border-t border-dashed border-stone-surface pt-2 text-ash sm:max-w-[425px]"
         onClick={stopClick}
       >
         <button

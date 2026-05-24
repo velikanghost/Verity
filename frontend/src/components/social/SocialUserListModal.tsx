@@ -38,9 +38,9 @@ export default function SocialUserListModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/35 px-4 py-6 backdrop-blur-sm">
-      <section className="verity-card flex max-h-[82vh] w-full max-w-[520px] flex-col overflow-hidden">
-        <div className="flex items-start justify-between gap-4 border-b border-dashed border-stone-surface p-5">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-midnight/35 px-2 py-2 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
+      <section className="verity-card flex max-h-[88dvh] w-full max-w-[520px] flex-col overflow-hidden">
+        <div className="flex items-start justify-between gap-4 border-b border-dashed border-stone-surface p-4 sm:p-5">
           <div>
             <h2 className="text-[23px] font-semibold leading-[1.2] tracking-[-0.44px] text-charcoal-primary">
               {title}

@@ -146,7 +146,7 @@ export default function FeedShell() {
 
   return (
     <div className="flex flex-col gap-3 py-4">
-      <section className="verity-card relative overflow-hidden p-5">
+      <section className="verity-card relative overflow-hidden p-4 sm:p-5">
         <div className="absolute -right-3 -top-3 h-20 w-20 rounded-full bg-sunburst-yellow/40" />
         <div className="absolute right-12 top-7 hidden sm:block">
           <span className="verity-blob block h-12 w-14 rotate-6 bg-meadow-green">
@@ -157,7 +157,7 @@ export default function FeedShell() {
           <p className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-ember-orange">
             Social prediction market
           </p>
-          <h1 className="text-[34px] font-semibold leading-[1.06] tracking-[-0.9px] text-midnight sm:text-[44px] sm:tracking-[-1.14px]">
+          <h1 className="text-[30px] font-semibold leading-[1.06] tracking-[-0.7px] text-midnight sm:text-[44px] sm:tracking-[-1.14px]">
             Back takes. Build markets.
           </h1>
           <p className="mt-3 text-[15px] leading-[1.47] tracking-[-0.2px] text-graphite">

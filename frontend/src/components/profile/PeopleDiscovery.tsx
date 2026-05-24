@@ -14,7 +14,7 @@ export default function PeopleDiscovery() {
 
   return (
     <section className="verity-card overflow-hidden">
-      <div className="border-b border-dashed border-stone-surface p-5">
+      <div className="border-b border-dashed border-stone-surface p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-charcoal-primary">
           <Users className="h-4 w-4 text-sky-blue" />
           People to follow
@@ -28,7 +28,7 @@ export default function PeopleDiscovery() {
           ))}
         </div>
       ) : (
-        <div className="p-5 text-sm tracking-[-0.18px] text-ash">
+        <div className="p-4 text-sm tracking-[-0.18px] text-ash sm:p-5">
           Creators will appear here once the feed has activity.
         </div>
       )}
@@ -38,7 +38,7 @@ export default function PeopleDiscovery() {
 
 function PersonCard({ person }: { person: Profile }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-dashed border-stone-surface p-5 transition-colors hover:bg-parchment-card sm:odd:border-r">
+    <div className="flex items-center justify-between gap-3 border-b border-dashed border-stone-surface p-4 transition-colors hover:bg-parchment-card sm:p-5 sm:odd:border-r">
       <Link
         className="flex min-w-0 items-center gap-3"
         href={`/profile/${encodeURIComponent(person.id)}`}

@@ -27,7 +27,7 @@ export default function UserHoverCard({
   return (
     <span className="group/user-card relative inline-flex min-w-0">
       {children}
-      <span className="pointer-events-none absolute left-0 top-full z-40 hidden w-[320px] pt-2 group-hover/user-card:block group-focus-within/user-card:block">
+      <span className="pointer-events-none absolute left-0 top-full z-40 hidden w-[min(320px,calc(100vw-2rem))] pt-2 group-hover/user-card:block group-focus-within/user-card:block">
         <span className="pointer-events-auto block rounded-[14px] bg-white p-4 shadow-[var(--shadow-sm)]">
           <span className="mb-3 flex items-start justify-between gap-3">
             <Link

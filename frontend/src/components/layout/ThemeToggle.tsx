@@ -4,22 +4,47 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
+const THEME_STORAGE_KEY = "verity-theme";
+const THEME_CHANGE_EVENT = "verity-theme-change";
 
-function getPreferredTheme(): Theme {
-  return "light";
+function isTheme(value: string | null): value is Theme {
+  return value === "light" || value === "dark";
+}
+
+function getStoredTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (isTheme(stored)) return stored;
+
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  window.localStorage.setItem("verity-theme", theme);
+  window.localStorage.setItem(THEME_STORAGE_KEY, theme);
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() => getPreferredTheme());
+  const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    const storedTheme = getStoredTheme();
+    setTheme(storedTheme);
+    applyTheme(storedTheme);
+
+    function handleThemeChange(event: Event) {
+      const nextTheme = (event as CustomEvent<Theme>).detail;
+      if (!isTheme(nextTheme)) return;
+      setTheme(nextTheme);
+      applyTheme(nextTheme);
+    }
+
+    window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange);
+    return () => window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange);
+  }, []);
 
   const isDark = theme === "dark";
 
@@ -31,6 +56,10 @@ export default function ThemeToggle() {
       onClick={() => {
         const nextTheme = isDark ? "light" : "dark";
         setTheme(nextTheme);
+        applyTheme(nextTheme);
+        window.dispatchEvent(
+          new CustomEvent<Theme>(THEME_CHANGE_EVENT, { detail: nextTheme }),
+        );
       }}
       type="button"
     >

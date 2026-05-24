@@ -310,7 +310,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
   }
 
   return (
-    <div className="verity-card flex gap-4 p-5">
+    <div className="verity-card flex gap-3 p-4 sm:gap-4 sm:p-5">
       {/* Avatar */}
       <div className="shrink-0">
         <div className="verity-blob h-10 w-10 animate-pulse bg-ember-orange">

@@ -61,8 +61,8 @@ export function useMarketLiquidity() {
 
     const toastId = toast.loading(
       isInitialization
-        ? "Preparing pre-market creator escrow fund..."
-        : "Preparing pre-market escrow contribution..."
+        ? "Preparing creator launch pool funding..."
+        : "Preparing launch pool contribution..."
     );
     try {
       const rawAmount = BigInt(Math.round(amount * 1e6));
@@ -85,7 +85,7 @@ export function useMarketLiquidity() {
       await publicClient!.waitForTransactionReceipt({ hash });
 
       // 3. Notify NestJS backend
-      toast.loading("Transaction confirmed on-chain! Registering escrow with database...", { id: toastId });
+      toast.loading("Transaction confirmed on-chain! Syncing pool funding with database...", { id: toastId });
       if (isInitialization) {
         await fundPoolBackend({
           marketId,
@@ -104,13 +104,13 @@ export function useMarketLiquidity() {
 
       toast.success(
         isInitialization
-          ? `Successfully funded ${amount} USDC to pre-market escrow!`
-          : `Successfully deposited ${amount} USDC to pre-market escrow!`,
+          ? `Successfully funded ${amount} USDC to the launch pool!`
+          : `Successfully deposited ${amount} USDC to the launch pool!`,
         { id: toastId }
       );
       return hash;
     } catch (error: any) {
-      const errMsg = error.message || "Failed to fund pre-market escrow.";
+      const errMsg = error.message || "Failed to fund the launch pool.";
       toast.error(errMsg.slice(0, 120), { id: toastId });
       throw error;
     }
