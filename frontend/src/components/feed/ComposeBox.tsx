@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Image as ImageIcon, BarChart2, Smile, MapPin } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { BarChart2 } from 'lucide-react'
 import { type MarketInput, type Profile } from '@/lib/verity'
 import { reviewPredictionPost, type VerityAgentReview } from '@/lib/verityAgent'
 import { useUsdcTransfer } from '@/hooks/useUsdcTransfer'
@@ -15,6 +15,8 @@ interface ComposeBoxProps {
   profile: Profile | null
   onCreated: () => void
 }
+
+type ComposeIntent = 'take' | 'market'
 
 const MARKET_CREATION_FEE_USDC = 1
 
@@ -118,6 +120,8 @@ function detectPythMarket(category: string, question: string): DetectedPyth {
 }
 
 export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
+  const composerRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { createMarketPreDeposit } = useUsdcTransfer()
   const { mutateAsync: createMarketPost } = useCreateMarketPostMutation()
   const { mutateAsync: createNormalPost } = useCreateNormalPostMutation()
@@ -137,6 +141,36 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
   const [reviewedSignature, setReviewedSignature] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    function applyIntent(intent: ComposeIntent) {
+      setIsMarket(intent === 'market')
+      window.requestAnimationFrame(() => {
+        composerRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        })
+        textareaRef.current?.focus()
+      })
+    }
+
+    const storedIntent = window.sessionStorage.getItem(
+      'verity-compose-intent',
+    ) as ComposeIntent | null
+    if (storedIntent === 'take' || storedIntent === 'market') {
+      window.sessionStorage.removeItem('verity-compose-intent')
+      applyIntent(storedIntent)
+    }
+
+    function handleComposeIntent(event: Event) {
+      const intent = (event as CustomEvent<ComposeIntent>).detail
+      if (intent === 'take' || intent === 'market') applyIntent(intent)
+    }
+
+    window.addEventListener('verity-compose-intent', handleComposeIntent)
+    return () =>
+      window.removeEventListener('verity-compose-intent', handleComposeIntent)
+  }, [])
 
   const detectedPyth = useMemo(() => {
     return detectPythMarket(market.category, market.question)
@@ -223,9 +257,9 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
 
   const primaryLabel = useMemo(() => {
     if (saving) return 'Posting'
-    if (!isMarket) return 'Post'
+    if (!isMarket) return 'Take'
     if (!predictionApproved) return 'Review'
-    return 'Pay 11 USDC & Post'
+    return 'Pay 11 USDC & Create Market'
   }, [isMarket, predictionApproved, saving])
 
   const marketReadyText = useMemo(() => {
@@ -310,7 +344,10 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
   }
 
   return (
-    <div className="verity-card flex gap-3 p-4 sm:gap-4 sm:p-5">
+    <div
+      className="verity-card flex gap-3 p-4 sm:gap-4 sm:p-5"
+      ref={composerRef}
+    >
       {/* Avatar */}
       <div className="shrink-0">
         <div className="verity-blob h-10 w-10 animate-pulse bg-ember-orange">
@@ -320,6 +357,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
 
       <div className="flex-1 flex flex-col pt-1">
         <textarea
+          ref={textareaRef}
           disabled={!profile || saving}
           onChange={(event) => setContent(event.target.value)}
           placeholder={
@@ -495,13 +533,6 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
         <div className="mt-2 flex items-center justify-between border-t border-dashed border-stone-surface pt-3">
           <div className="flex items-center gap-1 text-ash">
             <button
-              aria-label="Add image"
-              className="rounded-full p-2 transition-colors hover:bg-stone-surface hover:text-charcoal-primary"
-              type="button"
-            >
-              <ImageIcon className="w-5 h-5" />
-            </button>
-            <button
               aria-label="Create market"
               aria-pressed={isMarket}
               className={`rounded-full p-2 transition-colors hover:bg-stone-surface hover:text-charcoal-primary ${
@@ -513,20 +544,6 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
               type="button"
             >
               <BarChart2 className="w-5 h-5" />
-            </button>
-            <button
-              aria-label="Add emoji"
-              className="hidden rounded-full p-2 transition-colors hover:bg-stone-surface hover:text-charcoal-primary sm:block"
-              type="button"
-            >
-              <Smile className="w-5 h-5" />
-            </button>
-            <button
-              aria-label="Add location"
-              className="hidden rounded-full p-2 transition-colors hover:bg-stone-surface hover:text-charcoal-primary sm:block"
-              type="button"
-            >
-              <MapPin className="w-5 h-5" />
             </button>
           </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   Home, 
   Search, 
@@ -10,8 +10,12 @@ import {
   Wallet,
   CircleHelp,
   CircleDollarSign,
-  PenSquare
+  PenSquare,
+  TrendingUp,
+  MessageSquareText,
+  X
 } from "lucide-react";
+import { useState } from "react";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import WalletConnectControl from "@/components/wallet/WalletConnectControl";
 import { useUsdcBalance } from "@/hooks/useUsdcBalance";
@@ -28,10 +32,23 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
+  const router = useRouter();
   const pathname = usePathname();
   const { formattedBalance, isLoading: isBalanceLoading } = useUsdcBalance();
   const { profile } = useWalletProfile();
   const isConnected = Boolean(profile);
+  const [composeOpen, setComposeOpen] = useState(false);
+
+  function openComposer(intent: "take" | "market") {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("verity-compose-intent", intent);
+      window.dispatchEvent(
+        new CustomEvent("verity-compose-intent", { detail: intent }),
+      );
+    }
+    setComposeOpen(false);
+    if (pathname !== "/") router.push("/");
+  }
 
   return (
     <div className="verity-card flex h-full flex-col p-2">
@@ -84,10 +101,71 @@ export default function Sidebar() {
           <WalletConnectControl />
         </div>
         
-        <button className="verity-pill flex h-12 w-12 items-center justify-center bg-inverse text-xl font-semibold text-inverse-text transition-opacity hover:opacity-90 xl:h-12 xl:w-full">
-          <span className="hidden text-sm font-semibold tracking-[-0.18px] xl:block">Post</span>
-          <PenSquare className="h-6 w-6 xl:hidden" />
-        </button>
+        <div className="relative">
+          {composeOpen && (
+            <div className="absolute bottom-[calc(100%+10px)] left-0 z-50 w-[228px] rounded-[14px] bg-surface-solid p-2 shadow-[var(--shadow-sm)]">
+              <div className="mb-2 flex items-center justify-between px-2 pt-1">
+                <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-ash">
+                  Create
+                </span>
+                <button
+                  aria-label="Close compose menu"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-ash transition-colors hover:bg-surface-hover hover:text-foreground"
+                  onClick={() => setComposeOpen(false)}
+                  type="button"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <button
+                className="flex w-full items-center gap-3 rounded-[10px] p-3 text-left transition-colors hover:bg-surface-hover"
+                onClick={() => openComposer("market")}
+                type="button"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-ember-orange/10 text-ember-orange">
+                  <TrendingUp className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold tracking-[-0.18px] text-charcoal-primary">
+                    Market
+                  </span>
+                  <span className="mt-0.5 block text-xs tracking-[-0.14px] text-ash">
+                    Ask a tradable question
+                  </span>
+                </span>
+              </button>
+
+              <button
+                className="mt-1 flex w-full items-center gap-3 rounded-[10px] p-3 text-left transition-colors hover:bg-surface-hover"
+                onClick={() => openComposer("take")}
+                type="button"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-sky-blue/10 text-sky-blue">
+                  <MessageSquareText className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold tracking-[-0.18px] text-charcoal-primary">
+                    Take
+                  </span>
+                  <span className="mt-0.5 block text-xs tracking-[-0.14px] text-ash">
+                    Share a regular post
+                  </span>
+                </span>
+              </button>
+            </div>
+          )}
+
+          <button
+            aria-expanded={composeOpen}
+            className="verity-pill flex h-12 w-12 items-center justify-center bg-inverse text-xl font-semibold text-inverse-text transition-opacity hover:opacity-90 xl:h-12 xl:w-full"
+            onClick={() => setComposeOpen((current) => !current)}
+            type="button"
+          >
+            <span className="hidden text-sm font-semibold tracking-[-0.18px] xl:block">Post</span>
+            <PenSquare className="h-6 w-6 xl:hidden" />
+          </button>
+        </div>
       </div>
 
       {/* Mini Profile */}

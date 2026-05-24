@@ -4,6 +4,7 @@ import './globals.css'
 import Sidebar from '@/components/layout/Sidebar'
 import RightPanel from '@/components/layout/RightPanel'
 import MobileNav from '@/components/layout/MobileNav'
+import MobileComposeButton from '@/components/layout/MobileComposeButton'
 import AppProviders from '@/components/providers/AppProviders'
 
 const geistSans = Geist({
@@ -97,6 +98,7 @@ export default function RootLayout({
               <RightPanel />
             </aside>
           </div>
+          <MobileComposeButton />
           <MobileNav />
         </AppProviders>
       </body>
