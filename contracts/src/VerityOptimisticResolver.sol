@@ -137,6 +137,49 @@ contract VerityOptimisticResolver {
         );
     }
 
+    /// @notice Propose the resolution outcome of an expired market on behalf of a beneficiary.
+    function proposeResolutionFor(
+        bytes32 marketId,
+        address beneficiary,
+        bool proposedOutcome
+    ) external {
+        (
+            ,
+            uint256 deadline,
+            ,
+            bool registered,
+            ,
+            bool resolved,
+            bool voided
+        ) = factory.marketRegistry(marketId);
+
+        if (!registered) revert ProposalDoesNotExist();
+        if (resolved || voided) revert MarketAlreadyResolved();
+        if (block.timestamp <= deadline) revert MarketNotExpired();
+
+        Proposal storage prop = proposals[marketId];
+        if (prop.proposer != address(0)) revert ProposalAlreadyExists();
+
+        // Lock proposer's bond
+        usdc.safeTransferFrom(msg.sender, address(this), resolutionBond);
+
+        proposals[marketId] = Proposal({
+            proposer: beneficiary,
+            proposedWinningOutcome: proposedOutcome,
+            proposalTime: block.timestamp,
+            disputed: false,
+            disputer: address(0),
+            finalized: false
+        });
+
+        emit ResolutionProposed(
+            marketId,
+            beneficiary,
+            proposedOutcome,
+            block.timestamp
+        );
+    }
+
     /// @notice Dispute an existing resolution proposal within the dispute window by posting a bond.
     function disputeResolution(bytes32 marketId) external {
         Proposal storage prop = proposals[marketId];
@@ -154,6 +197,25 @@ contract VerityOptimisticResolver {
 
         emit ResolutionDisputed(marketId, msg.sender, block.timestamp);
     }
+
+    /// @notice Dispute an existing resolution proposal on behalf of a beneficiary.
+    function disputeResolutionFor(bytes32 marketId, address beneficiary) external {
+        Proposal storage prop = proposals[marketId];
+        if (prop.proposer == address(0)) revert ProposalDoesNotExist();
+        if (prop.disputed) revert ProposalAlreadyDisputed();
+        if (prop.finalized) revert ProposalAlreadyFinalized();
+        if (block.timestamp > prop.proposalTime + disputeWindow)
+            revert DisputeWindowExpired();
+
+        // Lock disputer's bond
+        usdc.safeTransferFrom(msg.sender, address(this), resolutionBond);
+
+        prop.disputed = true;
+        prop.disputer = beneficiary;
+
+        emit ResolutionDisputed(marketId, beneficiary, block.timestamp);
+    }
+
 
     /// @notice Finalize an undisputed proposal after the dispute window has elapsed.
     function finalizeResolution(bytes32 marketId) external {

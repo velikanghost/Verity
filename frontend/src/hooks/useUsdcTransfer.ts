@@ -2,7 +2,7 @@
 
 import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi";
 import { type Address } from "viem";
-import { arcTestnet, arcUsdcAddress, erc20Abi, FACTORY_ADDRESS, factoryAbi } from "@/lib/arc";
+import { arcTestnet, arcUsdcAddress, erc20Abi, FACTORY_ADDRESS, factoryAbi, ROUTER_ADDRESS, routerAbi } from "@/lib/arc";
 
 export function useUsdcTransfer() {
   const { address, isConnected } = useAccount();
@@ -58,19 +58,20 @@ export function useUsdcTransfer() {
     // 1 USDC fee + creatorLpAmount
     const totalRequired = BigInt(Math.round((creatorLpAmount + 1) * 1e6));
 
-    // Check allowance
+    // Check allowance for ROUTER_ADDRESS
     const allowance = await publicClient.readContract({
       address: arcUsdcAddress,
       abi: erc20Abi,
       functionName: "allowance",
-      args: [address, FACTORY_ADDRESS],
+      args: [address, ROUTER_ADDRESS],
     });
 
     if (allowance < totalRequired) {
+      // Approve max uint256 to ROUTER_ADDRESS so they only approve once globally
       const approveHash = await writeContractAsync({
         abi: erc20Abi,
         address: arcUsdcAddress,
-        args: [FACTORY_ADDRESS, totalRequired],
+        args: [ROUTER_ADDRESS, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
         chainId: arcTestnet.id,
         functionName: "approve",
       });
@@ -80,9 +81,9 @@ export function useUsdcTransfer() {
     const formattedMarketId = ("0x" + marketId.padEnd(64, "0")) as Address;
 
     const hash = await writeContractAsync({
-      abi: factoryAbi,
-      address: FACTORY_ADDRESS,
-      args: [formattedMarketId, BigInt(Math.round(creatorLpAmount * 1e6))],
+      abi: routerAbi,
+      address: ROUTER_ADDRESS,
+      args: [FACTORY_ADDRESS, formattedMarketId, BigInt(Math.round(creatorLpAmount * 1e6))],
       chainId: arcTestnet.id,
       functionName: "createMarketPreDeposit",
     });
@@ -93,3 +94,4 @@ export function useUsdcTransfer() {
 
   return { transferToTreasury, createMarketPreDeposit };
 }
+

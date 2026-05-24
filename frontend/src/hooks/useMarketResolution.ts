@@ -2,7 +2,7 @@
 
 import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi";
 import { type Address } from "viem";
-import { arcTestnet, arcUsdcAddress, RESOLVER_ADDRESS, VAULT_ADDRESS, FPMM_ADDRESS, FACTORY_ADDRESS, erc20Abi, resolverAbi, vaultAbi, fpmmAbi, factoryAbi } from "@/lib/arc";
+import { arcTestnet, arcUsdcAddress, RESOLVER_ADDRESS, VAULT_ADDRESS, FPMM_ADDRESS, FACTORY_ADDRESS, ROUTER_ADDRESS, erc20Abi, resolverAbi, vaultAbi, fpmmAbi, factoryAbi, routerAbi } from "@/lib/arc";
 import { toast } from "react-hot-toast";
 
 function formatMarketId(marketId: string): `0x${string}` {
@@ -41,7 +41,7 @@ export function useMarketResolution() {
         address: arcUsdcAddress,
         chainId: arcTestnet.id,
         functionName: "approve",
-        args: [spender, rawAmount],
+        args: [spender, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
       });
 
       toast.loading("Verifying USDC approval on-chain...", { id: toastId });
@@ -64,15 +64,15 @@ export function useMarketResolution() {
         functionName: "resolutionBond",
       });
 
-      // Approve bond spending
-      await approveIfNecessary(RESOLVER_ADDRESS, bondAmount, toastId);
+      // Approve bond spending to Router
+      await approveIfNecessary(ROUTER_ADDRESS, bondAmount, toastId);
 
-      // Dispute proposal
+      // Dispute proposal via Router
       toast.loading("Sending dispute transaction...", { id: toastId });
       const txHash = await writeContractAsync({
-        abi: resolverAbi,
-        address: RESOLVER_ADDRESS,
-        args: [formattedMarketId],
+        abi: routerAbi,
+        address: ROUTER_ADDRESS,
+        args: [RESOLVER_ADDRESS, formattedMarketId],
         chainId: arcTestnet.id,
         functionName: "disputeResolution",
       });
@@ -88,6 +88,7 @@ export function useMarketResolution() {
       throw error;
     }
   }
+
 
   async function redeemWinnings(marketId: string) {
     const toastId = toast.loading("Preparing to redeem winnings...");

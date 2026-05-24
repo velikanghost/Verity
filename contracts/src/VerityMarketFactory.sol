@@ -128,6 +128,36 @@ contract VerityMarketFactory {
         emit MarketPreDepositCreated(marketId, msg.sender, creatorLpAmount);
     }
 
+    /// @notice Creator deposits initial LP and pays the creation fee to treasury on behalf of a beneficiary.
+    /// @param marketId Unique market identifier
+    /// @param beneficiary The address that will own the creator LP and creator privileges
+    /// @param creatorLpAmount Amount of USDC to deposit as initial LP
+    function createMarketPreDepositFor(bytes32 marketId, address beneficiary, uint256 creatorLpAmount) external {
+        MarketInfo storage info = marketRegistry[marketId];
+        if (info.creator != address(0)) revert MarketAlreadyRegistered();
+        if (creatorLpAmount < fpmm.CREATOR_MIN_LOCK()) revert InsufficientCreatorDeposit();
+
+        // 1 USDC creation fee
+        uint256 fee = 1e6;
+
+        // Pull 1 USDC fee + creator LP from caller
+        usdc.safeTransferFrom(msg.sender, address(this), fee + creatorLpAmount);
+
+        // Send fee to fpmm's treasury
+        usdc.safeTransfer(fpmm.treasury(), fee);
+
+        preMarketDeposits[marketId].push(PreMarketDeposit({
+            lp: beneficiary,
+            amount: creatorLpAmount
+        }));
+
+        escrowBalances[marketId] = creatorLpAmount;
+        info.creator = beneficiary;
+
+        emit MarketPreDepositCreated(marketId, beneficiary, creatorLpAmount);
+    }
+
+
     /// @notice Register a new market after social qualification. Called by admin (backend).
     /// @param marketId Unique market identifier (e.g., keccak256 of MongoDB market ID)
     /// @param creator Wallet address of the market creator
@@ -265,6 +295,49 @@ contract VerityMarketFactory {
             emit MarketFunded(marketId, info.creator, totalUsdc);
         }
     }
+
+    /// @notice Public LPs and Creator deposit USDC before the market is active on behalf of a beneficiary.
+    /// @param marketId Market identifier
+    /// @param beneficiary The address that will own the deposited LP position
+    /// @param amount Amount of USDC to deposit
+    function depositPreMarketLiquidityFor(bytes32 marketId, address beneficiary, uint256 amount) external {
+        MarketInfo storage info = marketRegistry[marketId];
+        if (info.funded) revert MarketAlreadyFunded();
+        if (info.voided) revert MarketAlreadyVoided();
+        if (amount == 0) revert ZeroAmount();
+
+        // The creator must have made the pre-deposit first
+        if (info.creator == address(0)) revert NotCreator();
+
+        // If registered, check funding deadline
+        if (info.registered && block.timestamp > info.fundingDeadline) revert DeadlineInPast();
+
+        // Pull USDC to this factory contract
+        usdc.safeTransferFrom(msg.sender, address(this), amount);
+
+        preMarketDeposits[marketId].push(PreMarketDeposit({
+            lp: beneficiary,
+            amount: amount
+        }));
+        
+        escrowBalances[marketId] += amount;
+
+        // Trigger pool creation if minimum threshold is met AND the market is registered
+        if (info.registered && escrowBalances[marketId] >= fpmm.MIN_POOL_BALANCE()) {
+            info.funded = true;
+
+            uint256 totalUsdc = escrowBalances[marketId];
+            
+            // Approve FPMM to pull the bundled USDC
+            usdc.approve(address(fpmm), totalUsdc);
+
+            // Deploy the pool automatically
+            fpmm.createPool(marketId);
+
+            emit MarketFunded(marketId, info.creator, totalUsdc);
+        }
+    }
+
 
     /// @notice Refund pre-market deposits if the market was voided (funding failed)
     /// @param marketId Market identifier

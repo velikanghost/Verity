@@ -11,6 +11,8 @@ import {
 import { privateKeyToAccount } from 'viem/accounts';
 import fpmmAbi from './abi/VerityFPMM.json';
 import factoryAbi from './abi/VerityMarketFactory.json';
+import routerAbi from './abi/VerityRouter.json';
+
 
 export const arcTestnet = defineChain({
   id: 5042002,
@@ -28,6 +30,7 @@ export class BlockchainService implements OnModuleInit {
   private account: any;
   private fpmmAbi = fpmmAbi;
   private factoryAbi = factoryAbi;
+  private routerAbi = routerAbi;
   private usdcAbi: any;
 
   private fpmmAddress: `0x${string}`;
@@ -35,6 +38,7 @@ export class BlockchainService implements OnModuleInit {
   private usdcAddress: `0x${string}`;
   private pythAddress: `0x${string}`;
   private resolverAddress: `0x${string}`;
+  private routerAddress: `0x${string}`;
 
   constructor(private configService: ConfigService) {}
 
@@ -56,6 +60,10 @@ export class BlockchainService implements OnModuleInit {
     this.resolverAddress = (this.configService.get<string>(
       'RESOLVER_ADDRESS',
     ) || '0x0000000000000000000000000000000000000000') as `0x${string}`;
+    this.routerAddress = (this.configService.get<string>(
+      'ROUTER_ADDRESS',
+    ) || '0x0000000000000000000000000000000000000000') as `0x${string}`;
+
 
     this.publicClient = createPublicClient({
       chain: arcTestnet,
@@ -196,23 +204,46 @@ export class BlockchainService implements OnModuleInit {
       });
       if (receipt.status !== 'success') return null;
 
-      // Verify recipient matches factoryAddress
-      if (receipt.to?.toLowerCase() !== this.factoryAddress.toLowerCase()) {
+      const toAddress = receipt.to?.toLowerCase();
+      const isRouter = toAddress === this.routerAddress.toLowerCase();
+      const isFactory = toAddress === this.factoryAddress.toLowerCase();
+
+      if (!isRouter && !isFactory) {
         return null;
       }
 
-      // Retrieve transaction input data to verify function call and parameters
       const tx = await this.publicClient.getTransaction({
         hash: hash as `0x${string}`,
       });
 
-      const { functionName, args } = decodeFunctionData({
-        abi: this.factoryAbi,
-        data: tx.input,
-      });
+      let txMarketId: string;
+      let txAmount: bigint;
 
-      if (functionName !== 'createMarketPreDeposit') return null;
-      const [txMarketId, txAmount] = args as [string, bigint];
+      if (isRouter) {
+        const { functionName, args } = decodeFunctionData({
+          abi: this.routerAbi,
+          data: tx.input,
+        });
+
+        if (functionName !== 'createMarketPreDeposit') return null;
+        const [txFactory, marketIdArg, txAmountArg] = args as [string, string, bigint];
+
+        if (txFactory.toLowerCase() !== this.factoryAddress.toLowerCase()) {
+          return null;
+        }
+        txMarketId = marketIdArg;
+        txAmount = txAmountArg;
+      } else {
+        const { functionName, args } = decodeFunctionData({
+          abi: this.factoryAbi,
+          data: tx.input,
+        });
+
+        if (functionName !== 'createMarketPreDeposit') return null;
+        const [marketIdArg, txAmountArg] = args as [string, bigint];
+        txMarketId = marketIdArg;
+        txAmount = txAmountArg;
+      }
 
       const formattedInputMarketId = this.formatMarketId(marketId);
       if (txMarketId.toLowerCase() !== formattedInputMarketId.toLowerCase()) {
@@ -236,8 +267,11 @@ export class BlockchainService implements OnModuleInit {
       });
       if (receipt.status !== 'success') return null;
 
-      // Verify recipient matches factoryAddress
-      if (receipt.to?.toLowerCase() !== this.factoryAddress.toLowerCase()) {
+      const toAddress = receipt.to?.toLowerCase();
+      const isRouter = toAddress === this.routerAddress.toLowerCase();
+      const isFactory = toAddress === this.factoryAddress.toLowerCase();
+
+      if (!isRouter && !isFactory) {
         return null;
       }
 
@@ -245,13 +279,34 @@ export class BlockchainService implements OnModuleInit {
         hash: hash as `0x${string}`,
       });
 
-      const { functionName, args } = decodeFunctionData({
-        abi: this.factoryAbi,
-        data: tx.input,
-      });
+      let txMarketId: string;
+      let txAmount: bigint;
 
-      if (functionName !== 'depositPreMarketLiquidity') return null;
-      const [txMarketId, txAmount] = args as [string, bigint];
+      if (isRouter) {
+        const { functionName, args } = decodeFunctionData({
+          abi: this.routerAbi,
+          data: tx.input,
+        });
+
+        if (functionName !== 'depositPreMarketLiquidity') return null;
+        const [txFactory, marketIdArg, txAmountArg] = args as [string, string, bigint];
+
+        if (txFactory.toLowerCase() !== this.factoryAddress.toLowerCase()) {
+          return null;
+        }
+        txMarketId = marketIdArg;
+        txAmount = txAmountArg;
+      } else {
+        const { functionName, args } = decodeFunctionData({
+          abi: this.factoryAbi,
+          data: tx.input,
+        });
+
+        if (functionName !== 'depositPreMarketLiquidity') return null;
+        const [marketIdArg, txAmountArg] = args as [string, bigint];
+        txMarketId = marketIdArg;
+        txAmount = txAmountArg;
+      }
 
       const formattedInputMarketId = this.formatMarketId(marketId);
       if (txMarketId.toLowerCase() !== formattedInputMarketId.toLowerCase()) {
@@ -263,6 +318,7 @@ export class BlockchainService implements OnModuleInit {
       return null;
     }
   }
+
 
   async getTransactionReceipt(txHash: `0x${string}`) {
     try {

@@ -2,7 +2,7 @@
 
 import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi";
 import { type Address } from "viem";
-import { arcTestnet, arcUsdcAddress, FACTORY_ADDRESS, FPMM_ADDRESS, VAULT_ADDRESS, erc20Abi, erc1155Abi, factoryAbi, fpmmAbi } from "@/lib/arc";
+import { arcTestnet, arcUsdcAddress, FACTORY_ADDRESS, FPMM_ADDRESS, VAULT_ADDRESS, ROUTER_ADDRESS, erc20Abi, erc1155Abi, factoryAbi, fpmmAbi, routerAbi } from "@/lib/arc";
 import { useFundPoolMutation, useAddLiquidityMutation, useRemoveLiquidityMutation, useExecuteMarketTradeMutation } from "@/store/verity/verityQueries";
 import { toast } from "react-hot-toast";
 
@@ -47,7 +47,7 @@ export function useMarketLiquidity() {
         address: arcUsdcAddress,
         chainId: arcTestnet.id,
         functionName: "approve",
-        args: [spender, rawAmount],
+        args: [spender, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
       });
 
       toast.loading("Approval transaction sent! Waiting for confirmation...", { id: toastId });
@@ -67,16 +67,16 @@ export function useMarketLiquidity() {
     try {
       const rawAmount = BigInt(Math.round(amount * 1e6));
 
-      // 1. Approve USDC transfer to Factory contract
-      await approveIfNecessary(FACTORY_ADDRESS, rawAmount, toastId);
+      // 1. Approve USDC transfer to Router contract
+      await approveIfNecessary(ROUTER_ADDRESS, rawAmount, toastId);
 
-      // 2. Deposit pre-market liquidity
+      // 2. Deposit pre-market liquidity via Router
       toast.loading(`Please confirm the ${amount} USDC deposit in your wallet...`, { id: toastId });
       const formattedId = formatMarketId(marketId);
       const hash = await writeContractAsync({
-        abi: factoryAbi,
-        address: FACTORY_ADDRESS,
-        args: [formattedId, rawAmount],
+        abi: routerAbi,
+        address: ROUTER_ADDRESS,
+        args: [FACTORY_ADDRESS, formattedId, rawAmount],
         chainId: arcTestnet.id,
         functionName: "depositPreMarketLiquidity",
       });
@@ -123,16 +123,16 @@ export function useMarketLiquidity() {
     try {
       const rawAmount = BigInt(Math.round(amount * 1e6));
 
-      // 1. Approve USDC transfer to FPMM contract
-      await approveIfNecessary(FPMM_ADDRESS, rawAmount, toastId);
+      // 1. Approve USDC transfer to Router contract
+      await approveIfNecessary(ROUTER_ADDRESS, rawAmount, toastId);
 
-      // 2. Add liquidity
+      // 2. Add liquidity via Router
       toast.loading(`Please confirm the ${amount} USDC deposit in your wallet...`, { id: toastId });
       const formattedId = formatMarketId(marketId);
       const hash = await writeContractAsync({
-        abi: fpmmAbi,
-        address: FPMM_ADDRESS,
-        args: [formattedId, rawAmount],
+        abi: routerAbi,
+        address: ROUTER_ADDRESS,
+        args: [FPMM_ADDRESS, formattedId, rawAmount],
         chainId: arcTestnet.id,
         functionName: "addLiquidity",
       });
@@ -212,16 +212,16 @@ export function useMarketLiquidity() {
     try {
       const rawAmount = BigInt(Math.round(amount * 1e6));
 
-      // 1. Approve FPMM to spend USDC
-      await approveIfNecessary(FPMM_ADDRESS, rawAmount, toastId);
+      // 1. Approve Router to spend USDC
+      await approveIfNecessary(ROUTER_ADDRESS, rawAmount, toastId);
 
-      // 2. Buy tokens from FPMM
+      // 2. Buy tokens via Router
       toast.loading(`Please confirm the ${amount} USDC ${side} purchase in your wallet...`, { id: toastId });
       const formattedId = formatMarketId(marketId);
       const hash = await writeContractAsync({
-        abi: fpmmAbi,
-        address: FPMM_ADDRESS,
-        args: [formattedId, isYes, rawAmount],
+        abi: routerAbi,
+        address: ROUTER_ADDRESS,
+        args: [FPMM_ADDRESS, formattedId, isYes, rawAmount],
         chainId: arcTestnet.id,
         functionName: "buy",
       });
@@ -250,6 +250,7 @@ export function useMarketLiquidity() {
       throw error;
     }
   }
+
 
   async function sellTokens(
     marketId: string,

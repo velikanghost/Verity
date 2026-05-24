@@ -9,6 +9,7 @@ async function run() {
   
   const fpmmPath = path.join(contractsDir, "out/VerityFPMM.sol/VerityFPMM.json");
   const factoryPath = path.join(contractsDir, "out/VerityMarketFactory.sol/VerityMarketFactory.json");
+  const routerPath = path.join(contractsDir, "out/VerityRouter.sol/VerityRouter.json");
   const targetDir = path.join(backendDir, "src/modules/blockchain/abi");
 
   if (!fs.existsSync(targetDir)) {
@@ -16,6 +17,7 @@ async function run() {
   }
 
   let extractedCount = 0;
+  let totalToExtract = 3;
 
   if (fs.existsSync(fpmmPath)) {
     const data = JSON.parse(fs.readFileSync(fpmmPath, "utf8"));
@@ -41,10 +43,22 @@ async function run() {
     console.error(`✗ VerityMarketFactory.json not found at expected path: ${factoryPath}`);
   }
 
-  if (extractedCount === 2) {
+  if (fs.existsSync(routerPath)) {
+    const data = JSON.parse(fs.readFileSync(routerPath, "utf8"));
+    fs.writeFileSync(
+      path.join(targetDir, "VerityRouter.json"),
+      JSON.stringify(data.abi, null, 2)
+    );
+    console.log("✓ Successfully extracted VerityRouter ABI.");
+    extractedCount++;
+  } else {
+    console.error(`✗ VerityRouter.json not found at expected path: ${routerPath}`);
+  }
+
+  if (extractedCount === totalToExtract) {
     console.log("=== Extraction complete: All ABIs loaded ===");
   } else {
-    console.warn(`=== Extraction finished with issues: only ${extractedCount}/2 ABIs found ===`);
+    console.warn(`=== Extraction finished with issues: only ${extractedCount}/${totalToExtract} ABIs found ===`);
     process.exit(1);
   }
 }
@@ -53,3 +67,4 @@ run().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

@@ -233,6 +233,57 @@ contract VerityFPMM is ERC1155Holder {
         emit LiquidityAdded(marketId, msg.sender, usdcAmount, newShares);
     }
 
+    /// @notice Public LP adds liquidity to a pool on behalf of a beneficiary.
+    /// @param marketId Market identifier
+    /// @param beneficiary The address that will own the LP shares
+    /// @param usdcAmount Amount of USDC to deposit
+    function addLiquidityFor(bytes32 marketId, address beneficiary, uint256 usdcAmount) external {
+        if (usdcAmount == 0) revert ZeroAmount();
+        Pool storage pool = pools[marketId];
+        if (pool.creator == address(0)) revert InvalidPool();
+        if (pool.resolved) revert PoolNotActive();
+
+        // Transfer USDC from caller to this contract
+        usdc.safeTransferFrom(msg.sender, address(this), usdcAmount);
+
+        // Approve vault to pull USDC
+        usdc.approve(address(vault), usdcAmount);
+
+        // Mint YES + NO tokens
+        vault.mintPair(marketId, address(this), usdcAmount);
+
+        // Calculate LP shares to mint
+        uint256 newShares;
+        if (pool.totalLPShares == 0) {
+            newShares = usdcAmount;
+        } else {
+            // Use the lesser balance as denominator to prevent manipulation
+            uint256 denominator = pool.yesBalance < pool.noBalance
+                ? pool.yesBalance
+                : pool.noBalance;
+            newShares = (pool.totalLPShares * usdcAmount) / denominator;
+        }
+
+        // Update pool state
+        pool.yesBalance += usdcAmount;
+        pool.noBalance += usdcAmount;
+        pool.totalLPShares += newShares;
+        pool.totalDeposited += usdcAmount;
+
+        // Track LP position for beneficiary
+        lpShares[marketId][beneficiary] += newShares;
+        lpDepositTime[marketId][beneficiary] = block.timestamp;
+
+        // Check activation threshold
+        if (!pool.active && pool.totalDeposited >= MIN_POOL_BALANCE) {
+            pool.active = true;
+            emit PoolActivated(marketId, pool.totalDeposited);
+        }
+
+        emit LiquidityAdded(marketId, beneficiary, usdcAmount, newShares);
+    }
+
+
     /// @notice Public LP removes liquidity from a pool.
     /// @param marketId Market identifier
     /// @param shareAmount Number of LP shares to burn

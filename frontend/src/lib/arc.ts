@@ -25,10 +25,13 @@ export const arcTransport = http(rpcUrl);
 
 export const arcUsdcAddress = usdcAddress as Address;
 
-export const FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "0xd77A929AC02DfacD86270a6e3Ea36902fd65a58d") as Address;
-export const FPMM_ADDRESS = (process.env.NEXT_PUBLIC_FPMM_ADDRESS || "0x1aC7eD26492AdCfAbF522BaEd8cB4028aE2661ac") as Address;
-export const RESOLVER_ADDRESS = (process.env.NEXT_PUBLIC_RESOLVER_ADDRESS || "0x3Ec306418602139b2028a7CB4cA1884e87D37B03") as Address;
-export const VAULT_ADDRESS = (process.env.NEXT_PUBLIC_VAULT_ADDRESS || "0x85C95A5be55a4b4809c345912ce5de5B6D17e073") as Address;
+export const FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "0x47248BfD909337F78De56Aaa82d070Eb8964F30F") as Address;
+export const FPMM_ADDRESS = (process.env.NEXT_PUBLIC_FPMM_ADDRESS || "0x51203EF25B201A9138603d50711092698C350e24") as Address;
+export const RESOLVER_ADDRESS = (process.env.NEXT_PUBLIC_RESOLVER_ADDRESS || "0x8D387a1704E7efb92b315e97db54DA92a6212A1b") as Address;
+export const VAULT_ADDRESS = (process.env.NEXT_PUBLIC_VAULT_ADDRESS || "0x53B2404b703B78e0dfca79ffA0BDf7eBCb17E563") as Address;
+export const ROUTER_ADDRESS = (process.env.NEXT_PUBLIC_ROUTER_ADDRESS || "0xfd5b97972669Dbd447560B4c7b0eEbe7BD58ff3d") as Address;
+
+
 
 export function hasArcWalletConfig() {
   return Boolean(chainId && rpcUrl && usdcAddress);
@@ -237,3 +240,73 @@ export const vaultAbi = [
     outputs: [],
   },
 ] as const;
+
+export const routerAbi = [
+  {
+    name: "createMarketPreDeposit",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "factory", type: "address" },
+      { name: "marketId", type: "bytes32" },
+      { name: "creatorLpAmount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "depositPreMarketLiquidity",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "factory", type: "address" },
+      { name: "marketId", type: "bytes32" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "buy",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "fpmm", type: "address" },
+      { name: "marketId", type: "bytes32" },
+      { name: "isYes", type: "bool" },
+      { name: "usdcAmount", type: "uint256" },
+    ],
+    outputs: [{ name: "tokensOut", type: "uint256" }],
+  },
+  {
+    name: "addLiquidity",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "fpmm", type: "address" },
+      { name: "marketId", type: "bytes32" },
+      { name: "usdcAmount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "proposeResolution",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "resolver", type: "address" },
+      { name: "marketId", type: "bytes32" },
+      { name: "proposedOutcome", type: "bool" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "disputeResolution",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "resolver", type: "address" },
+      { name: "marketId", type: "bytes32" },
+    ],
+    outputs: [],
+  },
+] as const;
+
