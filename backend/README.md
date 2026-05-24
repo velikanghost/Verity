@@ -6,7 +6,7 @@ Verity's decentralized backend service, built using the NestJS framework and Mon
 
 - **Auth & Users**: Wallet-based login (`POST /api/users/wallet/:address`) and JWT protection.
 - **Posts & Comments**: Native posts feed supporting standard content and prediction market declarations.
-- **On-Chain Escrow & Funding Verification**: Verifies USDC transfer receipts and triggers database state changes (e.g. `qualified` $\to$ `funding_pool` $\to$ `tradable`).
+- **On-Chain Pool Funding Verification**: Verifies USDC transaction receipts and triggers database state changes (e.g. `qualified` -> `funding_pool` -> `tradable`).
 - **AMM Pricing & LP Tracking**: Integrates with `VerityFPMM` contract to fetch YES/NO token pricing and user LP positions.
 - **AI Agent Resolution Engine**: Uses Tavily Search API and configurable LLMs (Gemini, Claude, OpenAI) to gather facts and automatically propose outcomes for subjective prediction markets.
 - **Resolution Keeper**: An automated resolution agent checking expired markets every 30 seconds to submit Pyth VAAs or LLM-driven proposals.
@@ -37,10 +37,11 @@ JWT_EXPIRES_IN=7d
 # Arc Testnet Configuration
 ARC_RPC_URL=https://rpc.testnet.arc.network
 USDC_ADDRESS=0x3600000000000000000000000000000000000000
-CONDITIONAL_TOKEN_VAULT_ADDRESS=0x5D97c2a4fD99838095dFc1a17d6aEDfc64410cE4
-FPMM_ADDRESS=0x5e1b479c67ed99b8bd45E01eAbBD5ddE73011A7F
-FACTORY_ADDRESS=0x04dd36473333FC42F4e87d92Ef7ec915D652827b
-RESOLVER_ADDRESS=0x3Ec306418602139b2028a7CB4cA1884e87D37B03
+ROUTER_ADDRESS=0xfd5b97972669Dbd447560B4c7b0eEbe7BD58ff3d
+CONDITIONAL_TOKEN_VAULT_ADDRESS=0x53B2404b703B78e0dfca79ffA0BDf7eBCb17E563
+FPMM_ADDRESS=0x51203EF25B201A9138603d50711092698C350e24
+FACTORY_ADDRESS=0x47248BfD909337F78De56Aaa82d070Eb8964F30F
+RESOLVER_ADDRESS=0x8D387a1704E7efb92b315e97db54DA92a6212A1b
 
 # Required for E2E testing (requires gas + mock USDC)
 TEST_PRIVATE_KEY=0x...
