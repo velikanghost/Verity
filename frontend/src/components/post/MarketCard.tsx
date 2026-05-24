@@ -350,7 +350,7 @@ export default function MarketCard({
         <div className="mb-3" onClick={stopClick}>
           <div className="mb-2 grid grid-cols-2 gap-2">
             <button
-              className="verity-pill flex h-9 items-center justify-center gap-1 bg-meadow-green/12 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-meadow-green/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="verity-pill flex h-9 items-center justify-center gap-1 bg-meadow-green/20 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-meadow-green/30 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
               onClick={() => onVote?.('YES')}
               title={yesCondition}
@@ -359,7 +359,7 @@ export default function MarketCard({
               Upvote
             </button>
             <button
-              className="verity-pill flex h-9 items-center justify-center gap-1 bg-ember-orange/10 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-ember-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
+              className="verity-pill flex h-9 items-center justify-center gap-1 bg-ember-orange/18 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-ember-orange/25 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
               onClick={() => onVote?.('NO')}
               title={noCondition}
