@@ -39,7 +39,7 @@ export default function ProfileEditor() {
   return (
     <div className="flex flex-col gap-3 py-3 sm:py-4">
       <section className="verity-card overflow-hidden">
-        <div className="h-24 bg-midnight sm:h-28" />
+        <div className="h-24 bg-brand-primary sm:h-28" />
 
         <div className="px-4 pb-4 sm:px-5 sm:pb-5">
           <div className="-mt-10 flex items-end justify-between gap-3">
@@ -57,7 +57,7 @@ export default function ProfileEditor() {
                 Share profile <Share className="h-4 w-4" />
               </button>
               <button
-                className="verity-pill flex h-10 items-center justify-center gap-2 bg-midnight px-3 text-sm font-semibold tracking-[-0.18px] text-white transition-colors hover:bg-charcoal-primary sm:px-4"
+                className="verity-pill flex h-10 items-center justify-center gap-2 bg-brand-primary px-3 text-sm font-semibold tracking-[-0.18px] text-white shadow-[var(--shadow-sm)] transition-opacity hover:opacity-90 sm:px-4"
                 onClick={() => setEditing((current) => !current)}
                 type="button"
               >
