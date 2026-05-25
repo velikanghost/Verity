@@ -717,8 +717,52 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
 
   if (loading) {
     return (
-      <div className="verity-card p-8 text-center text-sm font-medium tracking-[-0.18px] text-ash">
-        Loading market...
+      <div className="flex flex-col gap-3 py-3 sm:py-4 animate-pulse">
+        {/* Main Details Card Skeleton */}
+        <div className="verity-card p-4 sm:p-5">
+          <div className="flex gap-4">
+            <div className="h-10 w-10 shrink-0 rounded-full bg-stone-surface" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-4 w-24 rounded bg-stone-surface" />
+                <div className="h-3 w-16 rounded bg-stone-surface" />
+              </div>
+              <div className="space-y-2 mb-4">
+                <div className="h-5 w-3/4 rounded bg-stone-surface" />
+                <div className="h-5 w-1/2 rounded bg-stone-surface" />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-3 mt-4 border-t border-dashed border-stone-surface pt-4">
+            <div className="h-3.5 w-1/3 rounded bg-stone-surface" />
+            <div className="h-3 w-1/4 rounded bg-stone-surface" />
+          </div>
+        </div>
+
+        {/* Voting & Signal Status Cards Skeletons */}
+        <div className="verity-card p-4 sm:p-5 space-y-4">
+          <div className="h-4 w-1/4 rounded bg-stone-surface" />
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <div className="h-3.5 w-1/3 rounded bg-stone-surface" />
+              <div className="h-3.5 w-1/4 rounded bg-stone-surface" />
+            </div>
+            <div className="h-2 w-full rounded bg-stone-surface" />
+          </div>
+        </div>
+
+        {/* Resolution/Details Panel Skeleton */}
+        <div className="verity-card p-4 sm:p-5 space-y-4">
+          <div className="h-4 w-1/4 rounded bg-stone-surface" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex justify-between items-center py-1">
+                <div className="h-3.5 w-1/3 rounded bg-stone-surface" />
+                <div className="h-3.5 w-1/4 rounded bg-stone-surface" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

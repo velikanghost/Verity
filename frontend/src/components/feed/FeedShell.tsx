@@ -211,9 +211,7 @@ export default function FeedShell() {
         role="tabpanel"
       >
         {loading ? (
-          <div className="verity-card p-8 text-center text-sm font-medium text-ash">
-            Loading feed...
-          </div>
+          <FeedSkeleton />
         ) : visibleItems.length > 0 ? (
           visibleItems.map((item) => (
             <FeedCard
@@ -403,4 +401,33 @@ function calculateYesPercent(market: MarketPost) {
   if (totalUsdc > 0) return (yes / totalUsdc) * 100
 
   return 50
+}
+
+export function FeedSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="verity-card p-4 sm:p-5 flex gap-4">
+          <div className="h-10 w-10 shrink-0 rounded-full bg-stone-surface" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-4 w-24 rounded bg-stone-surface" />
+              <div className="h-3 w-16 rounded bg-stone-surface" />
+            </div>
+            <div className="space-y-2 mb-4">
+              <div className="h-4 w-3/4 rounded bg-stone-surface" />
+              <div className="h-4 w-5/6 rounded bg-stone-surface" />
+              <div className="h-4 w-1/2 rounded bg-stone-surface" />
+            </div>
+            <div className="flex items-center justify-between border-t border-dashed border-stone-surface pt-3 max-w-[360px]">
+              <div className="h-5 w-8 rounded bg-stone-surface" />
+              <div className="h-5 w-8 rounded bg-stone-surface" />
+              <div className="h-5 w-8 rounded bg-stone-surface" />
+              <div className="h-5 w-8 rounded bg-stone-surface" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }

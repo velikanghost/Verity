@@ -135,7 +135,7 @@ export default function CommentsThread({
       </div>
 
       {loading ? (
-        <div className="p-6 text-center text-sm text-ash">Loading comments...</div>
+        <CommentsSkeleton />
       ) : commentsTree.rootComments.length > 0 ? (
         <div className="flex flex-col">
           {commentsTree.rootComments.map((comment) => {
@@ -235,5 +235,27 @@ function CommentRow({
         </div>
       </div>
     </article>
+  )
+}
+
+export function CommentsSkeleton() {
+  return (
+    <div className="flex flex-col animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex gap-3 p-4 border-b border-dashed border-stone-surface">
+          <div className="h-8 w-8 shrink-0 rounded-full bg-stone-surface" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="h-3.5 w-20 rounded bg-stone-surface" />
+              <div className="h-3 w-12 rounded bg-stone-surface" />
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-3 w-full rounded bg-stone-surface" />
+              <div className="h-3 w-5/6 rounded bg-stone-surface" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }

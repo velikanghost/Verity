@@ -7,7 +7,7 @@ import { useFeed } from '@/hooks/useFeed'
 import { displayHandle, displayName, type Profile } from '@/lib/verity'
 
 export default function PeopleDiscovery() {
-  const { items } = useFeed()
+  const { items, loading } = useFeed()
   const people = Array.from(
     new Map(items.map((item) => [item.author.id, item.author])).values(),
   ).slice(0, 4)
@@ -21,7 +21,22 @@ export default function PeopleDiscovery() {
         </h2>
       </div>
 
-      {people.length > 0 ? (
+      {loading ? (
+        <div className="grid gap-0 sm:grid-cols-2 animate-pulse">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center justify-between gap-3 border-b border-dashed border-stone-surface p-4 sm:p-5 sm:odd:border-r">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-full bg-stone-surface shrink-0" />
+                <div className="flex flex-col gap-1.5">
+                  <div className="h-3.5 w-24 rounded bg-stone-surface" />
+                  <div className="h-3 w-16 rounded bg-stone-surface" />
+                </div>
+              </div>
+              <div className="h-8 w-16 rounded-[20px] bg-stone-surface" />
+            </div>
+          ))}
+        </div>
+      ) : people.length > 0 ? (
         <div className="grid gap-0 sm:grid-cols-2">
           {people.map((person) => (
             <PersonCard key={person.id} person={person} />

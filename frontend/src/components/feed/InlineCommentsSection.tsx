@@ -44,9 +44,13 @@ export default function InlineCommentsSection({ postId, profile }: InlineComment
       {/* Comments List */}
       <div className="max-h-60 overflow-y-auto space-y-3 mb-4 pr-1 scrollbar-thin">
         {isLoading ? (
-          <div className="flex items-center justify-center py-4 text-xs text-ash">
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Loading comments...
+          <div className="space-y-3 animate-pulse">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex gap-3 text-sm">
+                <div className="h-8 w-8 rounded-full bg-stone-surface shrink-0" />
+                <div className="flex-1 min-w-0 bg-stone-surface/30 rounded-2xl h-10" />
+              </div>
+            ))}
           </div>
         ) : comments && comments.length > 0 ? (
           comments.map((comment) => (

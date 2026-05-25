@@ -66,6 +66,15 @@ export function useFeedQuery(viewerProfileId?: string, onlyMarkets = false) {
       const query = params.toString();
       return apiRequest<FeedPost[]>(`/feed${query ? `?${query}` : ""}`);
     },
+    placeholderData: (previousData, previousQuery) => {
+      if (!previousQuery) return undefined;
+      const prevKey = previousQuery.queryKey;
+      const prevOnlyMarkets = prevKey[2];
+      if (prevOnlyMarkets !== onlyMarkets) {
+        return undefined;
+      }
+      return previousData;
+    },
   });
 }
 
