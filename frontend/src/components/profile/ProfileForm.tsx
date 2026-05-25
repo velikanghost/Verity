@@ -20,6 +20,8 @@ export default function ProfileForm({
   const [username, setUsername] = useState(profile?.username || '')
   const [display, setDisplay] = useState(profile?.display_name || '')
   const [avatar, setAvatar] = useState(profile?.avatar_url || '')
+  const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || '')
+  const [avatarNotice, setAvatarNotice] = useState<string | null>(null)
   const [bio, setBio] = useState(profile?.bio || '')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -39,8 +41,8 @@ export default function ProfileForm({
       const img = new Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
-        const MAX_WIDTH = 256
-        const MAX_HEIGHT = 256
+        const MAX_WIDTH = 160
+        const MAX_HEIGHT = 160
         let width = img.width
         let height = img.height
 
@@ -62,8 +64,19 @@ export default function ProfileForm({
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height)
           const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
-          setAvatar(dataUrl)
-          toast.success('Image loaded and compressed!')
+          setAvatarPreview(dataUrl)
+
+          if (dataUrl.length <= 500) {
+            setAvatar(dataUrl)
+            setAvatarNotice('Image compressed and ready to save.')
+            toast.success('Image loaded.')
+            return
+          }
+
+          setAvatarNotice(
+            'Preview loaded, but direct image uploads need backend storage. Paste a hosted image URL below to save it publicly.'
+          )
+          toast.error('Upload preview loaded. Use an image URL to save it for now.')
         }
       }
       img.src = e.target?.result as string
@@ -73,6 +86,26 @@ export default function ProfileForm({
 
   async function save() {
     if (!profile) return
+
+    const trimmedAvatar = avatar.trim()
+    const isAvatarLikeUrl =
+      trimmedAvatar.length === 0 ||
+      /^https?:\/\//i.test(trimmedAvatar) ||
+      /^data:image\//i.test(trimmedAvatar)
+
+    if (!isAvatarLikeUrl) {
+      const errMsg = 'Avatar must be a hosted image URL.'
+      setMessage(errMsg)
+      toast.error(errMsg)
+      return
+    }
+
+    if (trimmedAvatar.length > 500) {
+      const errMsg = 'Avatar URL is too long. Use a hosted image link instead of a direct file upload.'
+      setMessage(errMsg)
+      toast.error(errMsg)
+      return
+    }
 
     setSaving(true)
     setMessage(null)
@@ -132,10 +165,10 @@ export default function ProfileForm({
             Avatar Picture
           </label>
           <div className="flex items-center gap-4 p-3 bg-stone-surface rounded-[10px] border border-dashed border-stone-200">
-            {avatar ? (
+            {avatarPreview ? (
               <div
                 className="h-12 w-12 rounded-[14px] bg-cover bg-center shrink-0 border border-stone-200 shadow-sm"
-                style={{ backgroundImage: `url(${avatar})` }}
+                style={{ backgroundImage: `url(${avatarPreview})` }}
               />
             ) : (
               <div className="verity-blob h-12 w-12 bg-sky-blue shrink-0">
@@ -154,10 +187,26 @@ export default function ProfileForm({
                 />
               </label>
               <p className="mt-1 text-[10px] text-ash font-mono">
-                Auto-resized and compressed (JPEG format).
+                Upload previews locally. Hosted URLs save publicly.
               </p>
             </div>
           </div>
+          <input
+            className="mt-2 h-11 w-full rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
+            disabled={!profile || saving}
+            onChange={(event) => {
+              setAvatar(event.target.value)
+              setAvatarPreview(event.target.value)
+              setAvatarNotice(null)
+            }}
+            placeholder="https://example.com/avatar.jpg"
+            value={avatar}
+          />
+          {avatarNotice && (
+            <p className="mt-2 text-xs leading-5 text-ash">
+              {avatarNotice}
+            </p>
+          )}
         </div>
 
         <div>

@@ -211,7 +211,7 @@ export default function WalletOnboardingModal() {
     <div
       aria-modal="true"
       aria-labelledby="wallet-onboarding-title"
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-midnight/45 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-obsidian/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-6"
       role="dialog"
     >
       <div className="verity-card w-full max-w-[460px] overflow-hidden bg-warm-canvas">
@@ -299,7 +299,7 @@ export default function WalletOnboardingModal() {
                 </p>
               </div>
               <button
-                className="verity-pill mt-5 flex h-11 w-full items-center justify-center gap-2 bg-midnight text-sm font-semibold tracking-[-0.18px] text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="verity-pill mt-5 flex h-11 w-full items-center justify-center gap-2 bg-inverse text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90 disabled:opacity-60"
                 disabled={isActivating}
                 onClick={handleActivate}
                 type="button"
@@ -325,7 +325,7 @@ export default function WalletOnboardingModal() {
               title="Finish profile setup"
             >
               <button
-                className="verity-pill mt-5 flex h-11 w-full items-center justify-center bg-midnight text-sm font-semibold tracking-[-0.18px] text-white transition-opacity hover:opacity-90"
+                className="verity-pill mt-5 flex h-11 w-full items-center justify-center bg-inverse text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90"
                 onClick={() => refetch()}
                 type="button"
               >
@@ -364,7 +364,7 @@ export default function WalletOnboardingModal() {
                 Letters, numbers, and underscores. No spaces.
               </p>
               <button
-                className="verity-pill mt-5 flex h-11 w-full items-center justify-center gap-2 bg-midnight text-sm font-semibold tracking-[-0.18px] text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="verity-pill mt-5 flex h-11 w-full items-center justify-center gap-2 bg-inverse text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90 disabled:opacity-60"
                 disabled={isSavingUsername || Boolean(usernameError)}
                 onClick={handleUsernameSave}
                 type="button"
@@ -405,7 +405,7 @@ export default function WalletOnboardingModal() {
                 Add Arc testnet USDC to fund pools, provide liquidity, and trade markets.
               </p>
               <button
-                className="verity-pill mt-5 flex h-11 w-full items-center justify-center gap-2 bg-midnight text-sm font-semibold tracking-[-0.18px] text-white transition-opacity hover:opacity-90"
+                className="verity-pill mt-5 flex h-11 w-full items-center justify-center gap-2 bg-inverse text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90"
                 onClick={() => setShowSuccess(false)}
                 type="button"
               >
@@ -465,7 +465,7 @@ function ProgressSteps({ active }: { active: number }) {
         <div
           className={`rounded-[10px] px-3 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-[0.12em] shadow-[var(--shadow-subtle)] ${
             index <= active
-              ? "bg-midnight text-white"
+              ? "bg-inverse text-inverse-text"
               : "bg-parchment-card text-ash"
           }`}
           key={label}
