@@ -10,6 +10,7 @@ import {
   useCreateNormalPostMutation,
 } from '@/store/verity/verityQueries'
 import { toast } from 'react-hot-toast'
+import { formatWeb3Error } from '@/lib/arc'
 
 interface ComposeBoxProps {
   profile: Profile | null
@@ -335,7 +336,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
       setContent('')
       onCreated()
     } catch (caught: any) {
-      const msg = caught?.message || 'Unable to create post.'
+      const msg = formatWeb3Error(caught)
       setError(msg)
       toast.error(msg, { id: tid })
     } finally {

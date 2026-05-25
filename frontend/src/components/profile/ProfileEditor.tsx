@@ -73,7 +73,6 @@ export default function ProfileEditor() {
               <h1 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.7px] text-midnight">
                 {isConnected ? displayName(profile) : 'Connect wallet'}
               </h1>
-              {profile && <BadgeCheck className="h-5 w-5 text-sky-blue" />}
             </div>
             <p className="mt-1 font-mono text-sm text-ash">
               {isConnected ? displayHandle(profile) : '@wallet'}

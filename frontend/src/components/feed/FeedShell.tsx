@@ -90,7 +90,6 @@ export default function FeedShell() {
       } else {
         await addPoolLiquidity(market.id, profile.id, amount)
       }
-      toast.success('Liquidity added successfully!')
       await reload()
     } catch (caught) {
       toast.error(
@@ -126,7 +125,6 @@ export default function FeedShell() {
         feeAmount,
         grossAmount,
       )
-      toast.success(`Successfully bought ${side} tokens!`)
       await reload()
     } catch (caught) {
       toast.error(

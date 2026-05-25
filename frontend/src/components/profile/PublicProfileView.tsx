@@ -111,7 +111,6 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
               <h1 className="truncate text-[28px] font-semibold leading-[1.1] tracking-[-0.7px] text-midnight">
                 {displayName(profile)}
               </h1>
-              <BadgeCheck className="h-5 w-5 text-sky-blue" />
             </div>
             <p className="mt-1 font-mono text-sm text-ash">
               {displayHandle(profile)}

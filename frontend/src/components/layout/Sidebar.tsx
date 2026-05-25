@@ -17,10 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import ThemeToggle from "@/components/layout/ThemeToggle";
-import WalletConnectControl from "@/components/wallet/WalletConnectControl";
-import { useUsdcBalance } from "@/hooks/useUsdcBalance";
-import { useWalletProfile } from "@/hooks/useWalletProfile";
-import { displayHandle, displayName } from "@/lib/verity";
+import SidebarProfile from "@/components/layout/SidebarProfile";
 
 const NAV_ITEMS = [
   { icon: Home, label: "Home", href: "/" },
@@ -34,9 +31,6 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { formattedBalance, isLoading: isBalanceLoading } = useUsdcBalance();
-  const { profile } = useWalletProfile();
-  const isConnected = Boolean(profile);
   const [composeOpen, setComposeOpen] = useState(false);
 
   function openComposer(intent: "take" | "market") {
@@ -88,18 +82,7 @@ export default function Sidebar() {
 
       {/* Action Buttons */}
       <div className="mb-6 mt-auto flex flex-col items-center gap-4 xl:w-full xl:items-stretch">
-        <div className="mb-2 hidden items-center justify-between rounded-[10px] bg-parchment-card p-4 shadow-[var(--shadow-subtle)] xl:flex">
-          <div className="flex items-center gap-2">
-            <CircleDollarSign className="h-5 w-5 text-meadow-green" />
-            <span className="font-mono text-sm font-semibold text-charcoal-primary">
-              {isBalanceLoading ? "..." : formattedBalance} USDC
-            </span>
-          </div>
-        </div>
 
-        <div className="hidden xl:block">
-          <WalletConnectControl />
-        </div>
         
         <div className="relative">
           {composeOpen && (
@@ -168,19 +151,9 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Mini Profile */}
-      <div className="mb-2 flex cursor-pointer items-center justify-center gap-3 rounded-[10px] p-3 transition-colors hover:bg-stone-surface xl:justify-start xl:p-4">
-        <div className="verity-blob h-10 w-10 bg-sky-blue">
-          <span className="verity-blob-smile" />
-        </div>
-        <div className="hidden xl:flex flex-col">
-          <span className="text-sm font-semibold tracking-[-0.18px] text-charcoal-primary">
-            {isConnected ? displayName(profile) : "Connect wallet"}
-          </span>
-          <span className="font-mono text-xs text-ash">
-            {isConnected ? displayHandle(profile) : "@wallet"}
-          </span>
-        </div>
+      {/* Sidebar Profile & Wallet info */}
+      <div className="mt-2">
+        <SidebarProfile />
       </div>
     </div>
   );

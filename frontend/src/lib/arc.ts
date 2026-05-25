@@ -1,4 +1,4 @@
-import { defineChain, http } from "viem";
+import { defineChain, http, createPublicClient } from "viem";
 import type { Address } from "viem";
 
 const chainId = Number(process.env.NEXT_PUBLIC_ARC_TESTNET_CHAIN_ID || "5042002");
@@ -22,6 +22,11 @@ export const arcTestnet = defineChain({
 });
 
 export const arcTransport = http(rpcUrl);
+
+export const publicClient = createPublicClient({
+  chain: arcTestnet,
+  transport: arcTransport,
+});
 
 export const arcUsdcAddress = usdcAddress as Address;
 
@@ -309,4 +314,54 @@ export const routerAbi = [
     outputs: [],
   },
 ] as const;
+
+export function formatWeb3Error(error: any): string {
+  if (!error) return "Unknown error occurred.";
+
+  const message = String(error.message || error);
+  const shortMessage = String(error.shortMessage || "");
+
+  // 1. Check for user rejection / cancellation
+  if (
+    message.includes("User rejected") ||
+    message.includes("User denied") ||
+    shortMessage.includes("User rejected") ||
+    shortMessage.includes("User denied")
+  ) {
+    return "Transaction was cancelled by user.";
+  }
+
+  // 2. Check for revert reasons / specific ERC20 errors
+  if (
+    message.includes("transfer amount exceeds allowance") ||
+    shortMessage.includes("transfer amount exceeds allowance")
+  ) {
+    return "USDC transfer exceeds allowance. Please approve the USDC transaction first.";
+  }
+  if (
+    message.includes("transfer amount exceeds balance") ||
+    shortMessage.includes("transfer amount exceeds balance")
+  ) {
+    return "Insufficient USDC balance to complete this transaction.";
+  }
+  if (
+    message.includes("insufficient funds for gas") ||
+    shortMessage.includes("insufficient funds for gas")
+  ) {
+    return "Insufficient testnet funds for transaction gas.";
+  }
+
+  // Fallback to shortMessage if available, otherwise a clean summary of message
+  if (shortMessage) {
+    return shortMessage;
+  }
+
+  // If it's a long viem error message, try to extract the reason
+  const match = message.match(/reverted with reason:\s*([^.\n]+)/);
+  if (match && match[1]) {
+    return `Execution reverted: ${match[1].trim()}`;
+  }
+
+  return message.slice(0, 120);
+}
 

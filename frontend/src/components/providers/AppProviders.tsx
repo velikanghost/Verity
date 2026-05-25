@@ -1,25 +1,34 @@
 "use client";
 
-import "@rainbow-me/rainbowkit/styles.css";
-import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { useState, type ReactNode } from "react";
-import { WagmiProvider } from "wagmi";
+import { PrivyProvider } from "@privy-io/react-auth";
+import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { arcTestnet, arcTransport } from "@/lib/arc";
 import { RightPanelSlotProvider } from "@/hooks/useRightPanelSlot";
 import { Toaster } from "react-hot-toast";
-import WalletOnboardingModal from "@/components/wallet/WalletOnboardingModal";
+import PrivyOnboardingModal from "@/components/wallet/PrivyOnboardingModal";
+import { usePrivy } from "@privy-io/react-auth";
+import { useEffect } from "react";
+import { arcTestnet } from "@/lib/arc";
 
-const config = getDefaultConfig({
-  appName: "Verity",
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "34bb558c5125cd9604951f37559e91ff",
-  chains: [arcTestnet],
-  transports: {
-    [arcTestnet.id]: arcTransport,
-  },
-  ssr: true,
-});
+function PrivyTokenSyncer() {
+  const { authenticated, getAccessToken } = usePrivy();
+
+  useEffect(() => {
+    if (authenticated) {
+      getAccessToken().then((token) => {
+        if (token) {
+          localStorage.setItem("verity_auth_token", token);
+        }
+      });
+    } else {
+      localStorage.removeItem("verity_auth_token");
+    }
+  }, [authenticated, getAccessToken]);
+
+  return null;
+}
 
 export default function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -36,18 +45,35 @@ export default function AppProviders({ children }: { children: ReactNode }) {
   );
 
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
+    <PrivyProvider
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cm6t6fff00000000000000000"}
+      config={{
+        loginMethods: ["email"],
+        supportedChains: [arcTestnet],
+        defaultChain: arcTestnet,
+        appearance: {
+          theme: "dark",
+          accentColor: "#676FFF",
+        },
+        embeddedWallets: {
+          ethereum: {
+            createOnLogin: "off",
+          },
+        },
+      }}
+    >
+      <SmartWalletsProvider>
+        <QueryClientProvider client={queryClient}>
           <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
             <RightPanelSlotProvider>
+              <PrivyTokenSyncer />
               {children}
-              <WalletOnboardingModal />
+              <PrivyOnboardingModal />
               <Toaster position="top-right" toastOptions={{ duration: 5000 }} />
             </RightPanelSlotProvider>
           </ThemeProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+        </QueryClientProvider>
+      </SmartWalletsProvider>
+    </PrivyProvider>
   );
 }

@@ -1,12 +1,14 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useAccount } from 'wagmi'
+import { usePrivyWallet } from '@/hooks/usePrivyWallet'
+import { usePrivy } from '@privy-io/react-auth'
 import { apiRequest } from '@/store/apiClient'
 import { useEffect } from 'react'
 
 export function useWalletProfile() {
-  const { address, isConnected } = useAccount()
+  const { address, isConnected } = usePrivyWallet()
+  const { getAccessToken, authenticated } = usePrivy()
 
   const {
     data: profile,
@@ -17,6 +19,11 @@ export function useWalletProfile() {
     queryFn: async () => {
       if (!address) return null
       try {
+        // Fetch the token directly from Privy to prevent race conditions on page load
+        const token = await getAccessToken()
+        if (!token) return null
+        localStorage.setItem('verity_auth_token', token)
+
         const res = await apiRequest<any>(`/users/wallet/${address}`)
         if (!res) return null
         if (res.token) {
@@ -30,7 +37,7 @@ export function useWalletProfile() {
         return null
       }
     },
-    enabled: isConnected && Boolean(address),
+    enabled: isConnected && Boolean(address) && authenticated,
   })
 
   // Handle localstorage cleanup when disconnected

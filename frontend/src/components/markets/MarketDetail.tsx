@@ -59,6 +59,7 @@ import {
 } from '@/store/verity/verityQueries'
 import { useMarketLiquidity } from '@/hooks/useMarketLiquidity'
 import { useMarketResolution } from '@/hooks/useMarketResolution'
+import { formatWeb3Error } from '@/lib/arc'
 
 interface MarketDetailProps {
   marketId: string
@@ -254,8 +255,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           }),
         ])
       } catch (caught) {
-        const msg = caught instanceof Error ? caught.message : 'Action failed.'
-        toast.error(msg.slice(0, 120))
+        toast.error(formatWeb3Error(caught))
       } finally {
         setActionPending(null)
       }

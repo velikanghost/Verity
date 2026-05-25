@@ -1,8 +1,8 @@
 "use client";
 
-import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi";
-import { type Address } from "viem";
-import { arcTestnet, arcUsdcAddress, RESOLVER_ADDRESS, VAULT_ADDRESS, FPMM_ADDRESS, FACTORY_ADDRESS, ROUTER_ADDRESS, erc20Abi, resolverAbi, vaultAbi, fpmmAbi, factoryAbi, routerAbi } from "@/lib/arc";
+import { usePrivyWallet } from "@/hooks/usePrivyWallet";
+import { type Address, encodeFunctionData } from "viem";
+import { arcTestnet, arcUsdcAddress, RESOLVER_ADDRESS, VAULT_ADDRESS, FPMM_ADDRESS, FACTORY_ADDRESS, ROUTER_ADDRESS, erc20Abi, resolverAbi, vaultAbi, fpmmAbi, factoryAbi, routerAbi, publicClient, formatWeb3Error } from "@/lib/arc";
 import { toast } from "react-hot-toast";
 
 function formatMarketId(marketId: string): `0x${string}` {
@@ -11,10 +11,7 @@ function formatMarketId(marketId: string): `0x${string}` {
 }
 
 export function useMarketResolution() {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const publicClient = usePublicClient({ chainId: arcTestnet.id });
-  const { writeContractAsync } = useWriteContract();
+  const { address, isConnected, chainId, sendBatchCalls } = usePrivyWallet();
 
   function checkPreconditions() {
     if (!isConnected || !address) {
@@ -22,31 +19,6 @@ export function useMarketResolution() {
     }
     if (chainId !== arcTestnet.id) {
       throw new Error(`Please switch to Arc Testnet (Chain ID: ${arcTestnet.id}).`);
-    }
-  }
-
-  async function approveIfNecessary(spender: Address, rawAmount: bigint, toastId: string) {
-    toast.loading("Checking USDC approval...", { id: toastId });
-    const currentAllowance = await publicClient!.readContract({
-      abi: erc20Abi,
-      address: arcUsdcAddress,
-      functionName: "allowance",
-      args: [address!, spender],
-    });
-
-    if (currentAllowance < rawAmount) {
-      toast.loading("USDC approval required. Please approve in your wallet...", { id: toastId });
-      const txHash = await writeContractAsync({
-        abi: erc20Abi,
-        address: arcUsdcAddress,
-        chainId: arcTestnet.id,
-        functionName: "approve",
-        args: [spender, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
-      });
-
-      toast.loading("Verifying USDC approval on-chain...", { id: toastId });
-      await publicClient!.waitForTransactionReceipt({ hash: txHash });
-      toast.success("USDC approval confirmed!", { id: toastId });
     }
   }
 
@@ -58,37 +30,55 @@ export function useMarketResolution() {
 
       // Read bond amount
       toast.loading("Reading resolution bond amount...", { id: toastId });
-      const bondAmount = await publicClient!.readContract({
+      const bondAmount = await publicClient.readContract({
         abi: resolverAbi,
         address: RESOLVER_ADDRESS,
         functionName: "resolutionBond",
       });
 
-      // Approve bond spending to Router
-      await approveIfNecessary(ROUTER_ADDRESS, bondAmount, toastId);
+      const calls: { to: Address; data: `0x${string}` }[] = [];
 
-      // Dispute proposal via Router
-      toast.loading("Sending dispute transaction...", { id: toastId });
-      const txHash = await writeContractAsync({
-        abi: routerAbi,
-        address: ROUTER_ADDRESS,
-        args: [RESOLVER_ADDRESS, formattedMarketId],
-        chainId: arcTestnet.id,
-        functionName: "disputeResolution",
+      // Check USDC allowance to Router
+      const allowance = await publicClient.readContract({
+        abi: erc20Abi,
+        address: arcUsdcAddress,
+        functionName: "allowance",
+        args: [address as `0x${string}`, ROUTER_ADDRESS],
       });
 
+      if (allowance < bondAmount) {
+        calls.push({
+          to: arcUsdcAddress,
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [ROUTER_ADDRESS, bondAmount],
+          }),
+        });
+      }
+
+      calls.push({
+        to: ROUTER_ADDRESS,
+        data: encodeFunctionData({
+          abi: routerAbi,
+          args: [RESOLVER_ADDRESS, formattedMarketId],
+          functionName: "disputeResolution",
+        }),
+      });
+
+      toast.loading("Submitting dispute transaction batch...", { id: toastId });
+      const txHash = await sendBatchCalls(calls);
+
       toast.loading("Waiting for dispute confirmation on-chain...", { id: toastId });
-      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       
       toast.success("Resolution proposal disputed successfully! ✓", { id: toastId });
       return { txHash, receipt };
     } catch (error: any) {
-      const msg = error?.shortMessage || error?.message || "Dispute failed.";
-      toast.error(`Dispute failed: ${msg}`, { id: toastId });
+      toast.error(formatWeb3Error(error), { id: toastId });
       throw error;
     }
   }
-
 
   async function redeemWinnings(marketId: string) {
     const toastId = toast.loading("Preparing to redeem winnings...");
@@ -97,22 +87,24 @@ export function useMarketResolution() {
       const formattedMarketId = formatMarketId(marketId);
 
       toast.loading("Sending redemption transaction...", { id: toastId });
-      const txHash = await writeContractAsync({
-        abi: vaultAbi,
-        address: VAULT_ADDRESS,
-        args: [formattedMarketId],
-        chainId: arcTestnet.id,
-        functionName: "redeem",
-      });
+      const txHash = await sendBatchCalls([
+        {
+          to: VAULT_ADDRESS,
+          data: encodeFunctionData({
+            abi: vaultAbi,
+            functionName: "redeem",
+            args: [formattedMarketId],
+          }),
+        },
+      ]);
 
       toast.loading("Waiting for redemption confirmation on-chain...", { id: toastId });
-      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       
       toast.success("Winnings redeemed successfully! ✓", { id: toastId });
       return { txHash, receipt };
     } catch (error: any) {
-      const msg = error?.shortMessage || error?.message || "Redemption failed.";
-      toast.error(`Redemption failed: ${msg}`, { id: toastId });
+      toast.error(formatWeb3Error(error), { id: toastId });
       throw error;
     }
   }
@@ -124,22 +116,24 @@ export function useMarketResolution() {
       const formattedMarketId = formatMarketId(marketId);
 
       toast.loading("Sending creator claim transaction...", { id: toastId });
-      const txHash = await writeContractAsync({
-        abi: fpmmAbi,
-        address: FPMM_ADDRESS,
-        args: [formattedMarketId],
-        chainId: arcTestnet.id,
-        functionName: "claimCreatorLiquidity",
-      });
+      const txHash = await sendBatchCalls([
+        {
+          to: FPMM_ADDRESS,
+          data: encodeFunctionData({
+            abi: fpmmAbi,
+            functionName: "claimCreatorLiquidity",
+            args: [formattedMarketId],
+          }),
+        },
+      ]);
 
       toast.loading("Waiting for claim confirmation on-chain...", { id: toastId });
-      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       
       toast.success("Creator liquidity claimed successfully! ✓", { id: toastId });
       return { txHash, receipt };
     } catch (error: any) {
-      const msg = error?.shortMessage || error?.message || "Claim failed.";
-      toast.error(`Claim failed: ${msg}`, { id: toastId });
+      toast.error(formatWeb3Error(error), { id: toastId });
       throw error;
     }
   }
@@ -151,22 +145,24 @@ export function useMarketResolution() {
       const formattedMarketId = formatMarketId(marketId);
 
       toast.loading("Sending refund claim transaction...", { id: toastId });
-      const txHash = await writeContractAsync({
-        abi: factoryAbi,
-        address: FACTORY_ADDRESS,
-        args: [formattedMarketId],
-        chainId: arcTestnet.id,
-        functionName: "claimRefund",
-      });
+      const txHash = await sendBatchCalls([
+        {
+          to: FACTORY_ADDRESS,
+          data: encodeFunctionData({
+            abi: factoryAbi,
+            functionName: "claimRefund",
+            args: [formattedMarketId],
+          }),
+        },
+      ]);
 
       toast.loading("Waiting for refund confirmation on-chain...", { id: toastId });
-      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       
       toast.success("USDC refund claimed successfully! ✓", { id: toastId });
       return { txHash, receipt };
     } catch (error: any) {
-      const msg = error?.shortMessage || error?.message || "Refund claim failed.";
-      toast.error(`Refund claim failed: ${msg}`, { id: toastId });
+      toast.error(formatWeb3Error(error), { id: toastId });
       throw error;
     }
   }
@@ -174,7 +170,7 @@ export function useMarketResolution() {
   async function readProposal(marketId: string) {
     try {
       const formattedMarketId = formatMarketId(marketId);
-      const result = await publicClient!.readContract({
+      const result = await publicClient.readContract({
         abi: resolverAbi,
         address: RESOLVER_ADDRESS,
         functionName: "proposals",
@@ -205,7 +201,7 @@ export function useMarketResolution() {
 
   async function readResolutionBond() {
     try {
-      const result = await publicClient!.readContract({
+      const result = await publicClient.readContract({
         abi: resolverAbi,
         address: RESOLVER_ADDRESS,
         functionName: "resolutionBond",

@@ -15,6 +15,8 @@ export interface UserResponse {
   id: string;
   wallet_address: string | null;
   walletAddress: string | null;
+  email?: string | null;
+  privyDid?: string | null;
   username: string;
   display_name: string | null;
   displayName: string | null;
@@ -44,6 +46,8 @@ export function serializeUser(user: UserDocument): UserResponse {
     id: user.id || (user as any)._id?.toString(),
     wallet_address: user.walletAddress,
     walletAddress: user.walletAddress,
+    email: user.email,
+    privyDid: user.privyDid,
     username: user.username,
     display_name: user.displayName,
     displayName: user.displayName,

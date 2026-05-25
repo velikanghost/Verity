@@ -14,6 +14,9 @@ export class User {
   @Prop({ type: String, default: null })
   passwordHash: string | null;
 
+  @Prop({ type: String, default: null, trim: true, index: true })
+  privyDid: string | null;
+
   @Prop({ type: String, required: true, unique: true, trim: true })
   username: string;
 

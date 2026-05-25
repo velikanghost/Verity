@@ -9,10 +9,11 @@ import {
   Network,
   Wallet,
 } from 'lucide-react'
-import { useSwitchChain, useAccount } from 'wagmi'
+import { usePrivyWallet } from '@/hooks/usePrivyWallet'
 import { arcTestnet } from '@/lib/arc'
 import { useUsdcBalance } from '@/hooks/useUsdcBalance'
 import WalletConnectControl from '@/components/wallet/WalletConnectControl'
+import { useState } from 'react'
 
 function shortAddress(addr?: string) {
   if (!addr) return ''
@@ -20,11 +21,22 @@ function shortAddress(addr?: string) {
 }
 
 export default function WalletSummary() {
-  const { address, isConnected, chainId } = useAccount()
-  const { switchChain, isPending } = useSwitchChain()
+  const { address, isConnected, chainId, switchChain } = usePrivyWallet()
   const { formattedBalance, isLoading } = useUsdcBalance()
+  const [isPending, setIsPending] = useState(false)
 
   const isArcTestnet = isConnected && chainId === arcTestnet.id
+
+  const handleSwitchChain = async () => {
+    setIsPending(true)
+    try {
+      await switchChain(arcTestnet.id)
+    } catch (err) {
+      console.error("Failed to switch chain:", err)
+    } finally {
+      setIsPending(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -99,7 +111,7 @@ export default function WalletSummary() {
           <button
             className="verity-pill mt-4 flex h-11 w-full items-center justify-center bg-inverse text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90"
             disabled={isPending}
-            onClick={() => switchChain({ chainId: arcTestnet.id })}
+            onClick={handleSwitchChain}
             type="button"
           >
             {isPending ? 'Switching...' : 'Switch to Arc Testnet'}

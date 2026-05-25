@@ -1,8 +1,8 @@
 "use client";
 
-import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi";
-import { type Address } from "viem";
-import { arcTestnet, arcUsdcAddress, FACTORY_ADDRESS, FPMM_ADDRESS, VAULT_ADDRESS, ROUTER_ADDRESS, erc20Abi, erc1155Abi, factoryAbi, fpmmAbi, routerAbi } from "@/lib/arc";
+import { usePrivyWallet } from "@/hooks/usePrivyWallet";
+import { type Address, encodeFunctionData } from "viem";
+import { arcTestnet, arcUsdcAddress, FACTORY_ADDRESS, FPMM_ADDRESS, VAULT_ADDRESS, ROUTER_ADDRESS, erc20Abi, erc1155Abi, fpmmAbi, routerAbi, publicClient, formatWeb3Error } from "@/lib/arc";
 import { useFundPoolMutation, useAddLiquidityMutation, useRemoveLiquidityMutation, useExecuteMarketTradeMutation } from "@/store/verity/verityQueries";
 import { toast } from "react-hot-toast";
 
@@ -12,10 +12,7 @@ function formatMarketId(marketId: string): `0x${string}` {
 }
 
 export function useMarketLiquidity() {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const publicClient = usePublicClient({ chainId: arcTestnet.id });
-  const { writeContractAsync } = useWriteContract();
+  const { address, isConnected, chainId, sendBatchCalls } = usePrivyWallet();
 
   const { mutateAsync: fundPoolBackend } = useFundPoolMutation();
   const { mutateAsync: addLiquidityBackend } = useAddLiquidityMutation();
@@ -31,29 +28,17 @@ export function useMarketLiquidity() {
     }
   }
 
-  async function approveIfNecessary(spender: Address, rawAmount: bigint, toastId: string) {
-    toast.loading("Checking USDC approval...", { id: toastId });
-    const currentAllowance = await publicClient!.readContract({
-      abi: erc20Abi,
-      address: arcUsdcAddress,
-      functionName: "allowance",
-      args: [address!, spender],
-    });
-
-    if (currentAllowance < rawAmount) {
-      toast.loading("USDC approval required. Please approve in your wallet...", { id: toastId });
-      const approvalHash = await writeContractAsync({
-        abi: erc20Abi,
-        address: arcUsdcAddress,
-        chainId: arcTestnet.id,
-        functionName: "approve",
-        args: [spender, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
-      });
-
-      toast.loading("Approval transaction sent! Waiting for confirmation...", { id: toastId });
-      await publicClient!.waitForTransactionReceipt({ hash: approvalHash });
-      toast.success("USDC approved successfully!", { id: toastId });
-    }
+  async function executeBatch(
+    calls: { to: Address; data: `0x${string}` }[],
+    toastId: string
+  ): Promise<`0x${string}`> {
+    toast.loading("Sending batched transactions to your wallet...", { id: toastId });
+    const bundleHash = await sendBatchCalls(calls);
+    toast.loading("Transactions submitted! Waiting for block confirmation...", { id: toastId });
+    
+    // Wait for the bundle completion using standard transaction receipt
+    await publicClient.waitForTransactionReceipt({ hash: bundleHash });
+    return bundleHash;
   }
 
   async function fundPreMarket(marketId: string, userId: string, amount: number, isInitialization = false) {
@@ -66,26 +51,41 @@ export function useMarketLiquidity() {
     );
     try {
       const rawAmount = BigInt(Math.round(amount * 1e6));
-
-      // 1. Approve USDC transfer to Router contract
-      await approveIfNecessary(ROUTER_ADDRESS, rawAmount, toastId);
-
-      // 2. Deposit pre-market liquidity via Router
-      toast.loading(`Please confirm the ${amount} USDC deposit in your wallet...`, { id: toastId });
       const formattedId = formatMarketId(marketId);
-      const hash = await writeContractAsync({
-        abi: routerAbi,
-        address: ROUTER_ADDRESS,
-        args: [FACTORY_ADDRESS, formattedId, rawAmount],
-        chainId: arcTestnet.id,
-        functionName: "depositPreMarketLiquidity",
+      const calls: { to: Address; data: `0x${string}` }[] = [];
+
+      // Check USDC allowance to Router
+      const allowance = await publicClient.readContract({
+        abi: erc20Abi,
+        address: arcUsdcAddress,
+        functionName: "allowance",
+        args: [address as `0x${string}`, ROUTER_ADDRESS],
       });
 
-      toast.loading("Deposit transaction sent! Waiting for block confirmation...", { id: toastId });
-      await publicClient!.waitForTransactionReceipt({ hash });
+      if (allowance < rawAmount) {
+        calls.push({
+          to: arcUsdcAddress,
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [ROUTER_ADDRESS, rawAmount],
+          }),
+        });
+      }
 
-      // 3. Notify NestJS backend
-      toast.loading("Transaction confirmed on-chain! Syncing pool funding with database...", { id: toastId });
+      calls.push({
+        to: ROUTER_ADDRESS,
+        data: encodeFunctionData({
+          abi: routerAbi,
+          args: [FACTORY_ADDRESS, formattedId, rawAmount],
+          functionName: "depositPreMarketLiquidity",
+        }),
+      });
+
+      const hash = await executeBatch(calls, toastId);
+
+      // Notify NestJS backend
+      toast.loading("Finalizing pool deposit...", { id: toastId });
       if (isInitialization) {
         await fundPoolBackend({
           marketId,
@@ -110,8 +110,7 @@ export function useMarketLiquidity() {
       );
       return hash;
     } catch (error: any) {
-      const errMsg = error.message || "Failed to fund the launch pool.";
-      toast.error(errMsg.slice(0, 120), { id: toastId });
+      toast.error(formatWeb3Error(error), { id: toastId });
       throw error;
     }
   }
@@ -122,26 +121,41 @@ export function useMarketLiquidity() {
     const toastId = toast.loading("Preparing liquidity pool deposit...");
     try {
       const rawAmount = BigInt(Math.round(amount * 1e6));
-
-      // 1. Approve USDC transfer to Router contract
-      await approveIfNecessary(ROUTER_ADDRESS, rawAmount, toastId);
-
-      // 2. Add liquidity via Router
-      toast.loading(`Please confirm the ${amount} USDC deposit in your wallet...`, { id: toastId });
       const formattedId = formatMarketId(marketId);
-      const hash = await writeContractAsync({
-        abi: routerAbi,
-        address: ROUTER_ADDRESS,
-        args: [FPMM_ADDRESS, formattedId, rawAmount],
-        chainId: arcTestnet.id,
-        functionName: "addLiquidity",
+      const calls: { to: Address; data: `0x${string}` }[] = [];
+
+      // Check USDC allowance to Router
+      const allowance = await publicClient.readContract({
+        abi: erc20Abi,
+        address: arcUsdcAddress,
+        functionName: "allowance",
+        args: [address as `0x${string}`, ROUTER_ADDRESS],
       });
 
-      toast.loading("Deposit transaction sent! Waiting for block confirmation...", { id: toastId });
-      await publicClient!.waitForTransactionReceipt({ hash });
+      if (allowance < rawAmount) {
+        calls.push({
+          to: arcUsdcAddress,
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [ROUTER_ADDRESS, rawAmount],
+          }),
+        });
+      }
 
-      // 3. Notify NestJS backend
-      toast.loading("Transaction confirmed on-chain! Syncing pool state with database...", { id: toastId });
+      calls.push({
+        to: ROUTER_ADDRESS,
+        data: encodeFunctionData({
+          abi: routerAbi,
+          args: [FPMM_ADDRESS, formattedId, rawAmount],
+          functionName: "addLiquidity",
+        }),
+      });
+
+      const hash = await executeBatch(calls, toastId);
+
+      // Notify NestJS backend
+      toast.loading("Finalizing pool deposit...", { id: toastId });
       await addLiquidityBackend({
         marketId,
         userId,
@@ -152,8 +166,7 @@ export function useMarketLiquidity() {
       toast.success(`Successfully deposited ${amount} USDC into the liquidity pool!`, { id: toastId });
       return hash;
     } catch (error: any) {
-      const errMsg = error.message || "Failed to deposit liquidity.";
-      toast.error(errMsg.slice(0, 120), { id: toastId });
+      toast.error(formatWeb3Error(error), { id: toastId });
       throw error;
     }
   }
@@ -164,23 +177,21 @@ export function useMarketLiquidity() {
     const toastId = toast.loading("Preparing liquidity pool withdrawal...");
     try {
       const rawAmount = BigInt(Math.round(lpShares * 1e6));
-
-      // 1. Remove liquidity on-chain
-      toast.loading(`Please confirm withdrawal of ${lpShares} LP shares in your wallet...`, { id: toastId });
       const formattedId = formatMarketId(marketId);
-      const hash = await writeContractAsync({
-        abi: fpmmAbi,
-        address: FPMM_ADDRESS,
-        args: [formattedId, rawAmount],
-        chainId: arcTestnet.id,
-        functionName: "removeLiquidity",
-      });
 
-      toast.loading("Withdrawal transaction sent! Waiting for block confirmation...", { id: toastId });
-      await publicClient!.waitForTransactionReceipt({ hash });
+      const calls = [{
+        to: FPMM_ADDRESS,
+        data: encodeFunctionData({
+          abi: fpmmAbi,
+          functionName: "removeLiquidity",
+          args: [formattedId, rawAmount],
+        }),
+      }];
 
-      // 2. Notify NestJS backend
-      toast.loading("Transaction confirmed on-chain! Updating pool balance and shares...", { id: toastId });
+      const hash = await executeBatch(calls, toastId);
+
+      // Notify NestJS backend
+      toast.loading("Finalizing pool withdrawal...", { id: toastId });
       await removeLiquidityBackend({
         marketId,
         userId,
@@ -191,8 +202,7 @@ export function useMarketLiquidity() {
       toast.success(`Successfully withdrawn ${lpShares} LP shares from the pool!`, { id: toastId });
       return hash;
     } catch (error: any) {
-      const errMsg = error.message || "Failed to withdraw liquidity.";
-      toast.error(errMsg.slice(0, 120), { id: toastId });
+      toast.error(formatWeb3Error(error), { id: toastId });
       throw error;
     }
   }
@@ -211,26 +221,41 @@ export function useMarketLiquidity() {
     const toastId = toast.loading(`Preparing ${side} token purchase...`);
     try {
       const rawAmount = BigInt(Math.round(amount * 1e6));
-
-      // 1. Approve Router to spend USDC
-      await approveIfNecessary(ROUTER_ADDRESS, rawAmount, toastId);
-
-      // 2. Buy tokens via Router
-      toast.loading(`Please confirm the ${amount} USDC ${side} purchase in your wallet...`, { id: toastId });
       const formattedId = formatMarketId(marketId);
-      const hash = await writeContractAsync({
-        abi: routerAbi,
-        address: ROUTER_ADDRESS,
-        args: [FPMM_ADDRESS, formattedId, isYes, rawAmount],
-        chainId: arcTestnet.id,
-        functionName: "buy",
+      const calls: { to: Address; data: `0x${string}` }[] = [];
+
+      // Check USDC allowance to Router
+      const allowance = await publicClient.readContract({
+        abi: erc20Abi,
+        address: arcUsdcAddress,
+        functionName: "allowance",
+        args: [address as `0x${string}`, ROUTER_ADDRESS],
       });
 
-      toast.loading("Trade submitted! Waiting for block confirmation...", { id: toastId });
-      await publicClient!.waitForTransactionReceipt({ hash });
+      if (allowance < rawAmount) {
+        calls.push({
+          to: arcUsdcAddress,
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [ROUTER_ADDRESS, rawAmount],
+          }),
+        });
+      }
 
-      // 3. Notify NestJS backend
-      toast.loading("Transaction confirmed on-chain! Updating trade history and position...", { id: toastId });
+      calls.push({
+        to: ROUTER_ADDRESS,
+        data: encodeFunctionData({
+          abi: routerAbi,
+          args: [FPMM_ADDRESS, formattedId, isYes, rawAmount],
+          functionName: "buy",
+        }),
+      });
+
+      const hash = await executeBatch(calls, toastId);
+
+      // Notify NestJS backend
+      toast.loading("Finalizing transaction...", { id: toastId });
       await executeMarketTradeBackend({
         marketId,
         profileId,
@@ -245,12 +270,10 @@ export function useMarketLiquidity() {
       toast.success(`Successfully bought ${side} tokens for ${amount} USDC!`, { id: toastId });
       return hash;
     } catch (error: any) {
-      const errMsg = error.message || `Failed to buy ${side} tokens.`;
-      toast.error(errMsg.slice(0, 120), { id: toastId });
+      toast.error(formatWeb3Error(error), { id: toastId });
       throw error;
     }
   }
-
 
   async function sellTokens(
     marketId: string,
@@ -266,45 +289,41 @@ export function useMarketLiquidity() {
     const toastId = toast.loading(`Preparing ${side} token sale...`);
     try {
       const rawAmount = BigInt(Math.round(tokenAmount * 1e6));
+      const formattedId = formatMarketId(marketId);
+      const calls: { to: Address; data: `0x${string}` }[] = [];
 
-      // 1. Approve FPMM as ERC1155 operator on the Vault (if not already)
-      toast.loading("Checking token approval...", { id: toastId });
-      const isApproved = await publicClient!.readContract({
+      // Check if FPMM is approved as ERC1155 operator on the Vault
+      const isApproved = await publicClient.readContract({
         abi: erc1155Abi,
         address: VAULT_ADDRESS,
         functionName: "isApprovedForAll",
-        args: [address!, FPMM_ADDRESS],
+        args: [address as `0x${string}`, FPMM_ADDRESS],
       });
 
       if (!isApproved) {
-        toast.loading("Token approval required. Please approve in your wallet...", { id: toastId });
-        const approvalHash = await writeContractAsync({
-          abi: erc1155Abi,
-          address: VAULT_ADDRESS,
-          chainId: arcTestnet.id,
-          functionName: "setApprovalForAll",
-          args: [FPMM_ADDRESS, true],
+        calls.push({
+          to: VAULT_ADDRESS,
+          data: encodeFunctionData({
+            abi: erc1155Abi,
+            functionName: "setApprovalForAll",
+            args: [FPMM_ADDRESS, true],
+          }),
         });
-        toast.loading("Approval sent! Waiting for confirmation...", { id: toastId });
-        await publicClient!.waitForTransactionReceipt({ hash: approvalHash });
       }
 
-      // 2. Sell tokens on FPMM
-      toast.loading(`Please confirm sale of ${tokenAmount} ${side} tokens in your wallet...`, { id: toastId });
-      const formattedId = formatMarketId(marketId);
-      const hash = await writeContractAsync({
-        abi: fpmmAbi,
-        address: FPMM_ADDRESS,
-        args: [formattedId, isYes, rawAmount],
-        chainId: arcTestnet.id,
-        functionName: "sell",
+      calls.push({
+        to: FPMM_ADDRESS,
+        data: encodeFunctionData({
+          abi: fpmmAbi,
+          functionName: "sell",
+          args: [formattedId, isYes, rawAmount],
+        }),
       });
 
-      toast.loading("Sale submitted! Waiting for block confirmation...", { id: toastId });
-      await publicClient!.waitForTransactionReceipt({ hash });
+      const hash = await executeBatch(calls, toastId);
 
-      // 3. Notify NestJS backend
-      toast.loading("Transaction confirmed on-chain! Updating trade history and position...", { id: toastId });
+      // Notify NestJS backend
+      toast.loading("Finalizing transaction...", { id: toastId });
       await executeMarketTradeBackend({
         marketId,
         profileId,
@@ -319,8 +338,7 @@ export function useMarketLiquidity() {
       toast.success(`Successfully sold ${tokenAmount} ${side} tokens!`, { id: toastId });
       return hash;
     } catch (error: any) {
-      const errMsg = error.message || `Failed to sell ${side} tokens.`;
-      toast.error(errMsg.slice(0, 120), { id: toastId });
+      toast.error(formatWeb3Error(error), { id: toastId });
       throw error;
     }
   }

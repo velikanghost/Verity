@@ -7,12 +7,12 @@ import {
   PublicClient,
   defineChain,
   decodeFunctionData,
+  decodeEventLog,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import fpmmAbi from './abi/VerityFPMM.json';
 import factoryAbi from './abi/VerityMarketFactory.json';
 import routerAbi from './abi/VerityRouter.json';
-
 
 export const arcTestnet = defineChain({
   id: 5042002,
@@ -22,6 +22,171 @@ export const arcTestnet = defineChain({
     default: { http: ['https://rpc.testnet.arc.network'] },
   },
 });
+
+const entryPointAbi = [
+  {
+    name: 'handleOps',
+    type: 'function',
+    inputs: [
+      {
+        name: 'ops',
+        type: 'tuple[]',
+        components: [
+          { name: 'sender', type: 'address' },
+          { name: 'nonce', type: 'uint256' },
+          { name: 'initCode', type: 'bytes' },
+          { name: 'callData', type: 'bytes' },
+          { name: 'callGasLimit', type: 'uint256' },
+          { name: 'verificationGasLimit', type: 'uint256' },
+          { name: 'preVerificationGas', type: 'uint256' },
+          { name: 'maxFeePerGas', type: 'uint256' },
+          { name: 'maxPriorityFeePerGas', type: 'uint256' },
+          { name: 'paymasterAndData', type: 'bytes' },
+          { name: 'signature', type: 'bytes' },
+        ],
+      },
+      { name: 'beneficiary', type: 'address' },
+    ],
+  },
+] as const;
+
+const smartAccountExecuteAbi = [
+  {
+    name: 'execute',
+    type: 'function',
+    inputs: [
+      { name: 'dest', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'func', type: 'bytes' },
+    ],
+  },
+  {
+    name: 'executeBatch',
+    type: 'function',
+    inputs: [
+      { name: 'dest', type: 'address[]' },
+      { name: 'func', type: 'bytes[]' },
+    ],
+  },
+  {
+    name: 'executeBatch',
+    type: 'function',
+    inputs: [
+      { name: 'dest', type: 'address[]' },
+      { name: 'value', type: 'uint256[]' },
+      { name: 'func', type: 'bytes[]' },
+    ],
+  },
+] as const;
+
+const safeExecTransactionAbi = [
+  {
+    name: 'execTransaction',
+    type: 'function',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'data', type: 'bytes' },
+      { name: 'operation', type: 'uint8' },
+      { name: 'safeTxGas', type: 'uint256' },
+      { name: 'baseGas', type: 'uint256' },
+      { name: 'gasPrice', type: 'uint256' },
+      { name: 'gasToken', type: 'address' },
+      { name: 'refundReceiver', type: 'address' },
+      { name: 'signatures', type: 'bytes' },
+    ],
+  },
+] as const;
+
+function getCallSequence(
+  to: string,
+  data: string,
+): { to: string; data: string }[] {
+  const calls: { to: string; data: string }[] = [
+    { to: to.toLowerCase(), data },
+  ];
+
+  if (!data || data === '0x') return calls;
+
+  // 1. Try to decode as EntryPoint handleOps
+  if (data.startsWith('0x1faf9611') || data.startsWith('0x43d7266e')) {
+    try {
+      const { args } = decodeFunctionData({
+        abi: entryPointAbi,
+        data: data as `0x${string}`,
+      });
+      if (args && args[0]) {
+        const ops = args[0] as any[];
+        for (const op of ops) {
+          const nestedCalls = getCallSequence(op.sender, op.callData);
+          calls.push(...nestedCalls);
+        }
+      }
+    } catch (e) {
+      // Ignore decode failure
+    }
+  }
+
+  // 2. Try to decode as smart account execute/executeBatch
+  try {
+    const decodedSmartAccount = decodeFunctionData({
+      abi: smartAccountExecuteAbi,
+      data: data as `0x${string}`,
+    });
+    if (
+      decodedSmartAccount.functionName === 'execute' &&
+      decodedSmartAccount.args
+    ) {
+      const [dest, , func] = decodedSmartAccount.args as [
+        string,
+        bigint,
+        string,
+      ];
+      const nestedCalls = getCallSequence(dest, func);
+      calls.push(...nestedCalls);
+    } else if (
+      decodedSmartAccount.functionName === 'executeBatch' &&
+      decodedSmartAccount.args
+    ) {
+      const args = decodedSmartAccount.args as any[];
+      const dests = args[0] as string[];
+      const funcs = args.find(
+        (arg) =>
+          Array.isArray(arg) &&
+          arg.length > 0 &&
+          typeof arg[0] === 'string' &&
+          arg[0].startsWith('0x'),
+      ) as string[];
+      if (funcs) {
+        for (let i = 0; i < dests.length; i++) {
+          const nestedCalls = getCallSequence(dests[i], funcs[i]);
+          calls.push(...nestedCalls);
+        }
+      }
+    }
+  } catch (e) {
+    // Ignore
+  }
+
+  // 3. Try to decode as Safe execTransaction
+  if (data.startsWith('0x6a761202')) {
+    try {
+      const { args } = decodeFunctionData({
+        abi: safeExecTransactionAbi,
+        data: data as `0x${string}`,
+      });
+      if (args) {
+        const [toArg, , dataArg] = args as [string, bigint, string];
+        const nestedCalls = getCallSequence(toArg, dataArg);
+        calls.push(...nestedCalls);
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  return calls;
+}
 
 @Injectable()
 export class BlockchainService implements OnModuleInit {
@@ -60,10 +225,8 @@ export class BlockchainService implements OnModuleInit {
     this.resolverAddress = (this.configService.get<string>(
       'RESOLVER_ADDRESS',
     ) || '0x0000000000000000000000000000000000000000') as `0x${string}`;
-    this.routerAddress = (this.configService.get<string>(
-      'ROUTER_ADDRESS',
-    ) || '0x0000000000000000000000000000000000000000') as `0x${string}`;
-
+    this.routerAddress = (this.configService.get<string>('ROUTER_ADDRESS') ||
+      '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
     this.publicClient = createPublicClient({
       chain: arcTestnet,
@@ -71,7 +234,7 @@ export class BlockchainService implements OnModuleInit {
     }) as PublicClient;
 
     const rawPrivateKey =
-      this.configService.get<string>('TEST_PRIVATE_KEY') ||
+      this.configService.get<string>('ADMIN_PRIVATE_KEY') ||
       this.configService.get<string>('KEEPER_PRIVATE_KEY');
     if (rawPrivateKey) {
       const privateKey = (
@@ -204,53 +367,90 @@ export class BlockchainService implements OnModuleInit {
       });
       if (receipt.status !== 'success') return null;
 
-      const toAddress = receipt.to?.toLowerCase();
-      const isRouter = toAddress === this.routerAddress.toLowerCase();
-      const isFactory = toAddress === this.factoryAddress.toLowerCase();
-
-      if (!isRouter && !isFactory) {
-        return null;
-      }
-
       const tx = await this.publicClient.getTransaction({
         hash: hash as `0x${string}`,
       });
 
-      let txMarketId: string;
-      let txAmount: bigint;
+      const calls = getCallSequence(receipt.to || tx.to || '', tx.input);
+      for (const call of calls) {
+        const callTo = call.to.toLowerCase();
+        const isRouter = callTo === this.routerAddress.toLowerCase();
+        const isFactory = callTo === this.factoryAddress.toLowerCase();
+        if (!isRouter && !isFactory) continue;
 
-      if (isRouter) {
-        const { functionName, args } = decodeFunctionData({
-          abi: this.routerAbi,
-          data: tx.input,
-        });
+        let txMarketId: string;
+        let txAmount: bigint;
 
-        if (functionName !== 'createMarketPreDeposit') return null;
-        const [txFactory, marketIdArg, txAmountArg] = args as [string, string, bigint];
+        if (isRouter) {
+          try {
+            const { functionName, args } = decodeFunctionData({
+              abi: this.routerAbi,
+              data: call.data as `0x${string}`,
+            });
 
-        if (txFactory.toLowerCase() !== this.factoryAddress.toLowerCase()) {
-          return null;
+            if (functionName !== 'createMarketPreDeposit') continue;
+            const [txFactory, marketIdArg, txAmountArg] = args as [
+              string,
+              string,
+              bigint,
+            ];
+
+            if (txFactory.toLowerCase() !== this.factoryAddress.toLowerCase()) {
+              continue;
+            }
+            txMarketId = marketIdArg;
+            txAmount = txAmountArg;
+          } catch (e) {
+            continue;
+          }
+        } else {
+          try {
+            const { functionName, args } = decodeFunctionData({
+              abi: this.factoryAbi,
+              data: call.data as `0x${string}`,
+            });
+
+            if (functionName !== 'createMarketPreDeposit') continue;
+            const [marketIdArg, txAmountArg] = args as [string, bigint];
+            txMarketId = marketIdArg;
+            txAmount = txAmountArg;
+          } catch (e) {
+            continue;
+          }
         }
-        txMarketId = marketIdArg;
-        txAmount = txAmountArg;
-      } else {
-        const { functionName, args } = decodeFunctionData({
-          abi: this.factoryAbi,
-          data: tx.input,
-        });
 
-        if (functionName !== 'createMarketPreDeposit') return null;
-        const [marketIdArg, txAmountArg] = args as [string, bigint];
-        txMarketId = marketIdArg;
-        txAmount = txAmountArg;
+        const formattedInputMarketId = this.formatMarketId(marketId);
+        if (txMarketId.toLowerCase() === formattedInputMarketId.toLowerCase()) {
+          return txAmount;
+        }
       }
 
+      // Fallback: search for event logs from the factory contract
       const formattedInputMarketId = this.formatMarketId(marketId);
-      if (txMarketId.toLowerCase() !== formattedInputMarketId.toLowerCase()) {
-        return null;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() === this.factoryAddress.toLowerCase()) {
+          try {
+            const decodedLog = decodeEventLog({
+              abi: this.factoryAbi,
+              data: log.data,
+              topics: log.topics,
+            });
+            if (decodedLog.eventName === 'MarketPreDepositCreated') {
+              const { marketId: logMarketId, amount } = decodedLog.args as any;
+              if (
+                logMarketId.toLowerCase() ===
+                formattedInputMarketId.toLowerCase()
+              ) {
+                return amount;
+              }
+            }
+          } catch (e) {
+            // Ignore
+          }
+        }
       }
 
-      return txAmount;
+      return null;
     } catch (error) {
       return null;
     }
@@ -267,58 +467,69 @@ export class BlockchainService implements OnModuleInit {
       });
       if (receipt.status !== 'success') return null;
 
-      const toAddress = receipt.to?.toLowerCase();
-      const isRouter = toAddress === this.routerAddress.toLowerCase();
-      const isFactory = toAddress === this.factoryAddress.toLowerCase();
-
-      if (!isRouter && !isFactory) {
-        return null;
-      }
-
       const tx = await this.publicClient.getTransaction({
         hash: hash as `0x${string}`,
       });
 
-      let txMarketId: string;
-      let txAmount: bigint;
+      const calls = getCallSequence(receipt.to || tx.to || '', tx.input);
+      for (const call of calls) {
+        const callTo = call.to.toLowerCase();
+        const isRouter = callTo === this.routerAddress.toLowerCase();
+        const isFactory = callTo === this.factoryAddress.toLowerCase();
+        if (!isRouter && !isFactory) continue;
 
-      if (isRouter) {
-        const { functionName, args } = decodeFunctionData({
-          abi: this.routerAbi,
-          data: tx.input,
-        });
+        let txMarketId: string;
+        let txAmount: bigint;
 
-        if (functionName !== 'depositPreMarketLiquidity') return null;
-        const [txFactory, marketIdArg, txAmountArg] = args as [string, string, bigint];
+        if (isRouter) {
+          try {
+            const { functionName, args } = decodeFunctionData({
+              abi: this.routerAbi,
+              data: call.data as `0x${string}`,
+            });
 
-        if (txFactory.toLowerCase() !== this.factoryAddress.toLowerCase()) {
-          return null;
+            if (functionName !== 'depositPreMarketLiquidity') continue;
+            const [txFactory, marketIdArg, txAmountArg] = args as [
+              string,
+              string,
+              bigint,
+            ];
+
+            if (txFactory.toLowerCase() !== this.factoryAddress.toLowerCase()) {
+              continue;
+            }
+            txMarketId = marketIdArg;
+            txAmount = txAmountArg;
+          } catch (e) {
+            continue;
+          }
+        } else {
+          try {
+            const { functionName, args } = decodeFunctionData({
+              abi: this.factoryAbi,
+              data: call.data as `0x${string}`,
+            });
+
+            if (functionName !== 'depositPreMarketLiquidity') continue;
+            const [marketIdArg, txAmountArg] = args as [string, bigint];
+            txMarketId = marketIdArg;
+            txAmount = txAmountArg;
+          } catch (e) {
+            continue;
+          }
         }
-        txMarketId = marketIdArg;
-        txAmount = txAmountArg;
-      } else {
-        const { functionName, args } = decodeFunctionData({
-          abi: this.factoryAbi,
-          data: tx.input,
-        });
 
-        if (functionName !== 'depositPreMarketLiquidity') return null;
-        const [marketIdArg, txAmountArg] = args as [string, bigint];
-        txMarketId = marketIdArg;
-        txAmount = txAmountArg;
+        const formattedInputMarketId = this.formatMarketId(marketId);
+        if (txMarketId.toLowerCase() === formattedInputMarketId.toLowerCase()) {
+          return txAmount;
+        }
       }
 
-      const formattedInputMarketId = this.formatMarketId(marketId);
-      if (txMarketId.toLowerCase() !== formattedInputMarketId.toLowerCase()) {
-        return null;
-      }
-
-      return txAmount;
+      return null;
     } catch (error) {
       return null;
     }
   }
-
 
   async getTransactionReceipt(txHash: `0x${string}`) {
     try {
@@ -373,7 +584,7 @@ export class BlockchainService implements OnModuleInit {
   ): Promise<string> {
     if (!this.walletClient) {
       throw new Error(
-        'Wallet client not initialized (missing TEST_PRIVATE_KEY or KEEPER_PRIVATE_KEY)',
+        'Wallet client not initialized (missing ADMIN_PRIVATE_KEY or KEEPER_PRIVATE_KEY)',
       );
     }
 
@@ -432,7 +643,7 @@ export class BlockchainService implements OnModuleInit {
   ): Promise<string> {
     if (!this.walletClient) {
       throw new Error(
-        'Wallet client not initialized (missing TEST_PRIVATE_KEY or KEEPER_PRIVATE_KEY)',
+        'Wallet client not initialized (missing ADMIN_PRIVATE_KEY or KEEPER_PRIVATE_KEY)',
       );
     }
 
@@ -895,7 +1106,9 @@ export class BlockchainService implements OnModuleInit {
       const block = await this.publicClient.getBlock({ blockTag: 'latest' });
       return Number(block.timestamp);
     } catch (error) {
-      throw new Error(`Failed to get current block timestamp: ${error.message}`);
+      throw new Error(
+        `Failed to get current block timestamp: ${error.message}`,
+      );
     }
   }
 }

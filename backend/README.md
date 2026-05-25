@@ -18,17 +18,21 @@ Verity's decentralized backend service, built using the NestJS framework and Mon
 ## Getting Started
 
 ### 1. Project Configuration
+
 Install dependencies from the monorepo root:
+
 ```bash
 pnpm install
 ```
 
 Configure the environment variables by copying `.env.example` to `.env` inside the `backend/` folder:
+
 ```bash
 cp .env.example .env
 ```
 
 Ensure the following variables are configured correctly:
+
 ```env
 MONGODB_URI=mongodb://localhost:27017/verity
 JWT_SECRET=your-long-secure-secret-key
@@ -44,7 +48,7 @@ FACTORY_ADDRESS=0x47248BfD909337F78De56Aaa82d070Eb8964F30F
 RESOLVER_ADDRESS=0x8D387a1704E7efb92b315e97db54DA92a6212A1b
 
 # Required for E2E testing (requires gas + mock USDC)
-TEST_PRIVATE_KEY=0x...
+ADMIN_PRIVATE_KEY=0x...
 
 # AI Agent Config
 LLM_PROVIDER=claude        # options: gemini, openai, claude, mock
@@ -60,42 +64,52 @@ OPENAI_API_KEY=sk-proj-... # required if LLM_PROVIDER is openai
 ## Available Scripts
 
 ### Extract ABIs
+
 Extracts ABI definitions from compiled Foundry artifacts and copies them into the backend package for use in blockchain read/write calls:
+
 ```bash
 pnpm run extract-abis
 ```
 
 ### Run Local Development Server
+
 Starts the NestJS application in watch mode:
+
 ```bash
 pnpm run dev
 ```
+
 The server runs on http://localhost:5050/api, and you can view the Swagger UI documentation at http://localhost:5050/api/docs.
 
 ### Seed Database
+
 Seeds the MongoDB database with initial sample mock data:
+
 ```bash
 pnpm run seed
 ```
 
 ### Run Unit & Integration Tests
+
 Runs the Jest test suites (including agent resolution, keeper simulations, etc.):
+
 ```bash
 pnpm run test
 ```
 
 ### Run On-Chain E2E Tests
-Executes the E2E test suites, signing transactions on Arc Testnet via your `TEST_PRIVATE_KEY`:
 
-*   **Standard E2E**:
-    ```bash
-    pnpm run test:backend-e2e
-    ```
-*   **Pyth Live Resolution E2E**:
-    ```bash
-    pnpm run test:pyth-live
-    ```
-*   **AI Agent + Optimistic Resolver Live E2E**:
-    ```bash
-    pnpm run test:resolver-live
-    ```
+Executes the E2E test suites, signing transactions on Arc Testnet via your `ADMIN_PRIVATE_KEY`:
+
+- **Standard E2E**:
+  ```bash
+  pnpm run test:backend-e2e
+  ```
+- **Pyth Live Resolution E2E**:
+  ```bash
+  pnpm run test:pyth-live
+  ```
+- **AI Agent + Optimistic Resolver Live E2E**:
+  ```bash
+  pnpm run test:resolver-live
+  ```
