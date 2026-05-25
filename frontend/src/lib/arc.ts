@@ -10,8 +10,8 @@ export const arcTestnet = defineChain({
   name: "Arc Testnet",
   nativeCurrency: {
     decimals: 18,
-    name: "Arc Testnet Ether",
-    symbol: "ETH",
+    name: "Arc",
+    symbol: "ARC",
   },
   rpcUrls: {
     default: {
