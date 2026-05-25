@@ -6,7 +6,7 @@ import { CircleHelp } from "lucide-react";
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Header (Mobile Only) */}
+      {/* Header (Mobile) */}
       <div className="verity-card sticky top-0 z-20 mx-1.5 mt-2 flex items-center justify-between p-3 sm:hidden">
         <div className="flex items-center">
           <div className="verity-blob flex h-8 w-8 items-center justify-center bg-sunburst-yellow text-sm font-semibold text-midnight">
