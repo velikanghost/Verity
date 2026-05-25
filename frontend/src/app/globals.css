@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
 
@@ -86,8 +86,10 @@
   --inverse: var(--midnight);
   --inverse-text: #ffffff;
   --panel-border: var(--border);
-  --panel-shadow: color(display-p3 0.94902 0.941176 0.929412) 0px 0px 0px 1px inset;
-  --panel-shadow-hover: rgba(0, 0, 0, 0.04) 0px 1px 6px 0px, rgba(0, 0, 0, 0.05) 0px 0px 24px 0px;
+  --panel-shadow: color(display-p3 0.94902 0.941176 0.929412) 0px 0px 0px 1px
+    inset;
+  --panel-shadow-hover:
+    rgba(0, 0, 0, 0.04) 0px 1px 6px 0px, rgba(0, 0, 0, 0.05) 0px 0px 24px 0px;
 
   /* Blob face color */
   --blob-face: #121212;
@@ -116,8 +118,10 @@
   --radius-card: 10px;
   --radius-card-lg: 24px;
   --radius-pill: 32px;
-  --shadow-subtle: color(display-p3 0.94902 0.941176 0.929412) 0px 0px 0px 1px inset;
-  --shadow-sm: rgba(0, 0, 0, 0.04) 0px 1px 6px 0px, rgba(0, 0, 0, 0.05) 0px 0px 24px 0px;
+  --shadow-subtle: color(display-p3 0.94902 0.941176 0.929412) 0px 0px 0px 1px
+    inset;
+  --shadow-sm:
+    rgba(0, 0, 0, 0.04) 0px 1px 6px 0px, rgba(0, 0, 0, 0.05) 0px 0px 24px 0px;
   --sidebar: var(--surface);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -131,7 +135,7 @@
 /* ───────────────────────────────────────────────────────────────────────────
    DARK THEME — single consolidated block
    ─────────────────────────────────────────────────────────────────────────── */
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
   /* Dynamic neutral palette — dark values */
   --warm-canvas: #11110f;
   --stone-surface: #2a2926;
@@ -157,7 +161,9 @@
   --inverse: #f4f3ef;
   --inverse-text: #11110f;
   --panel-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
-  --panel-shadow-hover: rgba(255, 255, 255, 0.03) 0px 1px 6px 0px, rgba(255, 255, 255, 0.04) 0px 0px 24px 0px;
+  --panel-shadow-hover:
+    rgba(255, 255, 255, 0.03) 0px 1px 6px 0px,
+    rgba(255, 255, 255, 0.04) 0px 0px 24px 0px;
 
   /* Blob face color */
   --blob-face: #f4f3ef;
@@ -183,7 +189,9 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --shadow-subtle: rgba(255, 255, 255, 0.06) 0px 0px 0px 1px inset;
-  --shadow-sm: rgba(255, 255, 255, 0.03) 0px 1px 6px 0px, rgba(255, 255, 255, 0.04) 0px 0px 24px 0px;
+  --shadow-sm:
+    rgba(255, 255, 255, 0.03) 0px 1px 6px 0px,
+    rgba(255, 255, 255, 0.04) 0px 0px 24px 0px;
   --sidebar: var(--surface);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -199,18 +207,34 @@
    ─────────────────────────────────────────────────────────────────────────── */
 body {
   background:
-    radial-gradient(circle at 12% 8%, rgba(255, 187, 38, 0.16), transparent 22rem),
-    radial-gradient(circle at 88% 18%, rgba(0, 144, 255, 0.08), transparent 18rem),
+    radial-gradient(
+      circle at 12% 8%,
+      rgba(255, 187, 38, 0.16),
+      transparent 22rem
+    ),
+    radial-gradient(
+      circle at 88% 18%,
+      rgba(0, 144, 255, 0.08),
+      transparent 18rem
+    ),
     var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-:root[data-theme="dark"] body {
+:root[data-theme='dark'] body {
   background:
-    radial-gradient(circle at 12% 8%, rgba(255, 187, 38, 0.06), transparent 22rem),
-    radial-gradient(circle at 88% 18%, rgba(0, 144, 255, 0.04), transparent 18rem),
+    radial-gradient(
+      circle at 12% 8%,
+      rgba(255, 187, 38, 0.06),
+      transparent 22rem
+    ),
+    radial-gradient(
+      circle at 88% 18%,
+      rgba(0, 144, 255, 0.04),
+      transparent 18rem
+    ),
     var(--background);
 }
 
@@ -295,7 +319,7 @@ body {
 
 .verity-blob::before,
 .verity-blob::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 35%;
   width: 4px;
@@ -327,11 +351,12 @@ body {
    @theme inline — fonts, radius scales, shadcn semantic token mappings
    ─────────────────────────────────────────────────────────────────────────── */
 @theme inline {
-  --font-heading: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
-  --font-family: "Fraunces", Georgia, ui-serif, serif;
-  --font-inter: "Inter", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-heading:
+    'Geist', 'Geist Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Geist', 'Geist Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', ui-monospace, monospace;
+  --font-family: 'Fraunces', Georgia, ui-serif, serif;
+  --font-inter: 'Inter', 'Geist', ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

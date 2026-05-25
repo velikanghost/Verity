@@ -11,6 +11,8 @@ import { PostsModule } from "./modules/posts/posts.module";
 import { MarketsModule } from "./modules/markets/markets.module";
 import { BlockchainModule } from "./modules/blockchain/blockchain.module";
 import { LiquidityModule } from "./modules/liquidity/liquidity.module";
+import { SocketModule } from "./modules/socket/socket.module";
+import { NotificationsModule } from "./modules/notifications/notifications.module";
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { LiquidityModule } from "./modules/liquidity/liquidity.module";
     MarketsModule,
     BlockchainModule,
     LiquidityModule,
+    SocketModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

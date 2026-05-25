@@ -66,7 +66,6 @@ export function useFeedQuery(viewerProfileId?: string, onlyMarkets = false) {
       const query = params.toString();
       return apiRequest<FeedPost[]>(`/feed${query ? `?${query}` : ""}`);
     },
-    refetchInterval: 5000,
   });
 }
 
@@ -92,7 +91,6 @@ export function useMarketPositionsQuery(
         `/markets/${marketId}/positions?profileId=${encodeURIComponent(profileId)}`
       ),
     enabled: Boolean(marketId && profileId),
-    refetchInterval: 5000,
   });
 }
 
@@ -197,14 +195,16 @@ export function useAddCommentMutation() {
       postId,
       authorId,
       content,
+      parentId,
     }: {
       postId: string;
       authorId: string;
       content: string;
+      parentId?: string;
     }) =>
       apiRequest<null>(`/posts/${postId}/comment`, {
         method: "POST",
-        body: JSON.stringify({ authorId, content }),
+        body: JSON.stringify({ authorId, content, parentId }),
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["comments"] });
@@ -315,7 +315,6 @@ export function usePoolStateQuery(marketId: string) {
     queryKey: ["pool-state", marketId] as const,
     queryFn: () => apiRequest<any>(`/markets/${marketId}/pool`),
     enabled: Boolean(marketId),
-    refetchInterval: 5000,
   });
 }
 
@@ -417,5 +416,40 @@ export function useDevQualifyMutation() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["feed"] });
     },
+  });
+}
+
+export function useNotificationsQuery(userId: string) {
+  return useQuery({
+    queryKey: ["notifications", userId] as const,
+    queryFn: () => apiRequest<any[]>(`/notifications?userId=${encodeURIComponent(userId)}`),
+    enabled: Boolean(userId),
+  });
+}
+
+export function useMarkNotificationReadMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (notificationId: string) =>
+      apiRequest<any>(`/notifications/${notificationId}/read`, {
+        method: "PATCH",
+      }),
+    onSuccess: (_, notificationId) => {
+      void qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+export function useProfileActivityQuery(profileId: string, tab: string, viewerId?: string) {
+  return useQuery({
+    queryKey: ["profile-activity", profileId, tab, viewerId || ""] as const,
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("profileId", profileId);
+      params.set("tab", tab);
+      if (viewerId) params.set("userId", viewerId);
+      return apiRequest<FeedPost[]>(`/posts?${params.toString()}`);
+    },
+    enabled: Boolean(profileId && tab),
   });
 }

@@ -18,6 +18,16 @@ export class FeedQueryDto {
   @Transform(({ value }) => value === "true" || value === true)
   @IsBoolean()
   onlyMarkets?: boolean;
+
+  @ApiPropertyOptional({ description: "Profile ID to filter by for activity tab view", example: "60d0fe4f5311236168a109ca" })
+  @IsOptional()
+  @IsMongoId()
+  profileId?: string;
+
+  @ApiPropertyOptional({ description: "Activity tab to filter by (posts, markets, comments, likes, reshares)", example: "posts" })
+  @IsOptional()
+  @IsString()
+  tab?: string;
 }
 
 export class CreatePostDto {
@@ -129,6 +139,11 @@ export class AddCommentDto {
   @IsString()
   @IsNotEmpty()
   content: string;
+
+  @ApiPropertyOptional({ description: "Optional parent Comment ID", example: "60d0fe4f5311236168a109ca" })
+  @IsMongoId()
+  @IsOptional()
+  parentId?: string;
 }
 
 export class ToggleLikeDto {

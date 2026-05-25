@@ -156,7 +156,9 @@ export default function MarketCard({
                 </Link>
               </UserHoverCard>
             ) : (
-              <span className="font-medium text-charcoal-primary">{creatorLabel}</span>
+              <span className="font-medium text-charcoal-primary">
+                {creatorLabel}
+              </span>
             )}
             <span className="text-ash">{'\u00B7'}</span>
             <span className="font-mono">{time}</span>
@@ -215,8 +217,9 @@ export default function MarketCard({
           </div>
         )}
 
-        {!isClosed && (
-          isTradable ? null : (status === 'funding_pool' || (status === 'qualified' && liquidity >= 40)) ? (
+        {!isClosed &&
+          (isTradable ? null : status === 'funding_pool' ||
+            (status === 'qualified' && liquidity >= 40) ? (
             <div className="flex flex-col items-center justify-center py-3 text-center">
               <svg
                 className="mb-2 h-7 w-7 animate-spin text-meadow-green"
@@ -263,24 +266,29 @@ export default function MarketCard({
               </div>
               <button
                 className="verity-pill flex h-10 items-center justify-center bg-inverse px-4 text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-                disabled={actionLoading || !isConnected || Number(lpAmount) <= 0}
+                disabled={
+                  actionLoading || !isConnected || Number(lpAmount) <= 0
+                }
                 onClick={() => onAddLP?.(Number(lpAmount))}
                 type="button"
               >
                 {actionLoadingStatus === 'deposit' ? 'Saving...' : 'Fund'}
               </button>
             </div>
-          )
-        )}
+          ))}
       </div>
 
       <div className="mb-4 rounded-[12px] bg-white-surface p-3 shadow-[var(--shadow-subtle)]">
         <div className="mb-2 flex items-center justify-between text-[12px] font-semibold tracking-[-0.14px] text-charcoal-primary">
           <span>Upvote/Downvote signal</span>
-          <span className="font-mono text-[11px] text-ash">{totalVotes}/{qualificationThreshold}</span>
+          <span className="font-mono text-[11px] text-ash">
+            {totalVotes}/{qualificationThreshold}
+          </span>
         </div>
         <div className="mb-2 flex flex-wrap justify-between gap-2">
-          <span className="font-mono text-[11px] text-ash">{freeYesVotes} up / {freeNoVotes} down</span>
+          <span className="font-mono text-[11px] text-ash">
+            {freeYesVotes} up / {freeNoVotes} down
+          </span>
           <span className="font-mono text-[11px] text-ash">
             {voteThresholdMet
               ? 'Review threshold met'
@@ -330,7 +338,9 @@ export default function MarketCard({
           <div className="grid grid-cols-2 gap-2">
             <button
               className="verity-pill flex h-10 items-center justify-center gap-1 bg-meadow-green/12 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] transition-all duration-200 hover:bg-meadow-green/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={actionLoading || !isConnected || Number(tradeAmount) <= 0}
+              disabled={
+                actionLoading || !isConnected || Number(tradeAmount) <= 0
+              }
               onClick={() => onUsdcVote?.('YES', Number(tradeAmount))}
               type="button"
             >
@@ -338,7 +348,9 @@ export default function MarketCard({
             </button>
             <button
               className="verity-pill flex h-10 items-center justify-center gap-1 bg-ember-orange/10 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] transition-all duration-200 hover:bg-ember-orange/15 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={actionLoading || !isConnected || Number(tradeAmount) <= 0}
+              disabled={
+                actionLoading || !isConnected || Number(tradeAmount) <= 0
+              }
               onClick={() => onUsdcVote?.('NO', Number(tradeAmount))}
               type="button"
             >

@@ -19,6 +19,8 @@ import { User, UserDocument } from "../users/users.model";
 import { Post, PostDocument } from "../posts/posts.model";
 import { PostsService, MarketResponse } from "../posts/posts.service";
 import { BlockchainService } from "../blockchain/blockchain.service";
+import { SocketGateway } from "../socket/socket.gateway";
+import { NotificationsService } from "../notifications/notifications.service";
 
 
 export interface DailyVotesResponse {
@@ -75,6 +77,8 @@ export class MarketsService {
     @Inject(forwardRef(() => PostsService))
     private readonly postsService: PostsService,
     private readonly blockchainService: BlockchainService,
+    private readonly socketGateway: SocketGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private todayKey(date = new Date()): string {
@@ -246,6 +250,11 @@ export class MarketsService {
       },
       { new: true, runValidators: true },
     );
+
+    // Emit Socket events
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+    this.socketGateway.broadcastToRoom(`market:${marketId}`, "market-updated", {});
+    this.socketGateway.broadcastToRoom(`post:${market.postId}`, "post-updated", {});
 
     return {
       market: this.postsService.serializeMarket(updatedMarket!),
@@ -551,6 +560,12 @@ export class MarketsService {
 
     // Sync market balances and prices from chain
     await this.syncMarketPrices(marketId);
+
+    // Emit Socket events
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+    this.socketGateway.broadcastToRoom(`market:${marketId}`, "market-updated", {});
+    this.socketGateway.broadcastToRoom(`post:${market.postId}`, "post-updated", {});
+    this.socketGateway.broadcastToRoom(`user:${dto.profileId}`, "user-updated", {});
   }
 
   async syncMarketPrices(marketId: string): Promise<void> {
@@ -584,6 +599,25 @@ export class MarketsService {
     market.resolvedOutcome = winningOutcome;
     market.resolvedByAdmin = adminAddress;
     await market.save();
+
+    // Trigger Notification for Creator
+    try {
+      const recipientId = market.authorId.toString();
+      await this.notificationsService.createNotification(
+        recipientId,
+        "0x28738040d191ff30673f546FB6BF997E6cdA6dbF",
+        "settlement",
+        "Market resolved",
+        `Your market "${market.question}" has been resolved to ${winningOutcome}.`,
+      );
+    } catch (err) {
+      // Ignore notification failures
+    }
+
+    // Emit Socket events
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+    this.socketGateway.broadcastToRoom(`market:${marketId}`, "market-updated", {});
+    this.socketGateway.broadcastToRoom(`post:${market.postId}`, "post-updated", {});
 
     return this.postsService.serializeMarket(market);
   }

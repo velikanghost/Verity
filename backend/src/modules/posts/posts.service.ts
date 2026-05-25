@@ -10,6 +10,7 @@ import { Like, LikeDocument, Reshare, ReshareDocument } from "../interactions/in
 import { Comment, CommentDocument } from "../comments/comments.model";
 import { serializeUser, UserResponse } from "../auth/auth.service";
 import { CreateMarketPostDto } from "./posts.dto";
+import { SocketGateway } from "../socket/socket.gateway";
 
 export interface MarketResponse {
   id: string;
@@ -105,6 +106,7 @@ export class PostsService {
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
     private blockchainService: BlockchainService,
     private liquidityService: LiquidityService,
+    private socketGateway: SocketGateway,
   ) {}
 
   validateMarketHeuristics(input: CreateMarketPostDto) {
@@ -241,9 +243,41 @@ export class PostsService {
     };
   }
 
-  async fetchFeed(viewerProfileId?: string, onlyMarkets = false): Promise<FeedPostResponse[]> {
+  async fetchFeed(
+    viewerProfileId?: string,
+    onlyMarkets = false,
+    profileId?: string,
+    tab?: string,
+  ): Promise<FeedPostResponse[]> {
+    let filter: any = {};
+
+    if (profileId) {
+      const pId = new Types.ObjectId(profileId);
+      if (tab === "posts") {
+        filter = { authorId: pId };
+      } else if (tab === "markets") {
+        filter = { authorId: pId, type: "market" };
+      } else if (tab === "likes") {
+        const likes = await this.likeModel.find({ userId: pId }).select("postId");
+        const postIds = likes.map((l) => l.postId);
+        filter = { _id: { $in: postIds } };
+      } else if (tab === "reshares") {
+        const reshares = await this.reshareModel.find({ userId: pId }).select("postId");
+        const postIds = reshares.map((r) => r.postId);
+        filter = { _id: { $in: postIds } };
+      } else if (tab === "comments") {
+        const comments = await this.commentModel.find({ authorId: pId }).select("postId");
+        const postIds = comments.map((c) => c.postId);
+        filter = { _id: { $in: postIds } };
+      } else {
+        filter = { authorId: pId };
+      }
+    } else if (onlyMarkets) {
+      filter = { type: "market" };
+    }
+
     const posts = await this.postModel
-      .find(onlyMarkets ? { type: "market" } : {})
+      .find(filter)
       .sort({ createdAt: -1 })
       .limit(50);
 
@@ -293,6 +327,42 @@ export class PostsService {
     });
   }
 
+  async findPostById(postId: string, viewerProfileId?: string): Promise<FeedPostResponse> {
+    const post = await this.postModel.findById(postId);
+    if (!post) {
+      throw new NotFoundException("Post not found.");
+    }
+
+    const [author, market] = await Promise.all([
+      this.userModel.findById(post.authorId),
+      this.marketModel.findOne({ postId: post._id }),
+    ]);
+
+    const marketId = market?._id;
+    const [viewerLiked, viewerReshared, viewerVote] = await Promise.all([
+      viewerProfileId
+        ? this.likeModel.exists({ userId: new Types.ObjectId(viewerProfileId), postId: post._id })
+        : Promise.resolve(null),
+      viewerProfileId
+        ? this.reshareModel.exists({ userId: new Types.ObjectId(viewerProfileId), postId: post._id })
+        : Promise.resolve(null),
+      viewerProfileId && marketId
+        ? this.voteModel.findOne({ userId: new Types.ObjectId(viewerProfileId), marketId, voteType: "free" }).select("side")
+        : Promise.resolve(null),
+    ]);
+
+    const base = this.serializePost(post);
+
+    return {
+      ...base,
+      author: author ? serializeUser(author) : this.fallbackProfile(post.authorId.toString()),
+      market: market ? this.serializeMarket(market) : null,
+      viewerLiked: !!viewerLiked,
+      viewerReshared: !!viewerReshared,
+      viewerVote: viewerVote ? (viewerVote.side as VoteSide) : null,
+    };
+  }
+
   async createNormalPost(profileId: string, content: string): Promise<FeedPostResponse> {
     const authorExists = await this.userModel.exists({ _id: profileId });
     if (!authorExists) {
@@ -310,6 +380,8 @@ export class PostsService {
     if (!createdPost) {
       throw new NotFoundException("Failed to retrieve created post.");
     }
+
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
     return createdPost;
   }
 
@@ -385,6 +457,7 @@ export class PostsService {
       throw new NotFoundException("Failed to retrieve created market post.");
     }
 
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
     return {
       post: createdPost,
       warning: this.getMarketWarning(input.question),

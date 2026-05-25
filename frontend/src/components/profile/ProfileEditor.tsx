@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Edit3, Save, Share } from 'lucide-react'
+import { BadgeCheck, Edit3, Share } from 'lucide-react'
 import ProfileActivityTabs, {
   type ProfileActivityTab,
 } from '@/components/social/ProfileActivityTabs'
@@ -14,21 +14,27 @@ import {
   displayName,
   type Profile,
 } from '@/lib/verity'
-import { useUpdateProfileMutation } from '@/store/verity/verityQueries'
+import { useProfileActivityQuery } from '@/store/verity/verityQueries'
 
 export default function ProfileEditor() {
   const router = useRouter()
   const { profile, isLoading } = useWalletProfile()
   const { items } = useFeed(profile?.id)
-  const [editing, setEditing] = useState(false)
   const [activeTab, setActiveTab] = useState<ProfileActivityTab>('posts')
   const [peopleModal, setPeopleModal] = useState<'followers' | 'following' | null>(null)
   const isConnected = Boolean(profile)
-  const profileItems = useMemo(
+
+  const { data: tabItems = [], isLoading: activityLoading } = useProfileActivityQuery(
+    profile?.id || '',
+    activeTab,
+    profile?.id
+  )
+
+  const localProfileItems = useMemo(
     () => (profile ? items.filter((item) => item.author.id === profile.id) : []),
     [items, profile],
   )
-  const marketItems = profileItems.filter((item) => item.market)
+  const marketItems = localProfileItems.filter((item) => item.market)
   const knownUsers = useMemo(() => {
     const users = new Map<string, Profile>()
     items.forEach((item) => users.set(item.author.id, item.author))
@@ -58,10 +64,10 @@ export default function ProfileEditor() {
               </button>
               <button
                 className="verity-pill flex h-10 items-center justify-center gap-2 bg-midnight px-4 text-sm font-semibold tracking-[-0.18px] text-white transition-colors hover:bg-charcoal-primary"
-                onClick={() => setEditing((current) => !current)}
+                onClick={() => router.push('/profile/edit')}
                 type="button"
               >
-                {editing ? 'Close editor' : 'Edit profile'} <Edit3 className="h-4 w-4" />
+                Edit profile <Edit3 className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -108,7 +114,7 @@ export default function ProfileEditor() {
                 Followers
               </button>
               <span className="font-mono text-xs text-ash">
-                {profileItems.length} posts
+                {localProfileItems.length} posts
               </span>
               <span className="font-mono text-xs text-ash">
                 {marketItems.length} markets
@@ -120,21 +126,11 @@ export default function ProfileEditor() {
         <ProfileTabs activeTab={activeTab} onChange={setActiveTab} />
       </section>
 
-      {editing && (
-        <section className="verity-card p-5">
-          <ProfileForm
-            error={null}
-            key={profile?.id || 'empty'}
-            loading={isLoading}
-            profile={profile}
-          />
-        </section>
-      )}
 
       {profile && (
         <ProfileActivityTabs
           activeTab={activeTab}
-          items={profileItems}
+          items={tabItems}
           onOpenMarket={(market) => router.push(`/markets/${market.id}`)}
           onOpenPost={(post) => router.push(`/posts/${post.id}`)}
           profile={profile}
@@ -183,13 +179,14 @@ function ProfileTabs({
     { id: 'markets', label: 'Markets' },
     { id: 'comments', label: 'Comments' },
     { id: 'likes', label: 'Likes' },
+    { id: 'reshares', label: 'Reshares' },
   ]
 
   return (
-    <div className="grid grid-cols-4 border-t border-dashed border-stone-surface px-2">
+    <div className="grid grid-cols-5 border-t border-dashed border-stone-surface px-2">
       {tabs.map((tab) => (
         <button
-          className={`relative h-12 text-sm font-semibold tracking-[-0.18px] transition-colors ${
+          className={`relative h-12 text-[13px] sm:text-sm font-semibold tracking-[-0.18px] transition-colors ${
             activeTab === tab.id ? 'text-charcoal-primary' : 'text-ash hover:text-charcoal-primary'
           }`}
           key={tab.id}
@@ -206,96 +203,3 @@ function ProfileTabs({
   )
 }
 
-function ProfileForm({
-  profile,
-  loading,
-  error,
-}: {
-  profile: Profile | null
-  loading: boolean
-  error: string | null
-}) {
-  const [username, setUsername] = useState(profile?.username || '')
-  const [display, setDisplay] = useState(profile?.display_name || '')
-  const [avatar, setAvatar] = useState(profile?.avatar_url || '')
-  const [bio, setBio] = useState(profile?.bio || '')
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const { mutateAsync: updateProfile } = useUpdateProfileMutation()
-
-  async function save() {
-    if (!profile) return
-
-    setSaving(true)
-    setMessage(null)
-
-    try {
-      await updateProfile({
-        profileId: profile.id,
-        input: {
-          username: username.trim(),
-          display_name: display.trim() || null,
-          avatar_url: avatar.trim() || null,
-          bio: bio.trim() || null,
-        },
-      })
-      setMessage('Profile saved.')
-    } catch (caught) {
-      setMessage(
-        caught instanceof Error ? caught.message : 'Unable to save profile.',
-      )
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <>
-      <div className="mt-5 grid gap-3">
-        <input
-          className="h-11 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
-          disabled={!profile || saving}
-          onChange={(event) => setUsername(event.target.value)}
-          placeholder="username"
-          value={username}
-        />
-        <input
-          className="h-11 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
-          disabled={!profile || saving}
-          onChange={(event) => setDisplay(event.target.value)}
-          placeholder="Display name"
-          value={display}
-        />
-        <input
-          className="h-11 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
-          disabled={!profile || saving}
-          onChange={(event) => setAvatar(event.target.value)}
-          placeholder="Avatar URL"
-          value={avatar}
-        />
-        <textarea
-          className="min-h-24 rounded-[10px] bg-white-surface p-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
-          disabled={!profile || saving}
-          onChange={(event) => setBio(event.target.value)}
-          placeholder="Bio"
-          value={bio}
-        />
-      </div>
-
-      {(message || error || loading) && (
-        <p className="mt-3 text-sm text-ash">
-          {loading ? 'Loading profile...' : message || error}
-        </p>
-      )}
-
-      <button
-        className="verity-pill mt-4 flex h-11 w-full items-center justify-center gap-2 bg-inverse text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={!profile || saving}
-        onClick={save}
-        type="button"
-      >
-        {saving ? 'Saving' : 'Save Profile'} <Save className="h-4 w-4" />
-      </button>
-    </>
-  )
-}

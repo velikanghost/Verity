@@ -4,6 +4,8 @@ import { Model, Types } from "mongoose";
 import { Like, Reshare, LikeDocument, ReshareDocument } from "./interactions.model";
 import { Post, PostDocument } from "../posts/posts.model";
 import { User, UserDocument } from "../users/users.model";
+import { SocketGateway } from "../socket/socket.gateway";
+import { NotificationsService } from "../notifications/notifications.service";
 
 @Injectable()
 export class InteractionsService {
@@ -12,6 +14,8 @@ export class InteractionsService {
     @InjectModel(Reshare.name) private reshareModel: Model<ReshareDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly socketGateway: SocketGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async assertTargets(postId: string, profileId: string): Promise<void> {
@@ -50,17 +54,36 @@ export class InteractionsService {
       if (deleted.deletedCount > 0) {
         await this.postModel.updateOne({ _id: postId }, { $inc: { likesCount: -1 } });
       }
-      return;
+    } else {
+      const result = await this.likeModel.updateOne(
+        { postId: new Types.ObjectId(postId), userId: new Types.ObjectId(profileId) },
+        { $setOnInsert: { postId: new Types.ObjectId(postId), userId: new Types.ObjectId(profileId) } },
+        { upsert: true },
+      );
+      if (result.upsertedCount > 0) {
+        await this.postModel.updateOne({ _id: postId }, { $inc: { likesCount: 1 } });
+
+        // Trigger notification
+        const liker = await this.userModel.findById(profileId);
+        const likerName = liker?.displayName || liker?.username || "Someone";
+        const recipientId = post.authorId.toString();
+        const actorId = profileId;
+        if (recipientId !== actorId) {
+          const snippet = post.content ? post.content.substring(0, 40) + (post.content.length > 40 ? "..." : "") : "your post";
+          await this.notificationsService.createNotification(
+            recipientId,
+            actorId,
+            "like",
+            "New like",
+            `${likerName} liked your post: "${snippet}"`,
+          );
+        }
+      }
     }
 
-    const result = await this.likeModel.updateOne(
-      { postId: new Types.ObjectId(postId), userId: new Types.ObjectId(profileId) },
-      { $setOnInsert: { postId: new Types.ObjectId(postId), userId: new Types.ObjectId(profileId) } },
-      { upsert: true },
-    );
-    if (result.upsertedCount > 0) {
-      await this.postModel.updateOne({ _id: postId }, { $inc: { likesCount: 1 } });
-    }
+    // Emit Socket events
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+    this.socketGateway.broadcastToRoom(`post:${postId}`, "post-updated", {});
   }
 
   async toggleReshare(postId: string, profileId: string, currentlyActive: boolean): Promise<void> {
@@ -74,16 +97,36 @@ export class InteractionsService {
       if (deleted.deletedCount > 0) {
         await this.postModel.updateOne({ _id: postId }, { $inc: { resharesCount: -1 } });
       }
-      return;
+    } else {
+      const result = await this.reshareModel.updateOne(
+        { postId: new Types.ObjectId(postId), userId: new Types.ObjectId(profileId) },
+        { $setOnInsert: { postId: new Types.ObjectId(postId), userId: new Types.ObjectId(profileId) } },
+        { upsert: true },
+      );
+      if (result.upsertedCount > 0) {
+        await this.postModel.updateOne({ _id: postId }, { $inc: { resharesCount: 1 } });
+
+        // Trigger notification
+        const post = await this.postModel.findById(postId);
+        const resharer = await this.userModel.findById(profileId);
+        const resharerName = resharer?.displayName || resharer?.username || "Someone";
+        const recipientId = post?.authorId?.toString();
+        const actorId = profileId;
+        if (post && recipientId && recipientId !== actorId) {
+          const snippet = post.content ? post.content.substring(0, 40) + (post.content.length > 40 ? "..." : "") : "your post";
+          await this.notificationsService.createNotification(
+            recipientId,
+            actorId,
+            "reshare",
+            "New reshare",
+            `${resharerName} reshared your post: "${snippet}"`,
+          );
+        }
+      }
     }
 
-    const result = await this.reshareModel.updateOne(
-      { postId: new Types.ObjectId(postId), userId: new Types.ObjectId(profileId) },
-      { $setOnInsert: { postId: new Types.ObjectId(postId), userId: new Types.ObjectId(profileId) } },
-      { upsert: true },
-    );
-    if (result.upsertedCount > 0) {
-      await this.postModel.updateOne({ _id: postId }, { $inc: { resharesCount: 1 } });
-    }
+    // Emit Socket events
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+    this.socketGateway.broadcastToRoom(`post:${postId}`, "post-updated", {});
   }
 }

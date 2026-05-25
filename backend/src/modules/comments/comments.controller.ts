@@ -20,7 +20,12 @@ export class CommentsController {
   @ApiOperation({ summary: "Add a comment to a post" })
   @ApiResponse({ status: 201, description: "Comment added successfully." })
   async addComment(@Body() createCommentDto: CreateCommentDto) {
-    await this.commentsService.addComment(createCommentDto.postId, createCommentDto.profileId, createCommentDto.content);
+    await this.commentsService.addComment(
+      createCommentDto.postId,
+      createCommentDto.profileId,
+      createCommentDto.content,
+      createCommentDto.parentId,
+    );
     return null;
   }
 }

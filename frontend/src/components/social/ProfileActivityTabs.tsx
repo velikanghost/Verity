@@ -12,7 +12,7 @@ import {
   type Profile,
 } from '@/lib/verity'
 
-export type ProfileActivityTab = 'posts' | 'markets' | 'comments' | 'likes'
+export type ProfileActivityTab = 'posts' | 'markets' | 'comments' | 'likes' | 'reshares'
 
 interface ProfileActivityTabsProps {
   activeTab: ProfileActivityTab
@@ -29,14 +29,8 @@ export default function ProfileActivityTabs({
   onOpenMarket,
   onOpenPost,
 }: ProfileActivityTabsProps) {
-  const rows = useMemo(() => {
-    if (activeTab === 'markets') return items.filter((item) => item.market)
-    if (activeTab === 'likes') return items.filter((item) => item.viewerLiked)
-    if (activeTab === 'comments') {
-      return items.filter((item) => item.commentsCount > 0)
-    }
-    return items
-  }, [activeTab, items])
+  // Items are pre-filtered by the backend when using the profile activity query.
+  const rows = items
 
   if (activeTab === 'comments') {
     return (
@@ -170,7 +164,9 @@ function EmptyActivity({ tab }: { tab: ProfileActivityTab }) {
         ? 'markets'
         : tab === 'comments'
           ? 'comments'
-          : 'liked posts or markets'
+          : tab === 'reshares'
+            ? 'reshares'
+            : 'liked posts or markets'
 
   return (
     <div className="verity-card p-8 text-center text-sm tracking-[-0.18px] text-ash">

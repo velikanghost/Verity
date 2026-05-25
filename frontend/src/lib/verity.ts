@@ -108,6 +108,8 @@ export interface MarketComment {
   content: string;
   created_at: string;
   author: Profile;
+  parentId?: string;
+  parent_id?: string;
 }
 
 export interface MarketPosition {

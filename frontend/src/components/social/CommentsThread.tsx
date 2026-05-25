@@ -1,10 +1,15 @@
 'use client'
 
-import { MessageCircle, Send } from 'lucide-react'
+import { MessageCircle, Send, Loader2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { displayHandle, displayName, relativeTime, type MarketComment } from '@/lib/verity'
+import { useWalletProfile } from '@/hooks/useWalletProfile'
+import { useAddCommentMutation } from '@/store/verity/verityQueries'
+import { toast } from 'react-hot-toast'
+import CommentModal from '@/components/social/CommentModal'
 
 interface CommentsThreadProps {
+  postId: string
   comments: MarketComment[]
   loading?: boolean
   title?: string
@@ -13,22 +18,66 @@ interface CommentsThreadProps {
 type CommentSort = 'relevant' | 'newest'
 
 export default function CommentsThread({
+  postId,
   comments,
   loading = false,
   title = 'Comments',
 }: CommentsThreadProps) {
   const [sort, setSort] = useState<CommentSort>('relevant')
   const [draft, setDraft] = useState('')
-  const sortedComments = useMemo(() => {
-    const copy = [...comments]
+  const [replyingToComment, setReplyingToComment] = useState<MarketComment | null>(null)
+  const { profile } = useWalletProfile()
+  const { mutateAsync: addComment, isPending: isSubmitting } = useAddCommentMutation()
+
+  // Group comments: find all root comments, and map child comments to their parentId
+  const commentsTree = useMemo(() => {
+    const rootComments: MarketComment[] = []
+    const childrenMap = new Map<string, MarketComment[]>()
+
+    comments.forEach((c) => {
+      if (c.parentId || c.parent_id) {
+        const pId = c.parentId || c.parent_id
+        const list = childrenMap.get(pId!) || []
+        list.push(c)
+        childrenMap.set(pId!, list)
+      } else {
+        rootComments.push(c)
+      }
+    });
+
+    // Sort roots based on the selected sort criteria
     if (sort === 'newest') {
-      return copy.sort(
+      rootComments.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       )
+    } else {
+      rootComments.sort((a, b) => b.content.length - a.content.length)
     }
-    return copy.sort((a, b) => b.content.length - a.content.length)
+
+    return { rootComments, childrenMap }
   }, [comments, sort])
+
+  const handleSend = async () => {
+    if (!profile) {
+      toast.error('Connect your wallet to comment.')
+      return
+    }
+    const content = draft.trim()
+    if (!content) return
+
+    try {
+      await addComment({
+        postId,
+        authorId: profile.id,
+        content,
+      })
+      setDraft('')
+      toast.success('Comment added successfully!')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add comment.')
+    }
+  }
 
   return (
     <section className="verity-card overflow-hidden">
@@ -60,27 +109,59 @@ export default function CommentsThread({
           <input
             className="min-w-0 flex-1 bg-transparent text-sm tracking-[-0.18px] text-charcoal-primary outline-none placeholder:text-ash"
             onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && draft.trim() && !isSubmitting) {
+                void handleSend()
+              }
+            }}
             placeholder="Write a comment..."
+            disabled={isSubmitting}
             value={draft}
           />
           <button
             aria-label="Send comment"
             className="flex h-9 w-9 items-center justify-center rounded-full bg-midnight text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!draft.trim()}
+            disabled={!draft.trim() || isSubmitting}
+            onClick={handleSend}
             type="button"
           >
-            <Send className="h-4 w-4" />
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin text-white" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </button>
         </div>
       </div>
 
       {loading ? (
         <div className="p-6 text-center text-sm text-ash">Loading comments...</div>
-      ) : sortedComments.length > 0 ? (
+      ) : commentsTree.rootComments.length > 0 ? (
         <div className="flex flex-col">
-          {sortedComments.map((comment) => (
-            <CommentRow comment={comment} key={comment.id} />
-          ))}
+          {commentsTree.rootComments.map((comment) => {
+            const replies = commentsTree.childrenMap.get(comment.id) || []
+            const sortedReplies = replies.sort(
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            )
+
+            return (
+              <div key={comment.id} className="border-b border-dashed border-stone-surface last:border-b-0">
+                <CommentRow comment={comment} onReplyClick={() => setReplyingToComment(comment)} />
+                {sortedReplies.length > 0 && (
+                  <div className="bg-parchment-card/30 pl-12 pr-4 pb-3 flex flex-col gap-2 border-t border-dashed border-stone-surface/30">
+                    {sortedReplies.map((reply) => (
+                      <CommentRow 
+                        key={reply.id} 
+                        comment={reply} 
+                        isReply 
+                        onReplyClick={() => setReplyingToComment(reply)} 
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       ) : (
         <div className="p-8 text-center">
@@ -91,20 +172,42 @@ export default function CommentsThread({
             No comments yet.
           </p>
           <p className="mt-1 text-sm tracking-[-0.18px] text-ash">
-            Start the discussion when the backend endpoint is ready.
+            Start the discussion.
           </p>
         </div>
       )}
+
+      <CommentModal
+        replyToComment={replyingToComment}
+        isOpen={Boolean(replyingToComment)}
+        onClose={() => setReplyingToComment(null)}
+      />
     </section>
   )
 }
 
-function CommentRow({ comment }: { comment: MarketComment }) {
+function CommentRow({
+  comment,
+  isReply = false,
+  onReplyClick,
+}: {
+  comment: MarketComment
+  isReply?: boolean
+  onReplyClick: () => void
+}) {
+  const avatarUrl = comment.author?.avatar_url || comment.author?.avatarUrl
   return (
-    <article className="flex gap-3 border-b border-dashed border-stone-surface p-4 last:border-b-0">
-      <div className="verity-blob h-10 w-10 shrink-0 bg-sky-blue">
-        <span className="verity-blob-smile" />
-      </div>
+    <article className={`flex gap-3 p-4 ${isReply ? 'pt-2 pb-2' : ''}`}>
+      {avatarUrl ? (
+        <span
+          className={`rounded-[10px] bg-cover bg-center shadow-[var(--shadow-subtle)] shrink-0 ${isReply ? 'h-7 w-7' : 'h-10 w-10'}`}
+          style={{ backgroundImage: `url(${avatarUrl})` }}
+        />
+      ) : (
+        <div className={`verity-blob shrink-0 bg-sky-blue ${isReply ? 'h-7 w-7' : 'h-10 w-10'}`}>
+          <span className="verity-blob-smile" />
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5 text-sm">
           <span className="font-semibold tracking-[-0.18px] text-charcoal-primary">
@@ -118,15 +221,16 @@ function CommentRow({ comment }: { comment: MarketComment }) {
             {relativeTime(comment.created_at)}
           </span>
         </div>
-        <p className="mt-1 whitespace-pre-wrap text-[15px] leading-[1.47] tracking-[-0.2px] text-graphite">
+        <p className={`mt-1 whitespace-pre-wrap leading-[1.47] tracking-[-0.2px] text-graphite ${isReply ? 'text-sm' : 'text-[15px]'}`}>
           {comment.content}
         </p>
         <div className="mt-2 flex gap-4 font-mono text-[11px] text-ash">
-          <button className="hover:text-charcoal-primary" type="button">
+          <button 
+            className="hover:text-charcoal-primary font-semibold" 
+            onClick={onReplyClick}
+            type="button"
+          >
             Reply
-          </button>
-          <button className="hover:text-ember-orange" type="button">
-            Like
           </button>
         </div>
       </div>

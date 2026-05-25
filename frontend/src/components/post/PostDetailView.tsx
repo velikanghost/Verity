@@ -94,7 +94,7 @@ export default function PostDetailView({ postId }: PostDetailViewProps) {
         onOpenMarket={(market) => router.push(`/markets/${market.id}`)}
       />
 
-      <CommentsThread comments={comments} loading={commentsLoading} />
+      <CommentsThread postId={postId} comments={comments} loading={commentsLoading} />
 
       <div className="lg:hidden">
         <RelatedMarketsPanel

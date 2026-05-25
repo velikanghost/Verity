@@ -5,6 +5,7 @@ import { LiquidityPool, LiquidityPoolDocument, LPPosition, LPPositionDocument, L
 import { BlockchainService } from "../blockchain/blockchain.service";
 import { Market, MarketDocument } from "../markets/markets.model";
 import { User, UserDocument } from "../users/users.model";
+import { SocketGateway } from "../socket/socket.gateway";
 
 @Injectable()
 export class LiquidityService {
@@ -15,6 +16,7 @@ export class LiquidityService {
     @InjectModel(Market.name) private marketModel: Model<MarketDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private blockchainService: BlockchainService,
+    private readonly socketGateway: SocketGateway,
   ) {}
 
   async initializePool(marketId: string, creatorId: string, creatorWallet: string, txHash: string): Promise<LiquidityPoolDocument> {
@@ -81,6 +83,10 @@ export class LiquidityService {
 
     await this.syncPoolFromChain(marketId);
 
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+    this.socketGateway.broadcastToRoom(`market:${marketId}`, "market-updated", {});
+    this.socketGateway.broadcastToRoom(`user:${creatorId}`, "user-updated", {});
+
     return pool;
   }
 
@@ -137,6 +143,10 @@ export class LiquidityService {
     });
 
     await this.syncPoolFromChain(marketId);
+
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+    this.socketGateway.broadcastToRoom(`market:${marketId}`, "market-updated", {});
+    this.socketGateway.broadcastToRoom(`user:${creatorId}`, "user-updated", {});
 
     return pool;
   }
@@ -203,6 +213,10 @@ export class LiquidityService {
 
     await this.syncPoolFromChain(marketId);
 
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+    this.socketGateway.broadcastToRoom(`market:${marketId}`, "market-updated", {});
+    this.socketGateway.broadcastToRoom(`user:${userId}`, "user-updated", {});
+
     return position;
   }
 
@@ -257,6 +271,11 @@ export class LiquidityService {
     if (remainingShares === 0) {
       await this.lpPositionModel.deleteOne({ _id: position._id });
       await this.syncPoolFromChain(marketId);
+
+      this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+      this.socketGateway.broadcastToRoom(`market:${marketId}`, "market-updated", {});
+      this.socketGateway.broadcastToRoom(`user:${userId}`, "user-updated", {});
+
       return null;
     } else {
       position.lpShares = remainingShares;
@@ -264,6 +283,11 @@ export class LiquidityService {
       position.depositedUsdc = Math.max(0, position.depositedUsdc - (position.depositedUsdc * (sharesDelta / (position.lpShares || 1))));
       await position.save();
       await this.syncPoolFromChain(marketId);
+
+      this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+      this.socketGateway.broadcastToRoom(`market:${marketId}`, "market-updated", {});
+      this.socketGateway.broadcastToRoom(`user:${userId}`, "user-updated", {});
+
       return position;
     }
   }

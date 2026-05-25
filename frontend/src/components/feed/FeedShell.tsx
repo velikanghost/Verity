@@ -1,15 +1,17 @@
-"use client";
+'use client'
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import ComposeBox from "@/components/feed/ComposeBox";
-import FeedTabs, { type FeedTabId } from "@/components/feed/FeedTabs";
-import MarketCard from "@/components/post/MarketCard";
-import PostCard from "@/components/post/PostCard";
-import { useDailyVotes } from "@/hooks/useDailyVotes";
-import { useFeed } from "@/hooks/useFeed";
-import { useWalletProfile } from "@/hooks/useWalletProfile";
-import { useMarketLiquidity } from "@/hooks/useMarketLiquidity";
+import { useMemo, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import ComposeBox from '@/components/feed/ComposeBox'
+import FeedTabs, { type FeedTabId } from '@/components/feed/FeedTabs'
+import MarketCard from '@/components/post/MarketCard'
+import PostCard from '@/components/post/PostCard'
+import CommentModal from '@/components/social/CommentModal'
+import { useDailyVotes } from '@/hooks/useDailyVotes'
+import { useFeed } from '@/hooks/useFeed'
+import { useWalletProfile } from '@/hooks/useWalletProfile'
+import { useMarketLiquidity } from '@/hooks/useMarketLiquidity'
+import { useSocket } from '@/hooks/useSocket'
 import {
   displayHandle,
   displayName,
@@ -19,75 +21,102 @@ import {
   type FeedPost,
   type MarketPost,
   type VoteSide,
-} from "@/lib/verity";
+  type Profile,
+} from '@/lib/verity'
 import {
   useAddCommentMutation,
   useToggleLikeMutation,
   useToggleReshareMutation,
   useCastFreeVoteMutation,
-} from "@/store/verity/verityQueries";
-import { toast } from "react-hot-toast";
+} from '@/store/verity/verityQueries'
+import { toast } from 'react-hot-toast'
 
 const FEED_CATEGORIES = [
-  "Crypto",
-  "Culture",
-  "Economics",
-  "Miscellaneous",
-  "Politics",
-  "Sports",
-] as const;
+  'Crypto',
+  'Culture',
+  'Economics',
+  'Miscellaneous',
+  'Politics',
+  'Sports',
+] as const
 
-type FeedCategory = (typeof FEED_CATEGORIES)[number];
+type FeedCategory = (typeof FEED_CATEGORIES)[number]
 
 export default function FeedShell() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<FeedTabId>("for-you");
-  const [activeCategory, setActiveCategory] = useState<FeedCategory | null>(null);
-  const { profile } = useWalletProfile();
-  const { dailyVotes, refetch: reloadDailyVotes } = useDailyVotes(profile?.id);
-  const { items, loading, error, reload } = useFeed(profile?.id, activeTab === "markets");
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState<FeedTabId>('for-you')
+  const [activeCategory, setActiveCategory] = useState<FeedCategory | null>(
+    null,
+  )
+  const { profile } = useWalletProfile()
+  const { dailyVotes, refetch: reloadDailyVotes } = useDailyVotes(profile?.id)
+  const { items, loading, error, reload } = useFeed(
+    profile?.id,
+    activeTab === 'markets',
+  )
 
-  const { mutateAsync: addComment } = useAddCommentMutation();
-  const { mutateAsync: toggleLike } = useToggleLikeMutation();
-  const { mutateAsync: toggleReshare } = useToggleReshareMutation();
-  const { mutateAsync: castFreeVote } = useCastFreeVoteMutation();
-  const { fundPreMarket, addPoolLiquidity, buyTokens } = useMarketLiquidity();
-  const [lpLoading, setLpLoading] = useState<string | null>(null);
+  const { joinRoom, leaveRoom } = useSocket()
+
+  useEffect(() => {
+    joinRoom('feed')
+    if (profile?.id) {
+      joinRoom(`user:${profile.id}`)
+    }
+    return () => {
+      leaveRoom('feed')
+      if (profile?.id) {
+        leaveRoom(`user:${profile.id}`)
+      }
+    }
+  }, [profile?.id])
+
+  const [commentingPost, setCommentingPost] = useState<FeedPost | null>(null)
+  const { mutateAsync: toggleLike } = useToggleLikeMutation()
+  const { mutateAsync: toggleReshare } = useToggleReshareMutation()
+  const { mutateAsync: castFreeVote } = useCastFreeVoteMutation()
+  const { fundPreMarket, addPoolLiquidity, buyTokens } = useMarketLiquidity()
+  const [lpLoading, setLpLoading] = useState<string | null>(null)
 
   async function handleAddLP(market: MarketPost, amount: number) {
     if (!profile) {
-      toast.error("Connect a wallet before taking that action.");
-      return;
+      toast.error('Connect a wallet before taking that action.')
+      return
     }
-    setLpLoading(market.id);
+    setLpLoading(market.id)
     try {
-      const isPoolActive = market.status === "tradable";
+      const isPoolActive = market.status === 'tradable'
       if (!isPoolActive) {
-        await fundPreMarket(market.id, profile.id, amount, false);
+        await fundPreMarket(market.id, profile.id, amount, false)
       } else {
-        await addPoolLiquidity(market.id, profile.id, amount);
+        await addPoolLiquidity(market.id, profile.id, amount)
       }
-      toast.success("Liquidity added successfully!");
-      await reload();
+      toast.success('Liquidity added successfully!')
+      await reload()
     } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : "Failed to add liquidity.");
+      toast.error(
+        caught instanceof Error ? caught.message : 'Failed to add liquidity.',
+      )
     } finally {
-      setLpLoading(null);
+      setLpLoading(null)
     }
   }
 
-  async function handleBuySide(market: MarketPost, side: VoteSide, amount: number) {
+  async function handleBuySide(
+    market: MarketPost,
+    side: VoteSide,
+    amount: number,
+  ) {
     if (!profile) {
-      toast.error("Connect a wallet before taking that action.");
-      return;
+      toast.error('Connect a wallet before taking that action.')
+      return
     }
-    setLpLoading(market.id);
+    setLpLoading(market.id)
     try {
-      const isYes = side === "YES";
-      const feeBps = market.trading_fee_bps ?? TRADING_FEE_BPS;
-      const feeAmount = (amount * feeBps) / 10000;
-      const selectedPrice = getMarketPrice(market, side);
-      const grossAmount = amount / selectedPrice;
+      const isYes = side === 'YES'
+      const feeBps = market.trading_fee_bps ?? TRADING_FEE_BPS
+      const feeAmount = (amount * feeBps) / 10000
+      const selectedPrice = getMarketPrice(market, side)
+      const grossAmount = amount / selectedPrice
 
       await buyTokens(
         market.id,
@@ -95,53 +124,51 @@ export default function FeedShell() {
         isYes,
         amount,
         feeAmount,
-        grossAmount
-      );
-      toast.success(`Successfully bought ${side} tokens!`);
-      await reload();
+        grossAmount,
+      )
+      toast.success(`Successfully bought ${side} tokens!`)
+      await reload()
     } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : "Failed to buy tokens.");
+      toast.error(
+        caught instanceof Error ? caught.message : 'Failed to buy tokens.',
+      )
     } finally {
-      setLpLoading(null);
+      setLpLoading(null)
     }
   }
 
   const visibleItems = useMemo(() => {
-    if (!activeCategory) return items;
-    return items.filter((item) => item.market?.category === activeCategory);
-  }, [activeCategory, items]);
+    if (!activeCategory) return items
+    return items.filter((item) => item.market?.category === activeCategory)
+  }, [activeCategory, items])
 
   async function runAction(action: () => Promise<unknown>) {
     if (!profile) {
-      toast.error("Connect a wallet before taking that action.");
-      return;
+      toast.error('Connect a wallet before taking that action.')
+      return
     }
 
     try {
-      await action();
-      await Promise.all([reload(), reloadDailyVotes()]);
+      await action()
+      await Promise.all([reload(), reloadDailyVotes()])
     } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : "Action failed.");
+      toast.error(caught instanceof Error ? caught.message : 'Action failed.')
     }
-  }
-
-  async function commentOn(post: FeedPost) {
-    const content = window.prompt("Add a comment");
-    if (!content) return;
-    await runAction(() => addComment({ postId: post.id, authorId: profile!.id, content }));
   }
 
   async function sharePost(post: FeedPost) {
-    const text = post.market?.question || post.content;
-    const url = post.market ? `${window.location.origin}/markets/${post.market.id}` : `${window.location.origin}/`;
+    const text = post.market?.question || post.content
+    const url = post.market
+      ? `${window.location.origin}/markets/${post.market.id}`
+      : `${window.location.origin}/`
 
     if (navigator.share) {
-      await navigator.share({ title: "Verity", text, url });
-      return;
+      await navigator.share({ title: 'Verity', text, url })
+      return
     }
 
-    await navigator.clipboard.writeText(`${text}\n${url}`);
-    toast.success("Link copied to clipboard!");
+    await navigator.clipboard.writeText(`${text}\n${url}`)
+    toast.success('Link copied to clipboard!')
   }
 
   return (
@@ -161,35 +188,11 @@ export default function FeedShell() {
             Back takes. Build markets.
           </h1>
           <p className="mt-3 text-[15px] leading-[1.47] tracking-[-0.2px] text-graphite">
-            Upvote or Downvote early signals, then trade YES/NO once a market earns enough conviction.
+            Upvote or Downvote early signals, then trade YES/NO once a market
+            earns enough conviction.
           </p>
         </div>
       </section>
-
-      <div className="verity-card p-3">
-        <div className="mb-2 text-xs font-semibold tracking-[-0.12px] text-charcoal-primary">Category</div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {FEED_CATEGORIES.map((category) => {
-            const isActive = activeCategory === category;
-
-            return (
-              <button
-                aria-pressed={isActive}
-                className={`verity-pill h-9 shrink-0 px-4 text-sm font-medium tracking-[-0.18px] transition-opacity ${
-                  isActive
-                    ? "bg-inverse text-inverse-text"
-                    : "bg-parchment-card text-graphite shadow-[var(--shadow-subtle)] hover:bg-stone-surface"
-                }`}
-                key={category}
-                onClick={() => setActiveCategory(isActive ? null : category)}
-                type="button"
-              >
-                {category}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
       <ComposeBox onCreated={reload} profile={profile} />
@@ -217,17 +220,50 @@ export default function FeedShell() {
               item={item}
               key={item.id}
               dailyVotesRemaining={dailyVotes.votesRemaining}
-              onComment={() => commentOn(item)}
-              onLike={() => runAction(() => toggleLike({ postId: item.id, profileId: profile!.id, currentlyLiked: item.viewerLiked }))}
+              onLike={() =>
+                runAction(() =>
+                  toggleLike({
+                    postId: item.id,
+                    profileId: profile!.id,
+                    currentlyLiked: item.viewerLiked,
+                  }),
+                )
+              }
               onOpenMarket={(market) => router.push(`/markets/${market.id}`)}
               onOpenPost={(post) => router.push(`/posts/${post.id}`)}
-              onReshare={() => runAction(() => toggleReshare({ postId: item.id, profileId: profile!.id, currentlyReshared: item.viewerReshared }))}
+              onReshare={() =>
+                runAction(() =>
+                  toggleReshare({
+                    postId: item.id,
+                    profileId: profile!.id,
+                    currentlyReshared: item.viewerReshared,
+                  }),
+                )
+              }
               onShare={() => sharePost(item)}
-              onUsdcVote={(market, side, amount) => handleBuySide(market, side, amount)}
-              onVote={(market, side) => runAction(() => castFreeVote({ marketId: market.id, userId: profile!.id, side }))}
+              onUsdcVote={(market, side, amount) =>
+                handleBuySide(market, side, amount)
+              }
+              onVote={(market, side) =>
+                runAction(() =>
+                  castFreeVote({
+                    marketId: market.id,
+                    userId: profile!.id,
+                    side,
+                  }),
+                )
+              }
               isConnected={Boolean(profile)}
               actionLoading={lpLoading}
               onAddLP={handleAddLP}
+              profile={profile}
+              onComment={() => {
+                if (!profile) {
+                  toast.error('Connect a wallet to leave a comment.')
+                  return
+                }
+                setCommentingPost(item)
+              }}
             />
           ))
         ) : (
@@ -239,14 +275,19 @@ export default function FeedShell() {
           </div>
         )}
       </div>
+
+      <CommentModal
+        post={commentingPost}
+        isOpen={Boolean(commentingPost)}
+        onClose={() => setCommentingPost(null)}
+      />
     </div>
-  );
+  )
 }
 
 function FeedCard({
   item,
   dailyVotesRemaining,
-  onComment,
   onLike,
   onOpenMarket,
   onOpenPost,
@@ -257,100 +298,109 @@ function FeedCard({
   isConnected,
   actionLoading,
   onAddLP,
+  profile,
+  onComment,
 }: {
-  item: FeedPost;
-  dailyVotesRemaining: number;
-  onComment: () => void;
-  onLike: () => void;
-  onOpenMarket: (market: MarketPost) => void;
-  onOpenPost: (post: FeedPost) => void;
-  onReshare: () => void;
-  onShare: () => void;
-  onUsdcVote: (market: MarketPost, side: VoteSide, amount: number) => void;
-  onVote: (market: MarketPost, side: VoteSide) => void;
-  isConnected: boolean;
-  actionLoading: string | null;
-  onAddLP: (market: MarketPost, amount: number) => Promise<void>;
+  item: FeedPost
+  dailyVotesRemaining: number
+  onLike: () => void
+  onOpenMarket: (market: MarketPost) => void
+  onOpenPost: (post: FeedPost) => void
+  onReshare: () => void
+  onShare: () => void
+  onUsdcVote: (market: MarketPost, side: VoteSide, amount: number) => void
+  onVote: (market: MarketPost, side: VoteSide) => void
+  isConnected: boolean
+  actionLoading: string | null
+  onAddLP: (market: MarketPost, amount: number) => Promise<void>
+  profile: Profile | null
+  onComment: () => void
 }) {
-  if (item.type === "market" && item.market) {
-    const yesPercent = calculateYesPercent(item.market);
-
-    return (
-      <MarketCard
-        category={item.market.category}
-        comments={item.commentsCount}
-        deadline={new Date(item.market.deadline).toLocaleString()}
-        freeNoVotes={item.market.free_no_votes}
-        freeYesVotes={item.market.free_yes_votes}
-        handle={displayHandle(item.author)}
-        marketCreationFeeUsdc={item.market.market_creation_fee_usdc}
-        name={displayName(item.author)}
-        noCondition={item.market.no_condition}
-        onComment={onComment}
-        onOpenDetails={() => onOpenMarket(item.market!)}
-        onReshare={onReshare}
-        onShare={onShare}
-        onUsdcVote={(side, amount) => onUsdcVote(item.market!, side, amount)}
-        onVote={(side) => onVote(item.market!, side)}
-        postContent={item.content}
-        profile={item.author}
-        profileHref={`/profile/${encodeURIComponent(item.author.id)}`}
-        question={item.market.question}
-        resolutionSource={item.market.resolution_source}
-        reshares={item.resharesCount}
-        reshared={item.viewerReshared}
-        status={item.market.status}
-        time={relativeTime(item.created_at)}
-        dailyVotesRemaining={dailyVotesRemaining}
-        qualificationThreshold={item.market.qualificationThreshold}
-        totalFreeVotes={item.market.totalFreeVotes}
-        tradingFeeBps={item.market.trading_fee_bps}
-        uniqueVoterThreshold={item.market.uniqueVoterThreshold}
-        uniqueVotersCount={item.market.uniqueVotersCount}
-        usdcNo={Number(item.market.usdc_no_amount)}
-        usdcYes={Number(item.market.usdc_yes_amount)}
-        viewerVote={item.viewerVote}
-        votingDisabledMessage={
-          dailyVotesRemaining <= 0 ? "You have used all 10 Upvote/Downvote signals today. They reset tomorrow." : null
-        }
-        yesCondition={item.market.yes_condition}
-        yesPercent={yesPercent}
-        liquidity={item.market.liquidity}
-        actionLoading={Boolean(actionLoading && actionLoading.startsWith(item.market.id))}
-        actionLoadingStatus={actionLoading && actionLoading.startsWith(item.market.id) ? actionLoading.replace(`${item.market.id}_`, "") : null}
-        isConnected={isConnected}
-        onAddLP={(amount) => onAddLP(item.market!, amount)}
-      />
-    );
-  }
-
   return (
-    <PostCard
-      comments={item.commentsCount}
-      content={item.content}
-      handle={displayHandle(item.author)}
-      liked={item.viewerLiked}
-      likes={item.likesCount}
-      name={displayName(item.author)}
-      onComment={onComment}
-      onOpenDetails={() => onOpenPost(item)}
-      onLike={onLike}
-      onReshare={onReshare}
-      onShare={onShare}
-      reshares={item.resharesCount}
-      reshared={item.viewerReshared}
-      time={relativeTime(item.created_at)}
-      profile={item.author}
-      profileHref={`/profile/${encodeURIComponent(item.author.id)}`}
-    />
-  );
+    <div className="flex flex-col gap-2">
+      {item.type === 'market' && item.market ? (
+        <MarketCard
+          category={item.market.category}
+          comments={item.commentsCount}
+          deadline={new Date(item.market.deadline).toLocaleString()}
+          freeNoVotes={item.market.free_no_votes}
+          freeYesVotes={item.market.free_yes_votes}
+          handle={displayHandle(item.author)}
+          marketCreationFeeUsdc={item.market.market_creation_fee_usdc}
+          name={displayName(item.author)}
+          noCondition={item.market.no_condition}
+          onComment={onComment}
+          onOpenDetails={() => onOpenMarket(item.market!)}
+          onReshare={onReshare}
+          onShare={onShare}
+          onUsdcVote={(side, amount) => onUsdcVote(item.market!, side, amount)}
+          onVote={(side) => onVote(item.market!, side)}
+          postContent={item.content}
+          profile={item.author}
+          profileHref={`/profile/${encodeURIComponent(item.author.id)}`}
+          question={item.market.question}
+          resolutionSource={item.market.resolution_source}
+          reshares={item.resharesCount}
+          reshared={item.viewerReshared}
+          status={item.market.status}
+          time={relativeTime(item.created_at)}
+          dailyVotesRemaining={dailyVotesRemaining}
+          qualificationThreshold={item.market.qualificationThreshold}
+          totalFreeVotes={item.market.totalFreeVotes}
+          tradingFeeBps={item.market.trading_fee_bps}
+          uniqueVoterThreshold={item.market.uniqueVoterThreshold}
+          uniqueVotersCount={item.market.uniqueVotersCount}
+          usdcNo={Number(item.market.usdc_no_amount)}
+          usdcYes={Number(item.market.usdc_yes_amount)}
+          viewerVote={item.viewerVote}
+          votingDisabledMessage={
+            dailyVotesRemaining <= 0
+              ? 'You have used all 10 Upvote/Downvote signals today. They reset tomorrow.'
+              : null
+          }
+          yesCondition={item.market.yes_condition}
+          yesPercent={calculateYesPercent(item.market)}
+          liquidity={item.market.liquidity}
+          actionLoading={Boolean(
+            actionLoading && actionLoading.startsWith(item.market.id),
+          )}
+          actionLoadingStatus={
+            actionLoading && actionLoading.startsWith(item.market.id)
+              ? actionLoading.replace(`${item.market.id}_`, '')
+              : null
+          }
+          isConnected={isConnected}
+          onAddLP={(amount) => onAddLP(item.market!, amount)}
+        />
+      ) : (
+        <PostCard
+          comments={item.commentsCount}
+          content={item.content}
+          handle={displayHandle(item.author)}
+          liked={item.viewerLiked}
+          likes={item.likesCount}
+          name={displayName(item.author)}
+          onComment={onComment}
+          onOpenDetails={() => onOpenPost(item)}
+          onLike={onLike}
+          onReshare={onReshare}
+          onShare={onShare}
+          reshares={item.resharesCount}
+          reshared={item.viewerReshared}
+          time={relativeTime(item.created_at)}
+          profile={item.author}
+          profileHref={`/profile/${encodeURIComponent(item.author.id)}`}
+        />
+      )}
+    </div>
+  )
 }
 
 function calculateYesPercent(market: MarketPost) {
-  const yes = Number(market.usdc_yes_amount);
-  const no = Number(market.usdc_no_amount);
-  const totalUsdc = yes + no;
-  if (totalUsdc > 0) return (yes / totalUsdc) * 100;
+  const yes = Number(market.usdc_yes_amount)
+  const no = Number(market.usdc_no_amount)
+  const totalUsdc = yes + no
+  if (totalUsdc > 0) return (yes / totalUsdc) * 100
 
-  return 50;
+  return 50
 }

@@ -1,4 +1,4 @@
-import { IsMongoId, IsString, Length } from "class-validator";
+import { IsMongoId, IsOptional, IsString, Length } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class CreateCommentDto {
@@ -14,6 +14,11 @@ export class CreateCommentDto {
   @IsString()
   @Length(1, 500, { message: "Comment content is required (max 500 chars)." })
   content: string;
+
+  @ApiProperty({ description: "Optional parent Comment ID", required: false, example: "60d0fe4f5311236168a109ca" })
+  @IsMongoId({ message: "A valid parent id is required." })
+  @IsOptional()
+  parentId?: string;
 }
 
 export class FetchCommentsQueryDto {

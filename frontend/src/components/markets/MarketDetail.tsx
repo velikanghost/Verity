@@ -21,6 +21,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
 import VerityAgentPanel from '@/components/markets/VerityAgentPanel'
+import CommentModal from '@/components/social/CommentModal'
 import { useDailyVotes } from '@/hooks/useDailyVotes'
 import { useFeed } from '@/hooks/useFeed'
 import { useSetRightPanelSlot } from '@/hooks/useRightPanelSlot'
@@ -78,6 +79,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const [tradeAmount, setTradeAmount] = useState('1')
   const [tradeAction, setTradeAction] = useState<MarketTradeAction>('BUY')
   const [selectedSide, setSelectedSide] = useState<VoteSide>('YES')
+  const [replyingToComment, setReplyingToComment] =
+    useState<MarketComment | null>(null)
 
   const { dailyVotes, refetch: reloadDailyVotes } = useDailyVotes(profileId)
   const { items, loading, error, reload } = useFeed(profileId, true)
@@ -477,9 +480,12 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
               <div className="flex flex-col gap-3">
                 {positions.map((pos) => {
                   const isResolved = market.status === 'resolved'
-                  const isWinner = isResolved && market.resolvedOutcome === pos.side
+                  const isWinner =
+                    isResolved && market.resolvedOutcome === pos.side
                   const currentPrice = isResolved
-                    ? (isWinner ? 1.0 : 0.0)
+                    ? isWinner
+                      ? 1.0
+                      : 0.0
                     : getMarketPrice(market, pos.side)
                   const currentValue = pos.shares * currentPrice
                   const isProfit = currentValue >= pos.invested_usdc
@@ -584,30 +590,46 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           </div>
         )}
 
-        <TradeTicket
-          action={tradeAction}
-          amount={tradeAmount}
-          balanceLabel={balance.isLoading ? '...' : balance.formattedBalance}
-          disabled={
-            Boolean(actionPending) || market.status !== 'tradable' || !validTradeAmount
-          }
-          estimatedShares={buyShares}
-          fee={tradeFee}
-          isConnected={isConnected}
-          netProceeds={tradeTotal}
-          onActionChange={setTradeAction}
-          onAmountChange={setTradeAmount}
-          onSideChange={setSelectedSide}
-          onTrade={() => executeTrade(selectedSide)}
-          price={selectedPrice}
-          selectedSide={selectedSide}
-          sellProceeds={sellProceeds}
-          total={tradeTotal}
-          yesPrice={yesPercent}
-          noPrice={noPercent}
-          actionPending={actionPending === 'trade'}
-          maxSellShares={selectedSideShares}
-        />
+        {['open_for_votes', 'qualified', 'funding_pool'].includes(
+          market.status,
+        ) ? (
+          <PreMarketFundingPanel
+            actionLoading={actionPending}
+            authorId={item.author_id || item.authorId}
+            market={market}
+            onAddLP={handleAddLP}
+            onFundPreMarket={handleFundPreMarket}
+            poolState={poolStateData}
+            profileId={profileId}
+          />
+        ) : (
+          <TradeTicket
+            action={tradeAction}
+            amount={tradeAmount}
+            balanceLabel={balance.isLoading ? '...' : balance.formattedBalance}
+            disabled={
+              Boolean(actionPending) ||
+              market.status !== 'tradable' ||
+              !validTradeAmount
+            }
+            estimatedShares={buyShares}
+            fee={tradeFee}
+            isConnected={isConnected}
+            netProceeds={tradeTotal}
+            onActionChange={setTradeAction}
+            onAmountChange={setTradeAmount}
+            onSideChange={setSelectedSide}
+            onTrade={() => executeTrade(selectedSide)}
+            price={selectedPrice}
+            selectedSide={selectedSide}
+            sellProceeds={sellProceeds}
+            total={tradeTotal}
+            yesPrice={yesPercent}
+            noPrice={noPercent}
+            actionPending={actionPending === 'trade'}
+            maxSellShares={selectedSideShares}
+          />
+        )}
 
         <MarketStatsPanel
           createdAt={createdAt}
@@ -653,6 +675,11 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     creatorTotalVolume,
     executeTrade,
     positions,
+    actionPending,
+    handleAddLP,
+    handleFundPreMarket,
+    poolStateData,
+    profileId,
   ])
 
   const rightPanelSlot = useMemo(
@@ -682,6 +709,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     creatorMarkets,
     creatorTotalVolume,
     JSON.stringify(positions),
+    actionPending || 'no-pending',
+    JSON.stringify(poolStateData || {}),
   ].join('|')
 
   useSetRightPanelSlot(rightPanelSlot, rightPanelSlotKey)
@@ -726,39 +755,49 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         question={market.question}
         time={relativeTime(item.created_at)}
         totalVotes={market.free_yes_votes + market.free_no_votes}
+        onDevQualify={handleDevQualify}
+        devQualifyLoading={actionPending === 'dev_qualify'}
       />
 
       <div className="flex flex-col gap-3 lg:hidden">{sidebarPanels}</div>
 
-      <SentimentPanel
-        noPercent={noPercent}
-        hasOpinions={hasUsdcOpinion}
-        yesPercent={yesPercent}
+      <SocialActions
+        comments={item.commentsCount}
+        freeNoVotes={market.free_no_votes}
+        freeYesVotes={market.free_yes_votes}
+        dailyVotesRemaining={dailyVotes.votesRemaining}
+        marketStatus={market.status}
+        onComment={() =>
+          document.getElementById('market-comment-input')?.focus()
+        }
+        onReshare={() =>
+          runAction('reshare', () =>
+            toggleReshare({
+              postId: item.id,
+              profileId: profile!.id,
+              currentlyReshared: item.viewerReshared,
+            }),
+          )
+        }
+        onShare={() => sharePost(item)}
+        onVote={(side) =>
+          runAction('free_vote', () =>
+            castFreeVote({ marketId: market.id, userId: profile!.id, side }),
+          )
+        }
+        reshares={item.resharesCount}
+        reshared={item.viewerReshared}
+        viewerVote={item.viewerVote}
       />
 
-      {['open_for_votes', 'qualified', 'funding_pool', 'tradable'].includes(
-        market.status,
-      ) && (
-        <VoteQualificationProgressPanel
-          loading={actionPending === 'dev_qualify'}
-          market={market}
-          onDevQualify={handleDevQualify}
-        />
-      )}
-
-      {['open_for_votes', 'qualified', 'funding_pool'].includes(
-        market.status,
-      ) && (
-        <PreMarketFundingPanel
-          actionLoading={actionPending}
-          authorId={item.author_id || item.authorId}
-          market={market}
-          onAddLP={handleAddLP}
-          onFundPreMarket={handleFundPreMarket}
-          poolState={poolStateData}
-          profileId={profileId}
-        />
-      )}
+      <CommentsPanel
+        commentDraft={commentDraft}
+        comments={comments}
+        loading={commentLoading}
+        onChange={setCommentDraft}
+        onSubmit={submitComment}
+        onReplyClick={setReplyingToComment}
+      />
 
       {market.status === 'tradable' && (
         <ActiveMarketLPPanel
@@ -824,41 +863,10 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         positions={positions}
       />
 
-      <CommentsPanel
-        commentDraft={commentDraft}
-        comments={comments}
-        loading={commentLoading}
-        onChange={setCommentDraft}
-        onSubmit={submitComment}
-      />
-
-      <SocialActions
-        comments={item.commentsCount}
-        freeNoVotes={market.free_no_votes}
-        freeYesVotes={market.free_yes_votes}
-        dailyVotesRemaining={dailyVotes.votesRemaining}
-        marketStatus={market.status}
-        onComment={() =>
-          document.getElementById('market-comment-input')?.focus()
-        }
-        onReshare={() =>
-          runAction('reshare', () =>
-            toggleReshare({
-              postId: item.id,
-              profileId: profile!.id,
-              currentlyReshared: item.viewerReshared,
-            }),
-          )
-        }
-        onShare={() => sharePost(item)}
-        onVote={(side) =>
-          runAction('free_vote', () =>
-            castFreeVote({ marketId: market.id, userId: profile!.id, side }),
-          )
-        }
-        reshares={item.resharesCount}
-        reshared={item.viewerReshared}
-        viewerVote={item.viewerVote}
+      <CommentModal
+        replyToComment={replyingToComment}
+        isOpen={Boolean(replyingToComment)}
+        onClose={() => setReplyingToComment(null)}
       />
     </div>
   )
@@ -873,6 +881,8 @@ function MarketHero({
   question,
   time,
   totalVotes,
+  onDevQualify,
+  devQualifyLoading = false,
 }: {
   category: string
   creator: string
@@ -882,9 +892,21 @@ function MarketHero({
   question: string
   time: string
   totalVotes: number
+  onDevQualify?: () => Promise<void>
+  devQualifyLoading?: boolean
 }) {
+  const totalUsdc =
+    Number(market.usdc_yes_amount) + Number(market.usdc_no_amount)
+  const yesPercent =
+    totalUsdc > 0 ? (Number(market.usdc_yes_amount) / totalUsdc) * 100 : 50
+  const noPercent = 100 - yesPercent
+
+  const targetVotes = market.qualificationThreshold ?? 50
+  const votesProgress = Math.min(100, (totalVotes / targetVotes) * 100)
+  const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production'
+
   return (
-    <section className="verity-card relative overflow-hidden p-5">
+    <section className="verity-card relative overflow-hidden p-5 mt-4">
       <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-sunburst-yellow/30" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="relative min-w-0">
@@ -907,21 +929,60 @@ function MarketHero({
         </span>
       </div>
 
-      <div className="relative mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-dashed border-stone-surface pt-3 font-mono text-xs text-ash">
+      <div className="relative mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-dashed border-stone-surface pt-3 font-mono text-xs text-ash items-center">
         <span>
           Leading outcome:{' '}
           <strong
             className={
-              leadingSide === 'YES'
-                ? 'text-meadow-green'
-                : 'text-ember-orange'
+              leadingSide === 'YES' ? 'text-meadow-green' : 'text-ember-orange'
             }
           >
             {leadingSide} {leadingPercent.toFixed(1)}%
           </strong>
         </span>
         <span>{totalVotes} Upvote/Downvote signals</span>
+        <span>
+          Sentiment:{' '}
+          <strong className="text-meadow-green">
+            Yes {yesPercent.toFixed(1)}%
+          </strong>
+          {' / '}
+          <strong className="text-ember-orange">
+            No {noPercent.toFixed(1)}%
+          </strong>
+        </span>
       </div>
+
+      {market.status === 'open_for_votes' && (
+        <div className="relative mt-4 border-t border-dashed border-stone-surface pt-3">
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 font-mono text-xs text-ash">
+            <span>
+              Signals cast progress:{' '}
+              <strong className="text-charcoal-primary">
+                {totalVotes} / {targetVotes}
+              </strong>
+            </span>
+            {isDev && onDevQualify && (
+              <button
+                className="text-[10px] font-bold uppercase tracking-[0.08em] text-meadow-green hover:underline focus:outline-none"
+                disabled={devQualifyLoading}
+                onClick={onDevQualify}
+                type="button"
+              >
+                {devQualifyLoading
+                  ? 'Fast-tracking...'
+                  : '[Skip signal review]'}
+              </button>
+            )}
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-parchment-card shadow-[var(--shadow-subtle)]">
+            <div
+              className="h-full bg-meadow-green transition-all duration-500"
+              style={{ width: `${votesProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
     </section>
   )
 }
@@ -976,7 +1037,9 @@ function TradeTicket({
     Number.isFinite(amountNumber) && amountNumber > 0 ? amountNumber : 0
 
   function addBuyAmount(value: number) {
-    const nextAmount = Number.isFinite(amountNumber) ? amountNumber + value : value
+    const nextAmount = Number.isFinite(amountNumber)
+      ? amountNumber + value
+      : value
     onAmountChange(String(nextAmount))
   }
 
@@ -989,22 +1052,24 @@ function TradeTicket({
     <section className="verity-card overflow-hidden">
       <div className="flex items-center justify-between border-b border-dashed border-stone-surface px-4 py-3">
         <div className="flex gap-4">
-        {(['BUY', 'SELL'] as const).map((nextAction) => (
-          <button
-            aria-pressed={action === nextAction}
-            className={`relative h-8 text-sm font-semibold tracking-[-0.18px] transition-colors ${
-              action === nextAction ? 'text-charcoal-primary' : 'text-ash hover:text-charcoal-primary'
-            }`}
-            key={nextAction}
-            onClick={() => onActionChange(nextAction)}
-            type="button"
-          >
-            {nextAction === 'BUY' ? 'Buy' : 'Sell'}
-            {action === nextAction && (
-              <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-charcoal-primary" />
-            )}
-          </button>
-        ))}
+          {(['BUY', 'SELL'] as const).map((nextAction) => (
+            <button
+              aria-pressed={action === nextAction}
+              className={`relative h-8 text-sm font-semibold tracking-[-0.18px] transition-colors ${
+                action === nextAction
+                  ? 'text-charcoal-primary'
+                  : 'text-ash hover:text-charcoal-primary'
+              }`}
+              key={nextAction}
+              onClick={() => onActionChange(nextAction)}
+              type="button"
+            >
+              {nextAction === 'BUY' ? 'Buy' : 'Sell'}
+              {action === nextAction && (
+                <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-charcoal-primary" />
+              )}
+            </button>
+          ))}
         </div>
         <span className="font-mono text-[11px] font-semibold text-charcoal-primary">
           Market
@@ -1012,124 +1077,123 @@ function TradeTicket({
       </div>
 
       <div className="p-4">
-
-      <div className="mb-6 grid grid-cols-2 gap-3">
-        <OutcomeButton
-          active={selectedSide === 'YES'}
-          label="Yes"
-          price={yesPrice}
-          side="YES"
-          onClick={onSideChange}
-        />
-        <OutcomeButton
-          active={selectedSide === 'NO'}
-          label="No"
-          price={noPrice}
-          side="NO"
-          onClick={onSideChange}
-        />
-      </div>
-
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div>
-          <label
-            className="block text-[15px] font-semibold tracking-[-0.2px] text-charcoal-primary"
-            htmlFor="market-trade-amount"
-          >
-            {action === 'BUY' ? 'Amount' : 'Shares'}
-          </label>
-          <p className="mt-0.5 font-mono text-[11px] text-ash">
-            {action === 'BUY'
-              ? `${balanceLabel} USDC balance`
-              : `${maxSellShares.toFixed(4)} ${selectedSide} available`}
-          </p>
+        <div className="mb-6 grid grid-cols-2 gap-3">
+          <OutcomeButton
+            active={selectedSide === 'YES'}
+            label="Yes"
+            price={yesPrice}
+            side="YES"
+            onClick={onSideChange}
+          />
+          <OutcomeButton
+            active={selectedSide === 'NO'}
+            label="No"
+            price={noPrice}
+            side="NO"
+            onClick={onSideChange}
+          />
         </div>
-        <input
-          aria-label={action === 'BUY' ? 'USDC amount' : 'Shares to sell'}
-          className="h-14 w-32 bg-transparent text-right font-mono text-[34px] font-semibold leading-none tracking-[-1px] text-midnight outline-none placeholder:text-ash"
-          id="market-trade-amount"
-          min="0"
-          onChange={(event) => onAmountChange(event.target.value)}
-          placeholder="0"
-          step="0.01"
-          type="number"
-          value={amount}
-        />
-      </div>
 
-      {action === 'BUY' ? (
-        <div className="mb-4 flex flex-wrap justify-end gap-2">
-          {quickBuyAmounts.map((value) => (
-            <button
-              className="verity-pill h-8 bg-parchment-card px-3 font-mono text-xs font-semibold text-graphite shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface"
-              key={value}
-              onClick={() => addBuyAmount(value)}
-              type="button"
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <label
+              className="block text-[15px] font-semibold tracking-[-0.2px] text-charcoal-primary"
+              htmlFor="market-trade-amount"
             >
-              +${value}
-            </button>
-          ))}
+              {action === 'BUY' ? 'Amount' : 'Shares'}
+            </label>
+            <p className="mt-0.5 font-mono text-[11px] text-ash">
+              {action === 'BUY'
+                ? `${balanceLabel} USDC balance`
+                : `${maxSellShares.toFixed(4)} ${selectedSide} available`}
+            </p>
+          </div>
+          <input
+            aria-label={action === 'BUY' ? 'USDC amount' : 'Shares to sell'}
+            className="h-14 w-32 bg-transparent text-right font-mono text-[34px] font-semibold leading-none tracking-[-1px] text-midnight outline-none placeholder:text-ash"
+            id="market-trade-amount"
+            min="0"
+            onChange={(event) => onAmountChange(event.target.value)}
+            placeholder="0"
+            step="0.01"
+            type="number"
+            value={amount}
+          />
         </div>
-      ) : (
-        <div className="mb-4 flex flex-wrap justify-end gap-2">
-          {sellPercentages.map((percent) => (
-            <button
-              className="verity-pill h-8 bg-parchment-card px-3 font-mono text-xs font-semibold text-graphite shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface disabled:cursor-not-allowed disabled:opacity-45"
-              disabled={maxSellShares <= 0}
-              key={percent}
-              onClick={() => setSellPercentage(percent)}
-              type="button"
-            >
-              {percent === 100 ? 'Max' : `${percent}%`}
-            </button>
-          ))}
-        </div>
-      )}
 
-      <div className="grid gap-1 rounded-[12px] bg-parchment-card p-3 font-mono text-[11px] text-ash shadow-[var(--shadow-subtle)]">
-        <div className="flex justify-between">
-          <span>Price</span>
-          <span>{(price * 100).toFixed(1)}¢</span>
-        </div>
-        <div className="flex justify-between">
-          <span>
-            {action === 'BUY' ? 'Estimated shares' : 'Gross proceeds'}
-          </span>
-          <span>
-            {action === 'BUY'
-              ? estimatedShares.toFixed(4)
-              : `${sellProceeds.toFixed(4)} USDC`}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span>Trading fee</span>
-          <span>{fee.toFixed(4)} USDC</span>
-        </div>
-        <div className="flex justify-between text-charcoal-primary">
-          <span>{action === 'BUY' ? 'Total' : 'Net proceeds'}</span>
-          <span>
-            {previewValue > 0
-              ? action === 'BUY'
-                ? total.toFixed(4)
-                : netProceeds.toFixed(4)
-              : '0.0000'}{' '}
-            USDC
-          </span>
-        </div>
-      </div>
+        {action === 'BUY' ? (
+          <div className="mb-4 flex flex-wrap justify-end gap-2">
+            {quickBuyAmounts.map((value) => (
+              <button
+                className="verity-pill h-8 bg-parchment-card px-3 font-mono text-xs font-semibold text-graphite shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface"
+                key={value}
+                onClick={() => addBuyAmount(value)}
+                type="button"
+              >
+                +${value}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="mb-4 flex flex-wrap justify-end gap-2">
+            {sellPercentages.map((percent) => (
+              <button
+                className="verity-pill h-8 bg-parchment-card px-3 font-mono text-xs font-semibold text-graphite shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={maxSellShares <= 0}
+                key={percent}
+                onClick={() => setSellPercentage(percent)}
+                type="button"
+              >
+                {percent === 100 ? 'Max' : `${percent}%`}
+              </button>
+            ))}
+          </div>
+        )}
 
-      <button
-        className="verity-pill mt-4 flex h-11 w-full items-center justify-center bg-inverse text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-        disabled={disabled || !isConnected}
-        onClick={onTrade}
-        type="button"
-      >
-        {actionPending
-          ? 'Processing...'
-          : isConnected
-            ? `${action === 'BUY' ? 'Buy' : 'Sell'} ${selectedSide}`
-            : 'Connect Wallet'}
-      </button>
+        <div className="grid gap-1 rounded-[12px] bg-parchment-card p-3 font-mono text-[11px] text-ash shadow-[var(--shadow-subtle)]">
+          <div className="flex justify-between">
+            <span>Price</span>
+            <span>{(price * 100).toFixed(1)}¢</span>
+          </div>
+          <div className="flex justify-between">
+            <span>
+              {action === 'BUY' ? 'Estimated shares' : 'Gross proceeds'}
+            </span>
+            <span>
+              {action === 'BUY'
+                ? estimatedShares.toFixed(4)
+                : `${sellProceeds.toFixed(4)} USDC`}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Trading fee</span>
+            <span>{fee.toFixed(4)} USDC</span>
+          </div>
+          <div className="flex justify-between text-charcoal-primary">
+            <span>{action === 'BUY' ? 'Total' : 'Net proceeds'}</span>
+            <span>
+              {previewValue > 0
+                ? action === 'BUY'
+                  ? total.toFixed(4)
+                  : netProceeds.toFixed(4)
+                : '0.0000'}{' '}
+              USDC
+            </span>
+          </div>
+        </div>
+
+        <button
+          className="verity-pill mt-4 flex h-11 w-full items-center justify-center bg-inverse text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={disabled || !isConnected}
+          onClick={onTrade}
+          type="button"
+        >
+          {actionPending
+            ? 'Processing...'
+            : isConnected
+              ? `${action === 'BUY' ? 'Buy' : 'Sell'} ${selectedSide}`
+              : 'Connect Wallet'}
+        </button>
       </div>
     </section>
   )
@@ -1192,7 +1256,9 @@ function SentimentPanel({
     <section className="verity-card p-5">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="font-semibold tracking-[-0.18px] text-charcoal-primary">Market Sentiment</h2>
+          <h2 className="font-semibold tracking-[-0.18px] text-charcoal-primary">
+            Market Sentiment
+          </h2>
           <p className="mt-1 font-mono text-[11px] text-ash">
             USDC-backed opinions only
           </p>
@@ -1270,7 +1336,9 @@ function RulesPanel({
 }) {
   return (
     <section className="verity-card p-5">
-      <h2 className="mb-4 font-semibold tracking-[-0.18px] text-charcoal-primary">Rules</h2>
+      <h2 className="mb-4 font-semibold tracking-[-0.18px] text-charcoal-primary">
+        Rules
+      </h2>
       <div className="grid gap-3 text-sm leading-relaxed tracking-[-0.18px] text-graphite">
         <p>{postContent}</p>
         <div className="rounded-[10px] bg-meadow-green/10 p-3 shadow-[var(--shadow-subtle)]">
@@ -1323,7 +1391,9 @@ function PositionPanel({
     <div className="grid gap-3">
       {positionRows.length > 0 && (
         <section className="verity-card p-5">
-          <h2 className="font-semibold tracking-[-0.18px] text-charcoal-primary">My Payout Preview</h2>
+          <h2 className="font-semibold tracking-[-0.18px] text-charcoal-primary">
+            My Payout Preview
+          </h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed tracking-[-0.18px] text-graphite">
             Preview of potential payouts if the market resolves to your chosen
             outcome side. Payouts are fully secured on-chain.
@@ -1362,13 +1432,40 @@ function CommentsPanel({
   loading,
   onChange,
   onSubmit,
+  onReplyClick,
 }: {
   commentDraft: string
   comments: MarketComment[]
   loading: boolean
   onChange: (value: string) => void
   onSubmit: () => void
+  onReplyClick: (comment: MarketComment) => void
 }) {
+  // Group comments: find all root comments, and map child comments to their parentId
+  const commentsTree = useMemo(() => {
+    const rootComments: MarketComment[] = []
+    const childrenMap = new Map<string, MarketComment[]>()
+
+    comments.forEach((c) => {
+      if (c.parentId || c.parent_id) {
+        const pId = c.parentId || c.parent_id
+        const list = childrenMap.get(pId!) || []
+        list.push(c)
+        childrenMap.set(pId!, list)
+      } else {
+        rootComments.push(c)
+      }
+    })
+
+    // Default newest first sorting for detail page comments
+    rootComments.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
+
+    return { rootComments, childrenMap }
+  }, [comments])
+
   return (
     <section className="verity-card p-5">
       <div className="mb-4 flex items-center gap-2">
@@ -1396,28 +1493,73 @@ function CommentsPanel({
         </button>
       </div>
 
-      <div className="grid gap-3">
-        {comments.length === 0 ? (
+      <div className="grid gap-3 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
+        {commentsTree.rootComments.length === 0 ? (
           <p className="text-sm text-ash">No comments yet.</p>
         ) : (
-          comments.map((comment) => (
-            <article
-              className="rounded-[10px] bg-parchment-card p-3 shadow-[var(--shadow-subtle)]"
-              key={comment.id}
-            >
-              <div className="mb-1 flex flex-wrap items-center gap-2 font-mono text-[11px] text-ash">
-                <span className="font-semibold text-charcoal-primary">
-                  {displayName(comment.author)}
-                </span>
-                <span>{displayHandle(comment.author)}</span>
-                <span>{'\u00B7'}</span>
-                <span>{relativeTime(comment.created_at)}</span>
+          commentsTree.rootComments.map((comment) => {
+            const replies = commentsTree.childrenMap.get(comment.id) || []
+            const sortedReplies = replies.sort(
+              (a, b) =>
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime(),
+            )
+
+            return (
+              <div key={comment.id} className="flex flex-col gap-2">
+                <article className="rounded-[10px] bg-parchment-card p-3 shadow-[var(--shadow-subtle)]">
+                  <div className="mb-1 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-ash">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-charcoal-primary">
+                        {displayName(comment.author)}
+                      </span>
+                      <span>{displayHandle(comment.author)}</span>
+                      <span>{'\u00B7'}</span>
+                      <span>{relativeTime(comment.created_at)}</span>
+                    </div>
+                    <button
+                      onClick={() => onReplyClick(comment)}
+                      className="text-sky-blue hover:underline font-semibold font-sans text-xs"
+                      type="button"
+                    >
+                      Reply
+                    </button>
+                  </div>
+                  <p className="text-sm leading-relaxed tracking-[-0.18px] text-graphite whitespace-pre-wrap">
+                    {comment.content}
+                  </p>
+                </article>
+
+                {sortedReplies.map((reply) => (
+                  <article
+                    className="ml-6 rounded-[10px] bg-parchment-card/60 p-2.5 shadow-[var(--shadow-subtle)] border-l-2 border-sky-blue/35"
+                    key={reply.id}
+                  >
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] text-ash">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-charcoal-primary">
+                          {displayName(reply.author)}
+                        </span>
+                        <span>{displayHandle(reply.author)}</span>
+                        <span>{'\u00B7'}</span>
+                        <span>{relativeTime(reply.created_at)}</span>
+                      </div>
+                      <button
+                        onClick={() => onReplyClick(reply)}
+                        className="text-sky-blue hover:underline font-semibold font-sans text-[11px]"
+                        type="button"
+                      >
+                        Reply
+                      </button>
+                    </div>
+                    <p className="text-xs leading-relaxed tracking-[-0.18px] text-graphite whitespace-pre-wrap">
+                      {reply.content}
+                    </p>
+                  </article>
+                ))}
               </div>
-              <p className="text-sm leading-relaxed tracking-[-0.18px] text-graphite">
-                {comment.content}
-              </p>
-            </article>
-          ))
+            )
+          })
         )}
       </div>
     </section>
@@ -1441,7 +1583,9 @@ function MarketStatsPanel({
 }) {
   return (
     <section className="verity-card p-4">
-      <h2 className="mb-4 font-semibold tracking-[-0.18px] text-charcoal-primary">Market Stats</h2>
+      <h2 className="mb-4 font-semibold tracking-[-0.18px] text-charcoal-primary">
+        Market Stats
+      </h2>
       <StatRow label="Trading fee" value={formatTradingFee(feeBps)} />
       <StatRow
         label="Liquidity"
@@ -1482,7 +1626,9 @@ function CreatorPanel({
     <section className="verity-card p-4">
       <div className="mb-4 flex items-center gap-2">
         <ShieldCheck className="h-4 w-4 text-meadow-green" />
-        <h2 className="font-semibold tracking-[-0.18px] text-charcoal-primary">Creator Stats</h2>
+        <h2 className="font-semibold tracking-[-0.18px] text-charcoal-primary">
+          Creator Stats
+        </h2>
       </div>
       <StatRow label="Creator" value={creatorName} />
       <StatRow label="Handle" value={creator} />
@@ -1746,7 +1892,8 @@ function PreMarketFundingPanel({
             Pool Funding
           </h2>
           <p className="mt-1 text-sm tracking-[-0.18px] text-ash">
-            Fund this market's launch pool. Contributions help open trading and may earn liquidity rewards.
+            Fund this market's launch pool. Contributions help open trading and
+            may earn liquidity rewards.
           </p>
         </div>
         <span className="rounded-full bg-meadow-green/10 px-3 py-1 font-mono text-xs font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)]">
@@ -1786,7 +1933,9 @@ function PreMarketFundingPanel({
                 onClick={() => onFundPreMarket(10)}
                 type="button"
               >
-                {actionLoading === 'fund_pre_market' ? 'Funding...' : 'Fund 10 USDC'}
+                {actionLoading === 'fund_pre_market'
+                  ? 'Funding...'
+                  : 'Fund 10 USDC'}
               </button>
             ) : null}
           </div>
@@ -1836,7 +1985,9 @@ function PreMarketFundingPanel({
               <button
                 className="verity-pill flex h-11 flex-1 items-center justify-center bg-inverse font-mono text-xs font-semibold uppercase tracking-[0.12em] text-inverse-text transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={
-                  Boolean(actionLoading) || !profileId || Number(depositAmount) <= 0
+                  Boolean(actionLoading) ||
+                  !profileId ||
+                  Number(depositAmount) <= 0
                 }
                 onClick={() => onAddLP(Number(depositAmount))}
                 type="button"
@@ -1845,7 +1996,8 @@ function PreMarketFundingPanel({
               </button>
             </div>
             <p className="mt-2 font-mono text-[10px] leading-relaxed text-ash">
-              Contributions convert to LP shares once the pool hits the {minPoolBalance} USDC launch target.
+              Contributions convert to LP shares once the pool hits the{' '}
+              {minPoolBalance} USDC launch target.
             </p>
           </div>
         )}
@@ -1940,7 +2092,9 @@ function ActiveMarketLPPanel({
             />
             <button
               className="verity-pill flex h-10 flex-1 items-center justify-center bg-inverse font-mono text-xs font-semibold uppercase tracking-[0.12em] text-inverse-text transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-              disabled={Boolean(actionLoading) || !profileId || Number(addAmount) <= 0}
+              disabled={
+                Boolean(actionLoading) || !profileId || Number(addAmount) <= 0
+              }
               onClick={() => onAddLP(Number(addAmount))}
               type="button"
             >
@@ -2075,9 +2229,9 @@ function ResolutionPanel({
       {isPyth ? (
         <div className="rounded-[12px] bg-parchment-card p-4 shadow-[var(--shadow-subtle)]">
           <p className="text-sm leading-relaxed tracking-[-0.18px] text-ash">
-            <strong>Pyth Quantitative Market:</strong> This prediction
-            resolves automatically on-chain using real-time price oracle
-            updates. No manual resolution proposal or disputes are needed.
+            <strong>Pyth Quantitative Market:</strong> This prediction resolves
+            automatically on-chain using real-time price oracle updates. No
+            manual resolution proposal or disputes are needed.
           </p>
         </div>
       ) : (
@@ -2309,7 +2463,9 @@ function RedeemPanel({
                 onClick={onRedeem}
                 type="button"
               >
-                {actionLoading === 'redeem' ? 'Redeeming...' : 'Redeem Winnings'}
+                {actionLoading === 'redeem'
+                  ? 'Redeeming...'
+                  : 'Redeem Winnings'}
               </button>
             </div>
           )}
@@ -2341,7 +2497,9 @@ function RedeemPanel({
             onClick={onClaimCreatorLP}
             type="button"
           >
-            {actionLoading === 'claim_creator_lp' ? 'Claiming...' : 'Claim Creator LP'}
+            {actionLoading === 'claim_creator_lp'
+              ? 'Claiming...'
+              : 'Claim Creator LP'}
           </button>
         </div>
       )}
@@ -2396,7 +2554,9 @@ function RefundPanel({
           onClick={onClaimRefund}
           type="button"
         >
-          {actionLoading === 'claim_refund' ? 'Claiming Refund...' : 'Claim USDC Refund'}
+          {actionLoading === 'claim_refund'
+            ? 'Claiming Refund...'
+            : 'Claim USDC Refund'}
         </button>
       </div>
     </section>

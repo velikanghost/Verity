@@ -17,6 +17,9 @@ export class Comment {
   @Prop({ type: Number, default: 0 })
   likesCount: number;
 
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Comment", required: false, index: true })
+  parentId?: Types.ObjectId;
+
   createdAt?: Date;
   updatedAt?: Date;
 }

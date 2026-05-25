@@ -7,6 +7,8 @@ import { Post, PostDocument } from "../posts/posts.model";
 import { serializeUser } from "../auth/auth.service";
 import { PostsService } from "../posts/posts.service";
 import { UserResponse } from "../auth/auth.service";
+import { SocketGateway } from "../socket/socket.gateway";
+import { NotificationsService } from "../notifications/notifications.service";
 
 export interface CommentResponse {
   id: string;
@@ -20,6 +22,8 @@ export interface CommentResponse {
   createdAt: string;
   updatedAt: string;
   author: UserResponse;
+  parentId?: string;
+  parent_id?: string;
 }
 
 @Injectable()
@@ -30,6 +34,8 @@ export class CommentsService {
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @Inject(forwardRef(() => PostsService))
     private readonly postsService: PostsService,
+    private readonly socketGateway: SocketGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private fallbackProfile(authorId: string): UserResponse {
@@ -72,6 +78,8 @@ export class CommentsService {
       createdAt,
       updatedAt,
       author: author ? serializeUser(author) : this.fallbackProfile(authorId),
+      parentId: comment.parentId?.toString(),
+      parent_id: comment.parentId?.toString(),
     };
   }
 
@@ -83,16 +91,14 @@ export class CommentsService {
     return comments.map((comment) => this.serializeComment(comment, authorMap.get(comment.authorId.toString())));
   }
 
-  async addComment(postId: string, profileId: string, content: string): Promise<void> {
-    const [postExists, authorExists] = await Promise.all([
-      this.postModel.exists({ _id: postId }),
-      this.userModel.exists({ _id: profileId }),
-    ]);
-
-    if (!postExists) {
+  async addComment(postId: string, profileId: string, content: string, parentId?: string): Promise<void> {
+    const post = await this.postModel.findById(postId);
+    if (!post) {
       throw new NotFoundException("Post not found.");
     }
-    if (!authorExists) {
+
+    const writer = await this.userModel.findById(profileId);
+    if (!writer) {
       throw new NotFoundException("Profile not found.");
     }
 
@@ -100,8 +106,53 @@ export class CommentsService {
       postId: new Types.ObjectId(postId),
       authorId: new Types.ObjectId(profileId),
       content: content.trim(),
+      parentId: parentId ? new Types.ObjectId(parentId) : undefined,
     });
 
     await this.postsService.incrementCommentsCount(postId);
+
+    // Socket events
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
+    this.socketGateway.broadcastToRoom(`post:${postId}`, "post-updated", {});
+
+    // Create Notification
+    const writerName = writer.displayName || writer.username || "Someone";
+
+    if (parentId) {
+      const parentComment = await this.commentModel.findById(parentId);
+      if (parentComment && parentComment.authorId.toString() !== profileId) {
+        const commentSnippet = parentComment.content.substring(0, 40) + (parentComment.content.length > 40 ? "..." : "");
+        await this.notificationsService.createNotification(
+          parentComment.authorId.toString(),
+          profileId,
+          "reply",
+          "New reply",
+          `${writerName} replied to your comment: "${commentSnippet}"`,
+        );
+      }
+    }
+
+    const recipientId = post.authorId.toString();
+    const actorId = profileId;
+    if (recipientId !== actorId) {
+      let alreadyNotified = false;
+      if (parentId) {
+        const parentComment = await this.commentModel.findById(parentId);
+        if (parentComment && parentComment.authorId.toString() === recipientId) {
+          alreadyNotified = true;
+        }
+      }
+
+      if (!alreadyNotified) {
+        const snippet = post.content ? post.content.substring(0, 40) + (post.content.length > 40 ? "..." : "") : "your market";
+        await this.notificationsService.createNotification(
+          recipientId,
+          actorId,
+          "reply",
+          "New reply",
+          `${writerName} commented on your post: "${snippet}"`,
+        );
+      }
+    }
   }
 }

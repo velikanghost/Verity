@@ -15,6 +15,7 @@ import {
   displayName,
   type Profile,
 } from '@/lib/verity'
+import { useProfileActivityQuery } from '@/store/verity/verityQueries'
 
 interface PublicProfileViewProps {
   userId: string
@@ -44,12 +45,18 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
     return authors.get(decodedUserId) || null
   }, [decodedUserId, items, viewerProfile])
 
-  const profileItems = useMemo(() => {
+  const { data: tabItems = [] } = useProfileActivityQuery(
+    profile?.id || '',
+    activeTab,
+    viewerProfile?.id
+  )
+
+  const localProfileItems = useMemo(() => {
     if (!profile) return []
     return items.filter((item) => item.author.id === profile.id)
   }, [items, profile])
 
-  const marketItems = profileItems.filter((item) => item.market)
+  const marketItems = localProfileItems.filter((item) => item.market)
   const knownUsers = useMemo(() => {
     const users = new Map<string, Profile>()
     items.forEach((item) => users.set(item.author.id, item.author))
@@ -133,7 +140,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
                 Followers
               </button>
               <span className="font-mono text-xs text-ash">
-                {profileItems.length} posts
+                {localProfileItems.length} posts
               </span>
               <span className="font-mono text-xs text-ash">
                 {marketItems.length} markets
@@ -150,7 +157,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
 
       <ProfileActivityTabs
         activeTab={activeTab}
-        items={profileItems}
+        items={tabItems}
         onOpenMarket={(market) => router.push(`/markets/${market.id}`)}
         onOpenPost={(post) => router.push(`/posts/${post.id}`)}
         profile={profile}
@@ -198,13 +205,14 @@ function ProfileTabs({
     { id: 'markets', label: 'Markets' },
     { id: 'comments', label: 'Comments' },
     { id: 'likes', label: 'Likes' },
+    { id: 'reshares', label: 'Reshares' },
   ]
 
   return (
-    <div className="grid grid-cols-4 border-t border-dashed border-stone-surface px-2">
+    <div className="grid grid-cols-5 border-t border-dashed border-stone-surface px-2">
       {tabs.map((tab) => (
         <button
-          className={`relative h-12 text-sm font-semibold tracking-[-0.18px] transition-colors ${
+          className={`relative h-12 text-[13px] sm:text-sm font-semibold tracking-[-0.18px] transition-colors ${
             activeTab === tab.id ? 'text-charcoal-primary' : 'text-ash hover:text-charcoal-primary'
           }`}
           key={tab.id}

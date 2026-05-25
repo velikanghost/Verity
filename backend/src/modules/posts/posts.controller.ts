@@ -21,7 +21,20 @@ export class PostsController {
     return this.postsService.fetchFeed(
       query.viewerProfileId || query.userId,
       query.onlyMarkets,
+      query.profileId,
+      query.tab,
     );
+  }
+
+  @Get(":postId")
+  @ApiOperation({ summary: "Fetch a single post by ID" })
+  @ApiParam({ name: "postId", description: "Post ID", example: "60d0fe4f5311236168a109ca" })
+  @ApiResponse({ status: 200, description: "Post retrieved successfully." })
+  async fetchPostById(
+    @Param("postId") postId: string,
+    @Query("viewerProfileId") viewerProfileId?: string,
+  ) {
+    return this.postsService.findPostById(postId, viewerProfileId);
   }
 
   @Post()
@@ -65,7 +78,7 @@ export class PostsController {
     @Body() dto: AddCommentDto,
   ) {
     const pId = dto.authorId || dto.profileId;
-    await this.commentsService.addComment(postId, pId!, dto.content);
+    await this.commentsService.addComment(postId, pId!, dto.content, dto.parentId);
     return null;
   }
 
