@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Edit3, Share } from 'lucide-react'
+import { Edit3, Share } from 'lucide-react'
 import ProfileActivityTabs, {
   type ProfileActivityTab,
 } from '@/components/social/ProfileActivityTabs'
@@ -48,7 +48,7 @@ export default function ProfileEditor() {
             <ProfileAvatar profile={profile} />
             <div className="mb-2 flex gap-2">
               <button
-                className="verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface sm:inline-flex"
+                className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-stone-surface sm:inline-flex"
                 onClick={() => {
                   if (typeof window !== 'undefined') {
                     void navigator.clipboard?.writeText(window.location.href)
@@ -59,7 +59,7 @@ export default function ProfileEditor() {
                 Share profile <Share className="h-4 w-4" />
               </button>
               <button
-                className="verity-pill flex h-10 items-center justify-center gap-2 bg-midnight px-4 text-sm font-semibold tracking-[-0.18px] text-white transition-colors hover:bg-charcoal-primary"
+                className="clickable verity-pill flex h-10 items-center justify-center gap-2 bg-inverse px-4 text-sm font-semibold tracking-[-0.18px] text-inverse-text hover:opacity-90"
                 onClick={() => router.push('/profile/edit')}
                 type="button"
               >

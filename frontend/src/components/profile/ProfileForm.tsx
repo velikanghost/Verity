@@ -164,10 +164,10 @@ export default function ProfileForm({
           <label className="block text-xs font-semibold text-ash uppercase tracking-wider mb-1">
             Avatar Picture
           </label>
-          <div className="flex items-center gap-4 p-3 bg-stone-surface rounded-[10px] border border-dashed border-stone-200">
+          <div className="flex items-center gap-4 rounded-[10px] border border-dashed border-border bg-surface-muted p-3">
             {avatarPreview ? (
               <div
-                className="h-12 w-12 rounded-[14px] bg-cover bg-center shrink-0 border border-stone-200 shadow-sm"
+                className="h-12 w-12 shrink-0 rounded-[14px] border border-border bg-cover bg-center shadow-[var(--shadow-subtle)]"
                 style={{ backgroundImage: `url(${avatarPreview})` }}
               />
             ) : (
@@ -176,7 +176,7 @@ export default function ProfileForm({
               </div>
             )}
             <div className="flex-1">
-              <label className="verity-pill cursor-pointer inline-flex items-center justify-center gap-2 bg-white px-3 h-8 text-[11px] font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-stone-surface transition-colors border border-stone-200">
+              <label className="clickable verity-pill inline-flex h-8 cursor-pointer items-center justify-center gap-2 border border-border bg-white-surface px-3 text-[11px] font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-surface-hover">
                 Upload Avatar
                 <input
                   type="file"

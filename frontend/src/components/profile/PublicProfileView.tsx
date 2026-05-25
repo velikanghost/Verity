@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Share } from 'lucide-react'
+import { Share } from 'lucide-react'
 import FollowButton from '@/components/profile/FollowButton'
 import ProfileActivityTabs, {
   type ProfileActivityTab,
@@ -92,7 +92,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
             <ProfileAvatar profile={profile} />
             <div className="mb-2 flex gap-2">
               <button
-                className="verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface sm:inline-flex"
+                className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-stone-surface sm:inline-flex"
                 onClick={() => {
                   if (typeof window !== 'undefined') {
                     void navigator.clipboard?.writeText(window.location.href)
