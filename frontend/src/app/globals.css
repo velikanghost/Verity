@@ -386,6 +386,91 @@ body {
   transform: none;
 }
 
+.landing-float {
+  animation: landing-float 4.8s ease-in-out infinite;
+}
+
+.landing-float-slow {
+  animation: landing-float 6.2s ease-in-out infinite;
+}
+
+.landing-wiggle {
+  animation: landing-wiggle 5.2s ease-in-out infinite;
+}
+
+.landing-pop {
+  animation: landing-pop 0.72s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.landing-progress {
+  animation: landing-progress 2.8s ease-in-out infinite;
+}
+
+.landing-marquee {
+  animation: landing-marquee 18s linear infinite;
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--landing-rotate, 0deg));
+  }
+  50% {
+    transform: translateY(-12px) rotate(calc(var(--landing-rotate, 0deg) + 2deg));
+  }
+}
+
+@keyframes landing-wiggle {
+  0%,
+  100% {
+    transform: rotate(var(--landing-rotate, 0deg)) scale(1);
+  }
+  50% {
+    transform: rotate(calc(var(--landing-rotate, 0deg) - 4deg)) scale(1.03);
+  }
+}
+
+@keyframes landing-pop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes landing-progress {
+  0%,
+  100% {
+    width: 58%;
+  }
+  50% {
+    width: 82%;
+  }
+}
+
+@keyframes landing-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-float,
+  .landing-float-slow,
+  .landing-wiggle,
+  .landing-pop,
+  .landing-progress,
+  .landing-marquee {
+    animation: none;
+  }
+}
+
 /* ───────────────────────────────────────────────────────────────────────────
    VERITY BLOB AVATAR — face adapts to theme
    ─────────────────────────────────────────────────────────────────────────── */
