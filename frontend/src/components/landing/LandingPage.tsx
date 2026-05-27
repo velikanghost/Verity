@@ -76,7 +76,7 @@ export default function LandingPage({ loading = false }: { loading?: boolean }) 
         <div className="pointer-events-none absolute right-[48%] top-[10%] hidden h-8 w-8 rounded-[999px] bg-ember-orange sm:block landing-float-slow" />
 
         <div className="relative z-10 max-w-3xl landing-pop">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white-surface px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-graphite shadow-[var(--shadow-subtle)] sm:mb-5 sm:text-xs">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white-surface px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-graphite shadow-[(--shadow-subtle)] sm:mb-5 sm:text-xs">
             <span className="h-2 w-2 rounded-full bg-meadow-green" />
             Social prediction markets on Arc
           </div>
@@ -106,7 +106,7 @@ export default function LandingPage({ loading = false }: { loading?: boolean }) 
           <div className="mt-6 grid gap-2 sm:mt-8 sm:grid-cols-3 sm:gap-3">
             {stats.map(([label, text]) => (
               <div
-                className="landing-pop rounded-[10px] bg-white-surface p-4 shadow-[var(--shadow-subtle)]"
+                className="landing-pop rounded-[10px] bg-white-surface p-4 shadow-[(--shadow-subtle)]"
                 key={label}
               >
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ash">
@@ -144,11 +144,11 @@ export default function LandingPage({ loading = false }: { loading?: boolean }) 
         <div className="mx-auto grid w-full max-w-[1180px] gap-3 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-4">
           {steps.map((step, index) => (
             <article
-              className="clickable-card landing-pop rounded-[10px] bg-white-surface p-5 shadow-[var(--shadow-subtle)]"
+              className="clickable-card landing-pop rounded-[10px] bg-white-surface p-5 shadow-[(--shadow-subtle)]"
               key={step.label}
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-parchment-card text-ember-orange shadow-[var(--shadow-subtle)]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-parchment-card text-ember-orange shadow-[(--shadow-subtle)]">
                   <step.icon className="h-5 w-5" />
                 </span>
                 <span className="font-mono text-[12px] font-semibold text-ash">
@@ -181,7 +181,7 @@ function LandingVisual() {
       <div className="absolute bottom-8 right-2 verity-blob landing-wiggle h-16 w-16 bg-ember-orange [--landing-rotate:7deg] sm:h-24 sm:w-24">
         <span className="verity-blob-smile" />
       </div>
-      <div className="absolute left-[42%] top-14 flex h-12 w-12 items-center justify-center rounded-[18px] bg-white-surface text-ember-orange shadow-[var(--shadow-sm)] landing-float sm:h-14 sm:w-14">
+      <div className="absolute left-[42%] top-14 flex h-12 w-12 items-center justify-center rounded-[18px] bg-white-surface text-ember-orange shadow-[(--shadow-sm)] landing-float sm:h-14 sm:w-14">
         <MessageSquareText className="h-6 w-6" />
       </div>
 
@@ -231,7 +231,7 @@ function LandingVisual() {
         </div>
       </div>
 
-      <div className="absolute bottom-16 left-0 max-w-[230px] rounded-[18px] bg-white-surface p-3 shadow-[var(--shadow-sm)] landing-float-slow sm:bottom-20 sm:p-4">
+      <div className="absolute bottom-16 left-0 max-w-[230px] rounded-[18px] bg-white-surface p-3 shadow-[(--shadow-sm)] landing-float-slow sm:bottom-20 sm:p-4">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-sunburst-yellow text-midnight">
             <UsersRound className="h-5 w-5" />
@@ -245,7 +245,7 @@ function LandingVisual() {
         </div>
       </div>
 
-      <div className="absolute right-0 top-[310px] max-w-[230px] rounded-[18px] bg-white-surface p-3 shadow-[var(--shadow-sm)] landing-float sm:top-[330px] sm:p-4">
+      <div className="absolute right-0 top-[310px] max-w-[230px] rounded-[18px] bg-white-surface p-3 shadow-[(--shadow-sm)] landing-float sm:top-[330px] sm:p-4">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-meadow-green/10 text-meadow-green">
             <ShieldCheck className="h-5 w-5" />

@@ -55,6 +55,9 @@
   --color-muted: var(--muted);
   --color-inverse: var(--inverse);
   --color-inverse-text: var(--inverse-text);
+
+  --shadow-subtle: var(--shadow-subtle);
+  --shadow-sm: var(--shadow-sm);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

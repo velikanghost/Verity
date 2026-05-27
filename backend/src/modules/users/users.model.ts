@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { HydratedDocument } from "mongoose";
+import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
 
 export type UserDocument = HydratedDocument<User>;
+export type FollowDocument = HydratedDocument<Follow>;
 
 @Schema({ timestamps: true, versionKey: false })
 export class User {
@@ -61,3 +62,15 @@ UserSchema.index(
   { email: 1 },
   { unique: true, partialFilterExpression: { email: { $type: "string" } } },
 );
+
+@Schema({ timestamps: true, versionKey: false })
+export class Follow {
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
+  followerId: Types.ObjectId;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
+  followingId: Types.ObjectId;
+}
+
+export const FollowSchema = SchemaFactory.createForClass(Follow);
+FollowSchema.index({ followerId: 1, followingId: 1 }, { unique: true });

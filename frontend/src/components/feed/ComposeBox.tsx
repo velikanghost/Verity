@@ -390,8 +390,8 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
         )}
 
         {isMarket && (
-          <div className="grid gap-3 rounded-[12px] bg-parchment-card p-3 shadow-[var(--shadow-subtle)]">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-white-surface px-3 py-2 font-mono text-[11px] text-ash shadow-[var(--shadow-subtle)]">
+          <div className="grid gap-3 rounded-[12px] bg-parchment-card p-3 shadow-[(--shadow-subtle)]">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-white-surface px-3 py-2 font-mono text-[11px] text-ash shadow-[(--shadow-subtle)]">
               <span>
                 Prediction posts cost 11 USDC (1 USDC fee + 10 USDC creator
                 launch liquidity)
@@ -401,7 +401,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
 
             <input
               ref={marketQuestionRef}
-              className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
+              className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
               disabled={!profile || saving}
               onChange={(event) =>
                 setMarket((current) => ({
@@ -415,7 +415,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
 
             <div className="grid gap-2 sm:grid-cols-2">
               <select
-                className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none"
+                className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none"
                 onChange={(event) =>
                   setMarket((current) => ({
                     ...current,
@@ -429,7 +429,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                 ))}
               </select>
               <input
-                className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none"
+                className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none"
                 onChange={(event) =>
                   setMarket((current) => ({
                     ...current,
@@ -443,7 +443,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
 
             {/* Pyth Programmatic Detection Display OR Manual Resolution Fields */}
             {detectedPyth.isPyth ? (
-              <div className="flex flex-col gap-1.5 rounded-[10px] bg-meadow-green/10 p-3 shadow-[var(--shadow-subtle)]">
+              <div className="flex flex-col gap-1.5 rounded-[10px] bg-meadow-green/10 p-3 shadow-[(--shadow-subtle)]">
                 <p className="text-xs font-semibold leading-relaxed text-charcoal-primary">
                   Verity detected this is a quantitative price prediction for{' '}
                   <span className="text-meadow-green">
@@ -451,7 +451,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                   </span>
                   .
                 </p>
-                <div className="mt-1 grid grid-cols-3 gap-2 rounded-[10px] bg-white-surface p-2 font-mono text-[10px] text-ash shadow-[var(--shadow-subtle)]">
+                <div className="mt-1 grid grid-cols-3 gap-2 rounded-[10px] bg-white-surface p-2 font-mono text-[10px] text-ash shadow-[(--shadow-subtle)]">
                   <div className="flex flex-col gap-0.5">
                     <span>FEED</span>
                     <span className="font-semibold text-charcoal-primary">
@@ -480,7 +480,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                   Resolution Criteria Details
                 </label>
                 <input
-                  className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash"
+                  className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash"
                   onChange={(event) =>
                     setMarket((current) => ({
                       ...current,
@@ -492,7 +492,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                 />
                 <div className="grid gap-2 sm:grid-cols-2">
                   <input
-                    className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-meadow-green/25"
+                    className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-meadow-green/25"
                     onChange={(event) =>
                       setMarket((current) => ({
                         ...current,
@@ -503,7 +503,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                     value={market.yesCondition}
                   />
                   <input
-                    className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-ember-orange/20"
+                    className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-ember-orange/20"
                     onChange={(event) =>
                       setMarket((current) => ({
                         ...current,
@@ -517,7 +517,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
               </div>
             )}
 
-            <div className="rounded-[10px] bg-white-surface p-3 shadow-[var(--shadow-subtle)]">
+            <div className="rounded-[10px] bg-white-surface p-3 shadow-[(--shadow-subtle)]">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-charcoal-primary">
                   Verity AI Agent

@@ -80,7 +80,7 @@ export default function PostDetailView({ postId }: PostDetailViewProps) {
   if (error && !item) {
     return (
       <div className="py-4">
-        <section className="rounded-[12px] bg-ember-orange/10 p-8 text-center text-sm text-charcoal-primary shadow-[var(--shadow-subtle)]">
+        <section className="rounded-[12px] bg-ember-orange/10 p-8 text-center text-sm text-charcoal-primary shadow-[(--shadow-subtle)]">
           {error}
         </section>
       </div>
@@ -100,7 +100,7 @@ export default function PostDetailView({ postId }: PostDetailViewProps) {
   return (
     <div className="flex flex-col gap-3 py-4">
       <Link
-        className="verity-pill flex h-10 w-fit items-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface"
+        className="verity-pill flex h-10 w-fit items-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] transition-colors hover:bg-stone-surface"
         href="/"
       >
         <ArrowLeft className="h-4 w-4" />

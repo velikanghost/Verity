@@ -22,6 +22,7 @@ export class NotificationsService {
     type: string,
     title: string,
     body: string,
+    targetId?: string,
   ): Promise<NotificationDocument> {
     const notification = await this.notificationModel.create({
       recipientId: new Types.ObjectId(recipientId),
@@ -29,6 +30,7 @@ export class NotificationsService {
       type,
       title,
       body,
+      targetId: targetId || null,
       read: false,
     });
 
@@ -44,6 +46,7 @@ export class NotificationsService {
       type,
       title,
       body,
+      targetId: notification.targetId || null,
       read: false,
       createdAt: notification.createdAt?.toISOString() || new Date().toISOString(),
       actor: serializedActor,
@@ -75,6 +78,7 @@ export class NotificationsService {
         title: n.title,
         body: n.body,
         read: n.read,
+        targetId: n.targetId || null,
         createdAt: n.createdAt ? n.createdAt.toISOString() : new Date().toISOString(),
         actor: actorMap.get(actorIdStr) || {
           id: actorIdStr,

@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import {
   Bell,
   CheckCircle2,
@@ -29,6 +30,7 @@ const ICON_MAP: Record<string, any> = {
 }
 
 export default function NotificationsPage() {
+  const router = useRouter()
   const { profile, isLoading: profileLoading } = useWalletProfile()
   const {
     data: notifications = [],
@@ -68,7 +70,7 @@ export default function NotificationsPage() {
         eyebrow="Inbox"
         title="Notifications"
       >
-        <div className="verity-card flex flex-col items-center gap-3 p-8 text-center text-sm font-medium text-ash bg-surface-solid border border-border rounded-xl shadow-[var(--shadow-subtle)]">
+        <div className="verity-card flex flex-col items-center gap-3 p-8 text-center text-sm font-medium text-ash bg-surface-solid border border-border rounded-xl shadow-[(--shadow-subtle)]">
           <Bell className="h-10 w-10 text-ash animate-bounce" />
           <p className="max-w-xs text-graphite font-semibold">
             Connect your wallet to see your replies, market movements, and
@@ -85,7 +87,7 @@ export default function NotificationsPage() {
       eyebrow="Inbox"
       title="Notifications"
     >
-      <section className="verity-card overflow-hidden bg-surface-solid border border-border rounded-xl shadow-[var(--shadow-subtle)]">
+      <section className="verity-card overflow-hidden bg-surface-solid border border-border rounded-xl shadow-[(--shadow-subtle)]">
         <div className="border-b border-dashed border-stone-surface p-4 sm:p-5 flex items-center justify-between">
           <h2 className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-charcoal-primary">
             <Bell className="h-4 w-4 text-meadow-green" />
@@ -119,6 +121,13 @@ export default function NotificationsPage() {
                 onClick={() => {
                   if (!notification.read) {
                     void handleMarkRead(notification.id)
+                  }
+                  if (notification.targetId) {
+                    if (['settlement', 'market_move', 'market_funded', 'market_registered'].includes(notification.type?.toLowerCase())) {
+                      router.push(`/markets/${notification.targetId}`)
+                    } else {
+                      router.push(`/posts/${notification.targetId}`)
+                    }
                   }
                 }}
               >

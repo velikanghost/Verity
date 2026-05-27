@@ -97,7 +97,7 @@ export default function Sidebar() {
       <div className="mb-6 mt-auto flex flex-col items-center gap-4 xl:w-full xl:items-stretch">
         <div className="relative">
           {composeOpen && (
-            <div className="absolute bottom-[calc(100%+10px)] left-0 z-50 w-[228px] rounded-[14px] bg-surface-solid p-2 shadow-[var(--shadow-sm)]">
+            <div className="absolute bottom-[calc(100%+10px)] left-0 z-50 w-[228px] rounded-[14px] bg-surface-solid p-2 shadow-[(--shadow-sm)]">
               <div className="mb-2 flex items-center justify-between px-2 pt-1">
                 <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-ash">
                   Create

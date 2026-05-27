@@ -193,7 +193,7 @@ export default function PrivyOnboardingModal() {
         {/* Header */}
         <div className="border-b border-border px-6 py-5 bg-surface-solid">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-stone-surface shadow-[var(--shadow-subtle)] border border-border">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-stone-surface shadow-[(--shadow-subtle)] border border-border">
               <Wallet className="h-5 w-5 text-charcoal-primary" />
             </div>
             <div>
@@ -270,7 +270,7 @@ export default function PrivyOnboardingModal() {
                 <label className="block text-xs font-mono font-bold uppercase tracking-wider text-ash">
                   Username
                 </label>
-                <div className="flex h-11 items-center rounded-xl bg-surface-solid border border-border px-4 shadow-[var(--shadow-subtle)] focus-within:border-charcoal-primary/40 transition-all">
+                <div className="flex h-11 items-center rounded-xl bg-surface-solid border border-border px-4 shadow-[(--shadow-subtle)] focus-within:border-charcoal-primary/40 transition-all">
                   <span className="font-mono text-sm text-ash mr-1">@</span>
                   <input
                     autoFocus

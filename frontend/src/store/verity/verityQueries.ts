@@ -36,6 +36,14 @@ export function useDailyVotesQuery(userId: string) {
   });
 }
 
+export function useUserProfileQuery(idOrUsername: string) {
+  return useQuery({
+    queryKey: ["user-profile", idOrUsername] as const,
+    queryFn: () => apiRequest<Profile>(`/users/${encodeURIComponent(idOrUsername)}`),
+    enabled: Boolean(idOrUsername),
+  });
+}
+
 export function useUpdateProfileMutation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -460,5 +468,43 @@ export function useProfileActivityQuery(profileId: string, tab: string, viewerId
       return apiRequest<FeedPost[]>(`/posts?${params.toString()}`);
     },
     enabled: Boolean(profileId && tab),
+  });
+}
+
+export function useIsFollowingQuery(targetId: string, viewerId: string) {
+  return useQuery({
+    queryKey: ["is-following", targetId, viewerId] as const,
+    queryFn: () => apiRequest<{ following: boolean }>(`/users/${targetId}/is-following`),
+    enabled: Boolean(targetId && viewerId),
+  });
+}
+
+export function useFollowUserMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetId: string) =>
+      apiRequest<{ success: boolean }>(`/users/${targetId}/follow`, {
+        method: "POST",
+      }),
+    onSuccess: (_, targetId) => {
+      void qc.invalidateQueries({ queryKey: ["is-following", targetId] });
+      void qc.invalidateQueries({ queryKey: ["wallet-profile"] });
+      void qc.invalidateQueries({ queryKey: ["feed"] });
+    },
+  });
+}
+
+export function useUnfollowUserMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetId: string) =>
+      apiRequest<{ success: boolean }>(`/users/${targetId}/unfollow`, {
+        method: "POST",
+      }),
+    onSuccess: (_, targetId) => {
+      void qc.invalidateQueries({ queryKey: ["is-following", targetId] });
+      void qc.invalidateQueries({ queryKey: ["wallet-profile"] });
+      void qc.invalidateQueries({ queryKey: ["feed"] });
+    },
   });
 }

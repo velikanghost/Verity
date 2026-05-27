@@ -232,8 +232,7 @@ export class MarketsService {
 
     let nextStatus = market.status;
     if (market.status === "open_for_votes") {
-      const hasMetThresholds =
-        totalFreeVotes >= market.qualificationThreshold && uniqueVotersCount >= market.uniqueVoterThreshold;
+      const hasMetThresholds = freeYesVotes >= 30;
       if (hasMetThresholds) {
         nextStatus = "qualified";
       }
@@ -609,6 +608,7 @@ export class MarketsService {
         "settlement",
         "Market resolved",
         `Your market "${market.question}" has been resolved to ${winningOutcome}.`,
+        market.id || (market as any)._id?.toString(),
       );
     } catch (err) {
       // Ignore notification failures
@@ -636,10 +636,10 @@ export class MarketsService {
     }
 
     market.status = 'qualified';
-    market.totalFreeVotes = market.qualificationThreshold;
-    market.uniqueVotersCount = market.uniqueVoterThreshold;
-    market.freeYesVotes = Math.ceil(market.qualificationThreshold * 0.6);
-    market.freeNoVotes = Math.floor(market.qualificationThreshold * 0.4);
+    market.totalFreeVotes = 30;
+    market.uniqueVotersCount = 30;
+    market.freeYesVotes = 30;
+    market.freeNoVotes = 0;
     await market.save();
 
     return this.postsService.serializeMarket(market);

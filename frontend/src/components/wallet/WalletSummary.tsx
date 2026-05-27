@@ -52,7 +52,7 @@ export default function WalletSummary() {
               </span>
             </div>
             <Link
-              className="verity-pill flex h-8 items-center gap-1.5 bg-parchment-card px-3 text-xs font-semibold tracking-[-0.14px] text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface"
+              className="verity-pill flex h-8 items-center gap-1.5 bg-parchment-card px-3 text-xs font-semibold tracking-[-0.14px] text-charcoal-primary shadow-[(--shadow-subtle)] transition-colors hover:bg-stone-surface"
               href="https://faucet.circle.com/"
               rel="noreferrer"
               target="_blank"

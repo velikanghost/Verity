@@ -128,6 +128,7 @@ export class CommentsService {
           "reply",
           "New reply",
           `${writerName} replied to your comment: "${commentSnippet}"`,
+          postId,
         );
       }
     }
@@ -151,6 +152,7 @@ export class CommentsService {
           "reply",
           "New reply",
           `${writerName} commented on your post: "${snippet}"`,
+          postId,
         );
       }
     }

@@ -76,6 +76,7 @@ export class InteractionsService {
             "like",
             "New like",
             `${likerName} liked your post: "${snippet}"`,
+            postId,
           );
         }
       }
@@ -120,6 +121,7 @@ export class InteractionsService {
             "reshare",
             "New reshare",
             `${resharerName} reshared your post: "${snippet}"`,
+            postId,
           );
         }
       }

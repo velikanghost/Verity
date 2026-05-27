@@ -105,8 +105,8 @@ export default function MarketCard({
   const hasViewerVoted = Boolean(viewerVote)
   const voteDisabled =
     !canFreeVote || hasViewerVoted || dailyVotesRemaining <= 0
-  const voteThresholdMet = totalVotes >= qualificationThreshold
-  const votesToReview = Math.max(0, qualificationThreshold - totalVotes)
+  const voteThresholdMet = freeYesVotes >= 30
+  const votesToReview = Math.max(0, 30 - freeYesVotes)
   const upvoteRatio = totalVotes > 0 ? (freeYesVotes / totalVotes) * 100 : 0
   const downvoteRatio = totalVotes > 0 ? (freeNoVotes / totalVotes) * 100 : 0
   const isDetail = variant === 'detail'
@@ -119,9 +119,7 @@ export default function MarketCard({
 
   return (
     <article
-      className={`verity-card p-4 sm:p-5 ${
-        isDetail ? '' : 'clickable-card'
-      }`}
+      className={`verity-card p-4 sm:p-5 ${isDetail ? '' : 'clickable-card'}`}
       onClick={openDetails}
       onKeyDown={(event) => {
         if (!isDetail && (event.key === 'Enter' || event.key === ' ')) {
@@ -173,13 +171,13 @@ export default function MarketCard({
       )}
 
       <div className="mb-2 flex flex-wrap gap-2">
-        <span className="rounded-[6px] bg-parchment-card px-2.5 py-1 text-[12px] font-medium tracking-[-0.14px] text-graphite shadow-[var(--shadow-subtle)]">
+        <span className="rounded-[6px] bg-parchment-card px-2.5 py-1 text-[12px] font-medium tracking-[-0.14px] text-graphite shadow-[(--shadow-subtle)]">
           {category}
         </span>
       </div>
 
       <div
-        className="mb-4 rounded-[12px] bg-parchment-card p-4 shadow-[var(--shadow-subtle)]"
+        className="mb-4 rounded-[12px] bg-parchment-card p-4 shadow-[(--shadow-subtle)]"
         onClick={stopClick}
       >
         <div className="mb-2 flex items-center justify-between text-[12px] font-semibold uppercase tracking-[0.12em] text-charcoal-primary">
@@ -202,7 +200,7 @@ export default function MarketCard({
 
         {!isTradable && (
           <div className="mb-3">
-            <div className="h-2 overflow-hidden rounded-full bg-white-surface shadow-[var(--shadow-subtle)]">
+            <div className="h-2 overflow-hidden rounded-full bg-white-surface shadow-[(--shadow-subtle)]">
               <div
                 className="h-full bg-meadow-green transition-all duration-500"
                 style={{ width: `${Math.min(100, (liquidity / 40) * 100)}%` }}
@@ -246,7 +244,7 @@ export default function MarketCard({
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <input
-                  className="h-10 w-full rounded-[10px] bg-white-surface pl-3 pr-12 font-mono text-xs text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none focus:ring-2 focus:ring-meadow-green/25"
+                  className="h-10 w-full rounded-[10px] bg-white-surface pl-3 pr-12 font-mono text-xs text-charcoal-primary shadow-[(--shadow-subtle)] outline-none focus:ring-2 focus:ring-meadow-green/25"
                   min="1"
                   onChange={(e) => setLpAmount(e.target.value)}
                   placeholder="Amount"
@@ -272,11 +270,11 @@ export default function MarketCard({
           ))}
       </div>
 
-      <div className="mb-4 rounded-[12px] bg-white-surface p-3 shadow-[var(--shadow-subtle)]">
+      <div className="mb-4 rounded-[12px] bg-white-surface p-3 shadow-[(--shadow-subtle)]">
         <div className="mb-2 flex items-center justify-between text-[12px] font-semibold tracking-[-0.14px] text-charcoal-primary">
-          <span>Upvote/Downvote signal</span>
+          <span>Upvotes signal</span>
           <span className="font-mono text-[11px] text-ash">
-            {totalVotes}/{qualificationThreshold}
+            {freeYesVotes}/30
           </span>
         </div>
         <div className="mb-2 flex flex-wrap justify-between gap-2">
@@ -290,21 +288,13 @@ export default function MarketCard({
           </span>
         </div>
         <div
-          aria-label={`Upvote ratio ${Math.round(upvoteRatio)}%, downvote ratio ${Math.round(downvoteRatio)}%`}
+          aria-label={`Upvote progress ${freeYesVotes}/30`}
           className="flex h-1.5 overflow-hidden rounded-full bg-stone-surface"
         >
-          {totalVotes > 0 && (
-            <>
-              <div
-                className="h-full bg-meadow-green transition-all duration-500"
-                style={{ width: `${upvoteRatio}%` }}
-              />
-              <div
-                className="h-full bg-ember-orange transition-all duration-500"
-                style={{ width: `${downvoteRatio}%` }}
-              />
-            </>
-          )}
+          <div
+            className="h-full bg-meadow-green transition-all duration-500"
+            style={{ width: `${Math.min(100, (freeYesVotes / 30) * 100)}%` }}
+          />
         </div>
         <div className="mt-2 font-mono text-[11px] text-ash">
           <span>Votes left today: {dailyVotesRemaining}</span>
@@ -316,7 +306,7 @@ export default function MarketCard({
           <div className="flex gap-2 mb-2">
             <div className="relative flex-1">
               <input
-                className="h-10 w-full rounded-[10px] bg-white-surface pl-3 pr-12 font-mono text-xs text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none focus:ring-2 focus:ring-sky-blue/25"
+                className="h-10 w-full rounded-[10px] bg-white-surface pl-3 pr-12 font-mono text-xs text-charcoal-primary shadow-[(--shadow-subtle)] outline-none focus:ring-2 focus:ring-sky-blue/25"
                 min="1"
                 onChange={(e) => setTradeAmount(e.target.value)}
                 placeholder="Trade amount"
@@ -331,7 +321,7 @@ export default function MarketCard({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
-              className="clickable verity-pill flex h-10 items-center justify-center gap-1 bg-meadow-green/12 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-meadow-green/20 disabled:cursor-not-allowed disabled:opacity-40"
+              className="clickable verity-pill flex h-10 items-center justify-center gap-1 bg-meadow-green/12 text-sm font-semibold text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-meadow-green/20 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={
                 actionLoading || !isConnected || Number(tradeAmount) <= 0
               }
@@ -341,7 +331,7 @@ export default function MarketCard({
               {actionLoadingStatus === 'buy_yes' ? 'Buying...' : 'BUY YES'}
             </button>
             <button
-              className="clickable verity-pill flex h-10 items-center justify-center gap-1 bg-ember-orange/10 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-ember-orange/15 disabled:cursor-not-allowed disabled:opacity-40"
+              className="clickable verity-pill flex h-10 items-center justify-center gap-1 bg-ember-orange/10 text-sm font-semibold text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-ember-orange/15 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={
                 actionLoading || !isConnected || Number(tradeAmount) <= 0
               }
@@ -356,7 +346,7 @@ export default function MarketCard({
         <div className="mb-3" onClick={stopClick}>
           <div className="mb-2 grid grid-cols-2 gap-2">
             <button
-              className="clickable verity-pill flex h-9 items-center justify-center gap-1 bg-meadow-green/20 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-meadow-green/30 disabled:cursor-not-allowed disabled:opacity-60"
+              className="clickable verity-pill flex h-9 items-center justify-center gap-1 bg-meadow-green/20 text-sm font-semibold text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-meadow-green/30 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
               onClick={() => onVote?.('YES')}
               title={yesCondition}
@@ -365,7 +355,7 @@ export default function MarketCard({
               Upvote
             </button>
             <button
-              className="clickable verity-pill flex h-9 items-center justify-center gap-1 bg-ember-orange/18 text-sm font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-ember-orange/25 disabled:cursor-not-allowed disabled:opacity-60"
+              className="clickable verity-pill flex h-9 items-center justify-center gap-1 bg-ember-orange/18 text-sm font-semibold text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-ember-orange/25 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
               onClick={() => onVote?.('NO')}
               title={noCondition}
@@ -381,7 +371,7 @@ export default function MarketCard({
           )}
         </div>
       ) : (
-        <p className="mb-3 rounded-[10px] bg-parchment-card p-3 text-sm font-medium text-ash shadow-[var(--shadow-subtle)]">
+        <p className="mb-3 rounded-[10px] bg-parchment-card p-3 text-sm font-medium text-ash shadow-[(--shadow-subtle)]">
           This market is not open for Upvote/Downvote signals.
         </p>
       )}
@@ -405,7 +395,7 @@ export default function MarketCard({
       </div>
 
       {isDetail && (
-        <div className="mb-3 grid gap-2 rounded-[10px] bg-parchment-card p-3 font-mono text-[11px] text-ash shadow-[var(--shadow-subtle)]">
+        <div className="mb-3 grid gap-2 rounded-[10px] bg-parchment-card p-3 font-mono text-[11px] text-ash shadow-[(--shadow-subtle)]">
           {yesCondition && (
             <span className="text-meadow-green">YES: {yesCondition}</span>
           )}
@@ -501,7 +491,7 @@ function getStatusTone(status: string) {
     case 'tradable':
       return 'bg-meadow-green/12 text-meadow-green'
     case 'resolved':
-      return 'bg-brand-primary text-white shadow-[var(--shadow-sm)]'
+      return 'bg-brand-primary text-white shadow-[(--shadow-sm)]'
     case 'voided':
       return 'bg-stone-surface text-ash'
     case 'resolving':

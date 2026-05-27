@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Patch, UseGuards, Inject, forwardRef, Request, ForbiddenException } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, UseGuards, Inject, forwardRef, Request, ForbiddenException, Post as HttpPost } from "@nestjs/common";
 import { UsersService } from "./users.service";
 import { UpdateUserDto } from "./users.dto";
 import { MarketsService } from "../markets/markets.service";
 import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { Types } from "mongoose";
+import { serializeUser } from "../auth/auth.service";
 
 @ApiTags("users")
 @Controller("users")
@@ -49,5 +51,48 @@ export class UsersController {
       throw new ForbiddenException("You can only update your own profile.");
     }
     return this.usersService.updateUser(id, updateUserDto);
+  }
+
+  @HttpPost(":id/follow")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Follow a user" })
+  @ApiParam({ name: "id", description: "Target user ID to follow", example: "60d0fe4f5311236168a109ca" })
+  async followUser(@Param("id") id: string, @Request() req: any) {
+    return this.usersService.follow(req.user.id, id);
+  }
+
+  @HttpPost(":id/unfollow")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Unfollow a user" })
+  @ApiParam({ name: "id", description: "Target user ID to unfollow", example: "60d0fe4f5311236168a109ca" })
+  async unfollowUser(@Param("id") id: string, @Request() req: any) {
+    return this.usersService.unfollow(req.user.id, id);
+  }
+
+  @Get(":id/is-following")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Check if current user is following target user" })
+  @ApiParam({ name: "id", description: "Target user ID to check", example: "60d0fe4f5311236168a109ca" })
+  async checkFollowing(@Param("id") id: string, @Request() req: any) {
+    const following = await this.usersService.isFollowing(req.user.id, id);
+    return { following };
+  }
+
+  @Get(":idOrUsername")
+  @ApiOperation({ summary: "Get user profile by ID or username" })
+  @ApiParam({ name: "idOrUsername", description: "User ID or username" })
+  @ApiResponse({ status: 200, description: "User profile retrieved successfully." })
+  async getUserProfile(@Param("idOrUsername") idOrUsername: string) {
+    let user;
+    if (Types.ObjectId.isValid(idOrUsername)) {
+      try {
+        user = await this.usersService.findUserById(idOrUsername);
+      } catch (err) {
+        user = await this.usersService.findUserByUsername(idOrUsername);
+      }
+    } else {
+      user = await this.usersService.findUserByUsername(idOrUsername);
+    }
+    return serializeUser(user);
   }
 }
