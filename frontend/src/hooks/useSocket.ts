@@ -42,7 +42,7 @@ export function useSocket() {
     const handlePostUpdated = (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["feed"] })
       if (data?.postId) {
-        queryClient.invalidateQueries({ queryKey: ["post-detail", data.postId] })
+        queryClient.invalidateQueries({ queryKey: ["post", data.postId] })
         queryClient.invalidateQueries({ queryKey: ["comments", data.postId] })
       }
     }

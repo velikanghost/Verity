@@ -18,6 +18,8 @@ import {
 import { useState } from 'react'
 import ThemeToggle from '@/components/layout/ThemeToggle'
 import SidebarProfile from '@/components/layout/SidebarProfile'
+import { useWalletProfile } from '@/hooks/useWalletProfile'
+import { useNotificationsQuery } from '@/store/verity/verityQueries'
 
 const NAV_ITEMS = [
   { icon: Home, label: 'Home', href: '/' },
@@ -32,6 +34,10 @@ export default function Sidebar() {
   const router = useRouter()
   const pathname = usePathname()
   const [composeOpen, setComposeOpen] = useState(false)
+
+  const { profile } = useWalletProfile()
+  const { data: notifications = [] } = useNotificationsQuery(profile?.id || '')
+  const unreadCount = notifications.filter((n: any) => !n.read).length
 
   function openComposer(intent: 'take' | 'market') {
     if (typeof window !== 'undefined') {
@@ -83,7 +89,14 @@ export default function Sidebar() {
                     : 'clickable-surface text-graphite'
                 }`}
               >
-                <item.icon className="h-6 w-6 xl:h-5 xl:w-5" />
+                <div className="relative flex items-center justify-center shrink-0">
+                  <item.icon className="h-6 w-6 xl:h-5 xl:w-5" />
+                  {item.href === '/notifications' && unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-coral-red text-[8px] font-bold text-white shadow-sm ring-1.5 ring-surface-solid">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
                 <span className="hidden font-medium tracking-[-0.18px] xl:block">
                   {item.label}
                 </span>
@@ -97,7 +110,7 @@ export default function Sidebar() {
       <div className="mb-6 mt-auto flex flex-col items-center gap-4 xl:w-full xl:items-stretch">
         <div className="relative">
           {composeOpen && (
-            <div className="absolute bottom-[calc(100%+10px)] left-0 z-50 w-[228px] rounded-[14px] bg-surface-solid p-2 shadow-[var(--shadow-sm)]">
+            <div className="absolute bottom-[calc(100%+10px)] left-0 z-50 w-[228px] rounded-[14px] bg-surface-solid p-2 shadow-[(--shadow-sm)]">
               <div className="mb-2 flex items-center justify-between px-2 pt-1">
                 <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-ash">
                   Create

@@ -54,7 +54,7 @@ export default function WalletConnectControl() {
 
   return (
     <button
-      className="verity-pill flex h-11 w-full items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface cursor-pointer"
+      className="verity-pill flex h-11 w-full items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] transition-colors hover:bg-stone-surface cursor-pointer"
       onClick={logout}
       type="button"
       title="Click to disconnect"

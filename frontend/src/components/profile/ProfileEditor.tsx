@@ -15,14 +15,14 @@ import { useProfileActivityQuery } from '@/store/verity/verityQueries'
 export default function ProfileEditor() {
   const router = useRouter()
   const { profile } = useWalletProfile()
-  const { items } = useFeed(profile?.id)
+  const { items } = useFeed()
   const [activeTab, setActiveTab] = useState<ProfileActivityTab>('posts')
   const [peopleModal, setPeopleModal] = useState<
     'followers' | 'following' | null
   >(null)
   const isConnected = Boolean(profile)
 
-  const { data: tabItems = [] } =
+  const { data: tabItems = [], isLoading: isActivityLoading } =
     useProfileActivityQuery(profile?.id || '', activeTab, profile?.id)
 
   const localProfileItems = useMemo(
@@ -48,7 +48,7 @@ export default function ProfileEditor() {
             <ProfileAvatar profile={profile} />
             <div className="mb-2 flex gap-2">
               <button
-                className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-stone-surface sm:inline-flex"
+                className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-stone-surface sm:inline-flex"
                 onClick={() => {
                   if (typeof window !== 'undefined') {
                     void navigator.clipboard?.writeText(window.location.href)
@@ -125,6 +125,7 @@ export default function ProfileEditor() {
         <ProfileActivityTabs
           activeTab={activeTab}
           items={tabItems}
+          loading={isActivityLoading}
           onOpenMarket={(market) => router.push(`/markets/${market.id}`)}
           onOpenPost={(post) => router.push(`/posts/${post.id}`)}
           profile={profile}
@@ -148,7 +149,7 @@ function ProfileAvatar({ profile }: { profile: Profile | null }) {
   if (avatarUrl) {
     return (
       <div
-        className="h-20 w-20 shrink-0 rounded-[24px] bg-cover bg-center ring-4 ring-white shadow-[var(--shadow-subtle)] sm:h-24 sm:w-24 sm:rounded-[28px]"
+        className="h-20 w-20 shrink-0 rounded-[24px] bg-cover bg-center ring-4 ring-white shadow-[(--shadow-subtle)] sm:h-24 sm:w-24 sm:rounded-[28px]"
         style={{ backgroundImage: `url(${avatarUrl})` }}
       />
     )

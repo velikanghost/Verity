@@ -3,7 +3,7 @@ import { PostsService } from "./posts.service";
 import { FeedQueryDto, CreatePostDto, CreateMarketPostDto, AddCommentDto, ToggleLikeDto, ToggleReshareDto } from "./posts.dto";
 import { CommentsService } from "../comments/comments.service";
 import { InteractionsService } from "../interactions/interactions.service";
-import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { Throttle } from "@nestjs/throttler";
 
@@ -41,6 +41,7 @@ export class PostsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Create a new normal post (Direct endpoint)" })
@@ -53,6 +54,7 @@ export class PostsController {
 
   @Post("normal")
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Create a new normal post" })
@@ -65,6 +67,7 @@ export class PostsController {
 
   @Post("market")
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Create a new prediction market post" })
@@ -77,6 +80,7 @@ export class PostsController {
 
   @Post(":postId/comment")
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Add a comment to a feed post" })
@@ -95,6 +99,7 @@ export class PostsController {
 
   @Post(":postId/like")
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Toggle like interaction on a feed post" })
@@ -113,6 +118,7 @@ export class PostsController {
 
   @Post(":postId/reshare")
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Toggle reshare interaction on a feed post" })

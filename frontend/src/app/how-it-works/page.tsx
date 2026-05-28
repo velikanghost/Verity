@@ -123,7 +123,7 @@ export default function HowItWorksPage() {
               Go to feed <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              className="verity-pill flex h-11 items-center bg-parchment-card px-5 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface"
+              className="verity-pill flex h-11 items-center bg-parchment-card px-5 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] transition-colors hover:bg-stone-surface"
               href="/explore"
             >
               Explore markets
@@ -242,7 +242,7 @@ export default function HowItWorksPage() {
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {SOCIAL.map((item) => (
             <article
-              className="rounded-[12px] bg-parchment-card p-4 shadow-[var(--shadow-subtle)]"
+              className="rounded-[12px] bg-parchment-card p-4 shadow-[(--shadow-subtle)]"
               key={item.title}
             >
               <item.icon className="mb-3 h-5 w-5 text-charcoal-primary" />
@@ -262,7 +262,7 @@ export default function HowItWorksPage() {
 
 function ResolutionCard({ label, text }: { label: string; text: string }) {
   return (
-    <div className="rounded-[12px] bg-parchment-card p-4 shadow-[var(--shadow-subtle)]">
+    <div className="rounded-[12px] bg-parchment-card p-4 shadow-[(--shadow-subtle)]">
       <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ash">
         {label}
       </p>

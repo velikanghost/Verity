@@ -23,7 +23,7 @@ export default function CommentsThread({
   loading = false,
   title = 'Comments',
 }: CommentsThreadProps) {
-  const [sort, setSort] = useState<CommentSort>('relevant')
+  const [sort, setSort] = useState<CommentSort>('newest')
   const [draft, setDraft] = useState('')
   const [replyingToComment, setReplyingToComment] = useState<MarketComment | null>(null)
   const { profile } = useWalletProfile()
@@ -86,12 +86,12 @@ export default function CommentsThread({
           <MessageCircle className="h-5 w-5 text-sky-blue" />
           {title}
         </h2>
-        <div className="grid grid-cols-2 rounded-[32px] bg-parchment-card p-1 shadow-[var(--shadow-subtle)]">
+        <div className="grid grid-cols-2 rounded-[32px] bg-parchment-card p-1 shadow-[(--shadow-subtle)]">
           {(['relevant', 'newest'] as const).map((nextSort) => (
             <button
               className={`verity-pill h-8 px-3 text-xs font-semibold capitalize tracking-[-0.14px] transition-colors ${
                 sort === nextSort
-                  ? 'bg-white text-charcoal-primary shadow-[var(--shadow-subtle)]'
+                  ? 'bg-white text-charcoal-primary shadow-[(--shadow-subtle)]'
                   : 'text-ash hover:text-charcoal-primary'
               }`}
               key={nextSort}
@@ -105,7 +105,7 @@ export default function CommentsThread({
       </div>
 
       <div className="border-b border-dashed border-stone-surface p-4">
-        <div className="flex gap-3 rounded-[12px] bg-parchment-card p-3 shadow-[var(--shadow-subtle)]">
+        <div className="flex gap-3 rounded-[12px] bg-parchment-card p-3 shadow-[(--shadow-subtle)]">
           <input
             className="min-w-0 flex-1 bg-transparent text-sm tracking-[-0.18px] text-charcoal-primary outline-none placeholder:text-ash"
             onChange={(event) => setDraft(event.target.value)}
@@ -200,7 +200,7 @@ function CommentRow({
     <article className={`flex gap-3 p-4 ${isReply ? 'pt-2 pb-2' : ''}`}>
       {avatarUrl ? (
         <span
-          className={`rounded-[10px] bg-cover bg-center shadow-[var(--shadow-subtle)] shrink-0 ${isReply ? 'h-7 w-7' : 'h-10 w-10'}`}
+          className={`rounded-[10px] bg-cover bg-center shadow-[(--shadow-subtle)] shrink-0 ${isReply ? 'h-7 w-7' : 'h-10 w-10'}`}
           style={{ backgroundImage: `url(${avatarUrl})` }}
         />
       ) : (

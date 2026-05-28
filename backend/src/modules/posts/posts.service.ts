@@ -88,6 +88,7 @@ export interface FeedPostResponse {
   viewerLiked: boolean;
   viewerReshared: boolean;
   viewerVote: VoteSide | null;
+  parentPost?: FeedPostResponse | null;
 }
 
 const VAGUE_WORDS = ["popular", "successful", "viral", "big", "famous", "good", "better", "important"];
@@ -266,9 +267,86 @@ export class PostsService {
         const postIds = reshares.map((r) => r.postId);
         filter = { _id: { $in: postIds } };
       } else if (tab === "comments") {
-        const comments = await this.commentModel.find({ authorId: pId }).select("postId");
-        const postIds = comments.map((c) => c.postId);
-        filter = { _id: { $in: postIds } };
+        const comments = await this.commentModel.find({ authorId: pId }).sort({ createdAt: -1 }).limit(50);
+        if (comments.length === 0) {
+          return [];
+        }
+
+        const commentAuthor = await this.userModel.findById(pId);
+        const serializedCommentAuthor = commentAuthor ? serializeUser(commentAuthor) : this.fallbackProfile(profileId);
+
+        const parentPostIds = comments.map((c) => c.postId);
+        const parentPosts = await this.postModel.find({ _id: { $in: parentPostIds } });
+        const parentPostIdsFetched = parentPosts.map((p) => p._id);
+        const parentAuthorIds = parentPosts.map((p) => p.authorId);
+
+        const [parentAuthors, parentMarkets] = await Promise.all([
+          this.userModel.find({ _id: { $in: parentAuthorIds } }),
+          this.marketModel.find({ postId: { $in: parentPostIdsFetched } }),
+        ]);
+
+        const parentAuthorMap = new Map(parentAuthors.map((author) => [author.id, serializeUser(author)]));
+        const parentMarketMap = new Map(parentMarkets.map((market) => [market.postId.toString(), market]));
+        const parentMarketIds = parentMarkets.map((market) => market._id);
+
+        const [likedIds, resharedIds, votes] = await Promise.all([
+          viewerProfileId
+            ? this.likeModel.find({ userId: new Types.ObjectId(viewerProfileId), postId: { $in: parentPostIdsFetched } }).select("postId")
+            : Promise.resolve([]),
+          viewerProfileId
+            ? this.reshareModel.find({ userId: new Types.ObjectId(viewerProfileId), postId: { $in: parentPostIdsFetched } }).select("postId")
+            : Promise.resolve([]),
+          viewerProfileId
+            ? this.voteModel
+                .find({ userId: new Types.ObjectId(viewerProfileId), marketId: { $in: parentMarketIds }, voteType: "free" })
+                .select("marketId side")
+            : Promise.resolve([]),
+        ]);
+
+        const liked = new Set(likedIds.map((item) => item.postId.toString()));
+        const reshared = new Set(resharedIds.map((item) => item.postId.toString()));
+        const voteMap = new Map<string, VoteSide>(
+          votes.map((vote) => [vote.marketId.toString(), vote.side] as [string, VoteSide]),
+        );
+
+        const parentPostsSerializedMap = new Map<string, FeedPostResponse>();
+        for (const post of parentPosts) {
+          const base = this.serializePost(post);
+          const market = parentMarketMap.get(post.id) || null;
+          parentPostsSerializedMap.set(post.id, {
+            ...base,
+            author: parentAuthorMap.get(base.authorId) || this.fallbackProfile(base.authorId),
+            market: market ? this.serializeMarket(market) : null,
+            viewerLiked: liked.has(post.id),
+            viewerReshared: reshared.has(post.id),
+            viewerVote: market ? voteMap.get(market.id) || null : null,
+          });
+        }
+
+        return comments.map((comment) => {
+          const createdAt = comment.createdAt ? new Date(comment.createdAt).toISOString() : new Date().toISOString();
+          const updatedAt = comment.updatedAt ? new Date(comment.updatedAt).toISOString() : new Date().toISOString();
+          return {
+            id: comment.id || (comment as any)._id?.toString(),
+            authorId: comment.authorId.toString(),
+            author_id: comment.authorId.toString(),
+            type: "comment",
+            content: comment.content,
+            createdAt,
+            created_at: createdAt,
+            updatedAt,
+            likesCount: comment.likesCount || 0,
+            commentsCount: 0,
+            resharesCount: 0,
+            sharesCount: 0,
+            author: serializedCommentAuthor,
+            market: null,
+            viewerLiked: false,
+            viewerReshared: false,
+            viewerVote: null,
+            parentPost: parentPostsSerializedMap.get(comment.postId.toString()) || null,
+          };
+        });
       } else {
         filter = { authorId: pId };
       }

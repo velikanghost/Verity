@@ -34,7 +34,7 @@ export default function VerityAgentPanel({
 
   return (
     <section
-      className={`rounded-[10px] bg-white-surface shadow-[var(--shadow-subtle)] ${
+      className={`rounded-[10px] bg-white-surface shadow-[(--shadow-subtle)] ${
         compact ? 'p-3' : 'p-4'
       }`}
     >
@@ -51,7 +51,7 @@ export default function VerityAgentPanel({
             Verity AI Agent
           </h2>
         </div>
-        <span className="rounded-full bg-parchment-card px-2.5 py-1 font-mono text-xs font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)]">
+        <span className="rounded-full bg-parchment-card px-2.5 py-1 font-mono text-xs font-semibold text-charcoal-primary shadow-[(--shadow-subtle)]">
           {agentReview.score}/100
         </span>
       </div>

@@ -25,7 +25,7 @@ export default function MobileComposeButton() {
   return (
     <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+82px)] right-4 z-50 sm:hidden">
       {open && (
-        <div className="mb-3 w-[240px] rounded-[14px] bg-surface-solid p-2 shadow-[var(--shadow-sm)]">
+        <div className="mb-3 w-[240px] rounded-[14px] bg-surface-solid p-2 shadow-[(--shadow-sm)]">
           <div className="mb-2 flex items-center justify-between px-2 pt-1">
             <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-ash">
               Create
@@ -81,7 +81,7 @@ export default function MobileComposeButton() {
       <button
         aria-expanded={open}
         aria-label={open ? 'Close create menu' : 'Create'}
-        className="clickable flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-[var(--shadow-sm)]"
+        className="clickable flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-[(--shadow-sm)]"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >

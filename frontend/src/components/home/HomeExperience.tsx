@@ -21,7 +21,7 @@ export default function HomeExperience() {
         <div className="flex items-center gap-2">
           <Link
             aria-label="Open Verity guide"
-            className="clickable-icon flex h-10 w-10 items-center justify-center bg-parchment-card text-graphite shadow-[var(--shadow-subtle)] hover:text-charcoal-primary"
+            className="clickable-icon flex h-10 w-10 items-center justify-center bg-parchment-card text-graphite shadow-[(--shadow-subtle)] hover:text-charcoal-primary"
             href="/how-it-works"
           >
             <CircleHelp className="h-5 w-5" />

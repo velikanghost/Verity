@@ -2,7 +2,7 @@
 
 import { usePrivyWallet } from "@/hooks/usePrivyWallet";
 import { type Address, encodeFunctionData } from "viem";
-import { arcTestnet, arcUsdcAddress, erc20Abi, FACTORY_ADDRESS, ROUTER_ADDRESS, routerAbi, publicClient } from "@/lib/arc";
+import { arcTestnet, arcUsdcAddress, erc20Abi, FACTORY_ADDRESS, factoryAbi, publicClient } from "@/lib/arc";
 
 export function useUsdcTransfer() {
   const { address, isConnected, chainId, sendBatchCalls } = usePrivyWallet();
@@ -48,12 +48,12 @@ export function useUsdcTransfer() {
     const formattedMarketId = ("0x" + marketId.padEnd(64, "0")) as Address;
     const calls: { to: Address; data: `0x${string}` }[] = [];
 
-    // Check USDC allowance to Router
+    // Check USDC allowance to Factory
     const allowance = await publicClient.readContract({
       address: arcUsdcAddress,
       abi: erc20Abi,
       functionName: "allowance",
-      args: [address as `0x${string}`, ROUTER_ADDRESS],
+      args: [address as `0x${string}`, FACTORY_ADDRESS],
     });
 
     if (allowance < totalRequired) {
@@ -62,17 +62,17 @@ export function useUsdcTransfer() {
         data: encodeFunctionData({
           abi: erc20Abi,
           functionName: "approve",
-          args: [ROUTER_ADDRESS, totalRequired],
+          args: [FACTORY_ADDRESS, totalRequired],
         }),
       });
     }
 
     calls.push({
-      to: ROUTER_ADDRESS,
+      to: FACTORY_ADDRESS,
       data: encodeFunctionData({
-        abi: routerAbi,
+        abi: factoryAbi,
         functionName: "createMarketPreDeposit",
-        args: [FACTORY_ADDRESS, formattedMarketId, BigInt(Math.round(creatorLpAmount * 1e6))],
+        args: [formattedMarketId, BigInt(Math.round(creatorLpAmount * 1e6))],
       }),
     });
 

@@ -2,7 +2,7 @@
 
 import { usePrivyWallet } from "@/hooks/usePrivyWallet";
 import { type Address, encodeFunctionData } from "viem";
-import { arcTestnet, arcUsdcAddress, RESOLVER_ADDRESS, VAULT_ADDRESS, FPMM_ADDRESS, FACTORY_ADDRESS, ROUTER_ADDRESS, erc20Abi, resolverAbi, vaultAbi, fpmmAbi, factoryAbi, routerAbi, publicClient, formatWeb3Error } from "@/lib/arc";
+import { arcTestnet, arcUsdcAddress, RESOLVER_ADDRESS, VAULT_ADDRESS, FPMM_ADDRESS, FACTORY_ADDRESS, erc20Abi, resolverAbi, vaultAbi, fpmmAbi, factoryAbi, publicClient, formatWeb3Error } from "@/lib/arc";
 import { toast } from "react-hot-toast";
 
 function formatMarketId(marketId: string): `0x${string}` {
@@ -38,12 +38,12 @@ export function useMarketResolution() {
 
       const calls: { to: Address; data: `0x${string}` }[] = [];
 
-      // Check USDC allowance to Router
+      // Check USDC allowance to Resolver
       const allowance = await publicClient.readContract({
         abi: erc20Abi,
         address: arcUsdcAddress,
         functionName: "allowance",
-        args: [address as `0x${string}`, ROUTER_ADDRESS],
+        args: [address as `0x${string}`, RESOLVER_ADDRESS],
       });
 
       if (allowance < bondAmount) {
@@ -52,16 +52,16 @@ export function useMarketResolution() {
           data: encodeFunctionData({
             abi: erc20Abi,
             functionName: "approve",
-            args: [ROUTER_ADDRESS, bondAmount],
+            args: [RESOLVER_ADDRESS, bondAmount],
           }),
         });
       }
 
       calls.push({
-        to: ROUTER_ADDRESS,
+        to: RESOLVER_ADDRESS,
         data: encodeFunctionData({
-          abi: routerAbi,
-          args: [RESOLVER_ADDRESS, formattedMarketId],
+          abi: resolverAbi,
+          args: [formattedMarketId],
           functionName: "disputeResolution",
         }),
       });

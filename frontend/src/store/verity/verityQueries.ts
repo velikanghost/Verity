@@ -36,6 +36,14 @@ export function useDailyVotesQuery(userId: string) {
   });
 }
 
+export function useUserProfileQuery(idOrUsername: string) {
+  return useQuery({
+    queryKey: ["user-profile", idOrUsername] as const,
+    queryFn: () => apiRequest<Profile>(`/users/${encodeURIComponent(idOrUsername)}`),
+    enabled: Boolean(idOrUsername),
+  });
+}
+
 export function useUpdateProfileMutation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -85,6 +93,19 @@ export function usePostCommentsQuery(postId: string) {
       apiRequest<MarketComment[]>(
         `/comments?postId=${encodeURIComponent(postId)}`
       ),
+    enabled: Boolean(postId),
+  });
+}
+
+export function usePostQuery(postId: string, viewerProfileId?: string) {
+  return useQuery({
+    queryKey: ["post", postId, viewerProfileId || ""] as const,
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (viewerProfileId) params.set("viewerProfileId", viewerProfileId);
+      const query = params.toString();
+      return apiRequest<FeedPost>(`/posts/${encodeURIComponent(postId)}${query ? `?${query}` : ""}`);
+    },
     enabled: Boolean(postId),
   });
 }
@@ -327,6 +348,19 @@ export function usePoolStateQuery(marketId: string) {
   });
 }
 
+export function useMarketDetailQuery(marketId: string, viewerProfileId?: string) {
+  return useQuery({
+    queryKey: ["market-detail", marketId, viewerProfileId || ""] as const,
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (viewerProfileId) params.set("userId", viewerProfileId);
+      const query = params.toString();
+      return apiRequest<FeedPost>(`/markets/${encodeURIComponent(marketId)}${query ? `?${query}` : ""}`);
+    },
+    enabled: Boolean(marketId),
+  });
+}
+
 export function useLPPositionsQuery(marketId: string, userId: string) {
   return useQuery({
     queryKey: ["lp-positions", marketId, userId] as const,
@@ -439,11 +473,26 @@ export function useNotificationsQuery(userId: string) {
 export function useMarkNotificationReadMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (notificationId: string) =>
+    mutationFn: ({ notificationId, userId }: { notificationId: string; userId: string }) =>
       apiRequest<any>(`/notifications/${notificationId}/read`, {
         method: "PATCH",
+        body: JSON.stringify({ userId }),
       }),
-    onSuccess: (_, notificationId) => {
+    onSuccess: (_, { notificationId }) => {
+      void qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsReadMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiRequest<any>(`/notifications/read-all`, {
+        method: "POST",
+        body: JSON.stringify({ userId }),
+      }),
+    onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
@@ -460,5 +509,43 @@ export function useProfileActivityQuery(profileId: string, tab: string, viewerId
       return apiRequest<FeedPost[]>(`/posts?${params.toString()}`);
     },
     enabled: Boolean(profileId && tab),
+  });
+}
+
+export function useIsFollowingQuery(targetId: string, viewerId: string) {
+  return useQuery({
+    queryKey: ["is-following", targetId, viewerId] as const,
+    queryFn: () => apiRequest<{ following: boolean }>(`/users/${targetId}/is-following`),
+    enabled: Boolean(targetId && viewerId),
+  });
+}
+
+export function useFollowUserMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetId: string) =>
+      apiRequest<{ success: boolean }>(`/users/${targetId}/follow`, {
+        method: "POST",
+      }),
+    onSuccess: (_, targetId) => {
+      void qc.invalidateQueries({ queryKey: ["is-following", targetId] });
+      void qc.invalidateQueries({ queryKey: ["wallet-profile"] });
+      void qc.invalidateQueries({ queryKey: ["feed"] });
+    },
+  });
+}
+
+export function useUnfollowUserMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetId: string) =>
+      apiRequest<{ success: boolean }>(`/users/${targetId}/unfollow`, {
+        method: "POST",
+      }),
+    onSuccess: (_, targetId) => {
+      void qc.invalidateQueries({ queryKey: ["is-following", targetId] });
+      void qc.invalidateQueries({ queryKey: ["wallet-profile"] });
+      void qc.invalidateQueries({ queryKey: ["feed"] });
+    },
   });
 }

@@ -20,6 +20,9 @@ export class Notification {
   @Prop({ type: String, required: true })
   body: string;
 
+  @Prop({ type: String, default: null })
+  targetId: string | null;
+
   @Prop({ type: Boolean, default: false, index: true })
   read: boolean;
 

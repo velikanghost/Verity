@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, TrendingUp } from 'lucide-react'
@@ -10,6 +10,7 @@ import CommentsThread from '@/components/social/CommentsThread'
 import { useFeed } from '@/hooks/useFeed'
 import { useSetRightPanelSlot } from '@/hooks/useRightPanelSlot'
 import { useWalletProfile } from '@/hooks/useWalletProfile'
+import { useSocket } from '@/hooks/useSocket'
 import {
   displayHandle,
   displayName,
@@ -17,7 +18,7 @@ import {
   type FeedPost,
   type MarketPost,
 } from '@/lib/verity'
-import { usePostCommentsQuery } from '@/store/verity/verityQueries'
+import { usePostCommentsQuery, usePostQuery } from '@/store/verity/verityQueries'
 
 interface PostDetailViewProps {
   postId: string
@@ -26,10 +27,24 @@ interface PostDetailViewProps {
 export default function PostDetailView({ postId }: PostDetailViewProps) {
   const router = useRouter()
   const { profile } = useWalletProfile()
-  const { items, loading, error } = useFeed(profile?.id)
-  const item = items.find((feedItem) => feedItem.id === postId)
+  const { joinRoom, leaveRoom } = useSocket()
+  const { items, loading: feedLoading } = useFeed()
+  const { data: item, isLoading: itemLoading, error: itemError } = usePostQuery(postId, profile?.id)
   const { data: comments = [], isLoading: commentsLoading } =
     usePostCommentsQuery(postId)
+
+  useEffect(() => {
+    joinRoom(`post:${postId}`)
+    return () => {
+      leaveRoom(`post:${postId}`)
+    }
+  }, [postId, joinRoom, leaveRoom])
+
+  useEffect(() => {
+    if (item?.market?.id) {
+      router.replace(`/markets/${item.market.id}`)
+    }
+  }, [item, router])
 
   const relatedMarkets = useMemo(() => {
     const category = item?.market?.category
@@ -49,7 +64,7 @@ export default function PostDetailView({ postId }: PostDetailViewProps) {
     `${postId}-${relatedMarkets.map((related) => related.id).join(',')}`,
   )
 
-  if (loading && !item) {
+  if (itemLoading) {
     return (
       <div className="flex flex-col gap-3 py-4 animate-pulse">
         <div className="h-10 w-24 rounded bg-stone-surface" />
@@ -77,11 +92,11 @@ export default function PostDetailView({ postId }: PostDetailViewProps) {
     )
   }
 
-  if (error && !item) {
+  if (itemError) {
     return (
       <div className="py-4">
-        <section className="rounded-[12px] bg-ember-orange/10 p-8 text-center text-sm text-charcoal-primary shadow-[var(--shadow-subtle)]">
-          {error}
+        <section className="rounded-[12px] bg-ember-orange/10 p-8 text-center text-sm text-charcoal-primary shadow-[(--shadow-subtle)]">
+          {(itemError as any)?.message || "Failed to load post."}
         </section>
       </div>
     )
@@ -91,7 +106,7 @@ export default function PostDetailView({ postId }: PostDetailViewProps) {
     return (
       <div className="py-4">
         <section className="verity-card p-8 text-center text-sm text-ash">
-          Post not found in the current feed.
+          Post not found.
         </section>
       </div>
     )
@@ -100,7 +115,7 @@ export default function PostDetailView({ postId }: PostDetailViewProps) {
   return (
     <div className="flex flex-col gap-3 py-4">
       <Link
-        className="verity-pill flex h-10 w-fit items-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] transition-colors hover:bg-stone-surface"
+        className="verity-pill flex h-10 w-fit items-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] transition-colors hover:bg-stone-surface"
         href="/"
       >
         <ArrowLeft className="h-4 w-4" />

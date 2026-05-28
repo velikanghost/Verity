@@ -113,7 +113,7 @@ export class CommentsService {
 
     // Socket events
     this.socketGateway.broadcastToRoom("feed", "feed-updated", {});
-    this.socketGateway.broadcastToRoom(`post:${postId}`, "post-updated", {});
+    this.socketGateway.broadcastToRoom(`post:${postId}`, "post-updated", { postId });
 
     // Create Notification
     const writerName = writer.displayName || writer.username || "Someone";
@@ -128,6 +128,7 @@ export class CommentsService {
           "reply",
           "New reply",
           `${writerName} replied to your comment: "${commentSnippet}"`,
+          postId,
         );
       }
     }
@@ -151,6 +152,7 @@ export class CommentsService {
           "reply",
           "New reply",
           `${writerName} commented on your post: "${snippet}"`,
+          postId,
         );
       }
     }

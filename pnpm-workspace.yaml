@@ -11,4 +11,12 @@ allowBuilds:
   utf-8-validate: true
 
 onlyBuiltDependencies:
+  - '@nestjs/core'
+  - '@reown/appkit'
+  - '@scarf/scarf'
+  - bufferutil
+  - keccak
   - msw
+  - sharp
+  - unrs-resolver
+  - utf-8-validate

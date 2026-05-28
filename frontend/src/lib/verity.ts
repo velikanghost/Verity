@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 
-export type PostType = "normal" | "market";
+export type PostType = "normal" | "market" | "comment";
 export type VoteSide = "YES" | "NO";
 export type MarketTradeAction = "BUY" | "SELL";
 
@@ -99,6 +99,7 @@ export interface FeedPost {
   viewerLiked: boolean;
   viewerReshared: boolean;
   viewerVote: VoteSide | null;
+  parentPost?: FeedPost | null;
 }
 
 export interface MarketComment {

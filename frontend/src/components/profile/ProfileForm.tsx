@@ -139,7 +139,7 @@ export default function ProfileForm({
             Username
           </label>
           <input
-            className="h-11 w-full rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
+            className="h-11 w-full rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
             disabled={!profile || saving}
             onChange={(event) => setUsername(event.target.value)}
             placeholder="Username"
@@ -152,7 +152,7 @@ export default function ProfileForm({
             Display Name
           </label>
           <input
-            className="h-11 w-full rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
+            className="h-11 w-full rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
             disabled={!profile || saving}
             onChange={(event) => setDisplay(event.target.value)}
             placeholder="Display name"
@@ -167,7 +167,7 @@ export default function ProfileForm({
           <div className="flex items-center gap-4 rounded-[10px] border border-dashed border-border bg-surface-muted p-3">
             {avatarPreview ? (
               <div
-                className="h-12 w-12 shrink-0 rounded-[14px] border border-border bg-cover bg-center shadow-[var(--shadow-subtle)]"
+                className="h-12 w-12 shrink-0 rounded-[14px] border border-border bg-cover bg-center shadow-[(--shadow-subtle)]"
                 style={{ backgroundImage: `url(${avatarPreview})` }}
               />
             ) : (
@@ -176,7 +176,7 @@ export default function ProfileForm({
               </div>
             )}
             <div className="flex-1">
-              <label className="clickable verity-pill inline-flex h-8 cursor-pointer items-center justify-center gap-2 border border-border bg-white-surface px-3 text-[11px] font-semibold text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-surface-hover">
+              <label className="clickable verity-pill inline-flex h-8 cursor-pointer items-center justify-center gap-2 border border-border bg-white-surface px-3 text-[11px] font-semibold text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-surface-hover">
                 Upload Avatar
                 <input
                   type="file"
@@ -192,7 +192,7 @@ export default function ProfileForm({
             </div>
           </div>
           <input
-            className="mt-2 h-11 w-full rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
+            className="mt-2 h-11 w-full rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
             disabled={!profile || saving}
             onChange={(event) => {
               setAvatar(event.target.value)
@@ -214,7 +214,7 @@ export default function ProfileForm({
             Bio
           </label>
           <textarea
-            className="min-h-24 w-full rounded-[10px] bg-white-surface p-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
+            className="min-h-24 w-full rounded-[10px] bg-white-surface p-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
             disabled={!profile || saving}
             onChange={(event) => setBio(event.target.value)}
             placeholder="Bio"

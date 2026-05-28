@@ -11,7 +11,11 @@ import SocialUserListModal from '@/components/social/SocialUserListModal'
 import { useFeed } from '@/hooks/useFeed'
 import { useWalletProfile } from '@/hooks/useWalletProfile'
 import { displayHandle, displayName, type Profile } from '@/lib/verity'
-import { useProfileActivityQuery } from '@/store/verity/verityQueries'
+import {
+  useProfileActivityQuery,
+  useUserProfileQuery,
+} from '@/store/verity/verityQueries'
+import { FeedSkeleton } from '@/components/feed/FeedShell'
 
 interface PublicProfileViewProps {
   userId: string
@@ -20,35 +24,21 @@ interface PublicProfileViewProps {
 export default function PublicProfileView({ userId }: PublicProfileViewProps) {
   const router = useRouter()
   const { profile: viewerProfile } = useWalletProfile()
-  const { items, loading, error } = useFeed(viewerProfile?.id)
+  const { items, loading, error } = useFeed()
   const [activeTab, setActiveTab] = useState<ProfileActivityTab>('posts')
   const [peopleModal, setPeopleModal] = useState<
     'followers' | 'following' | null
   >(null)
 
   const decodedUserId = decodeURIComponent(userId)
-  const profile = useMemo(() => {
-    const authors = new Map<string, Profile>()
-    items.forEach((item) => {
-      authors.set(item.author.id, item.author)
-      if (item.author.username) authors.set(item.author.username, item.author)
-      if (displayHandle(item.author) !== '@unknown') {
-        authors.set(displayHandle(item.author).slice(1), item.author)
-      }
-    })
-    if (viewerProfile) {
-      authors.set(viewerProfile.id, viewerProfile)
-      if (viewerProfile.username)
-        authors.set(viewerProfile.username, viewerProfile)
-    }
-    return authors.get(decodedUserId) || null
-  }, [decodedUserId, items, viewerProfile])
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    error: profileError,
+  } = useUserProfileQuery(decodedUserId)
 
-  const { data: tabItems = [] } = useProfileActivityQuery(
-    profile?.id || '',
-    activeTab,
-    viewerProfile?.id,
-  )
+  const { data: tabItems = [], isLoading: isActivityLoading } =
+    useProfileActivityQuery(profile?.id || '', activeTab, viewerProfile?.id)
 
   const localProfileItems = useMemo(() => {
     if (!profile) return []
@@ -70,16 +60,45 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
         )
       : 0
 
-  if (loading && !profile) {
-    return <ProfileState message="Loading profile..." />
+  if (isProfileLoading) {
+    return (
+      <div className="flex flex-col gap-3 py-3 sm:py-4 animate-pulse">
+        <section className="verity-card overflow-hidden">
+          <div className="h-24 bg-stone-surface sm:h-28" />
+          <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+            <div className="-mt-10 flex items-end justify-between gap-3">
+              <div className="h-20 w-20 shrink-0 rounded-[24px] bg-stone-surface ring-4 ring-white sm:h-24 sm:w-24 sm:rounded-[28px]" />
+              <div className="mb-2 h-10 w-28 rounded-full bg-stone-surface" />
+            </div>
+            <div className="mt-3">
+              <div className="h-6 w-48 rounded bg-stone-surface" />
+              <div className="mt-2 h-4 w-32 rounded bg-stone-surface" />
+              <div className="mt-4 h-4 w-full max-w-[480px] rounded bg-stone-surface" />
+              <div className="mt-2 h-4 w-full max-w-[360px] rounded bg-stone-surface" />
+              <div className="mt-5 flex gap-4">
+                <div className="h-4 w-20 rounded bg-stone-surface" />
+                <div className="h-4 w-20 rounded bg-stone-surface" />
+              </div>
+            </div>
+          </div>
+          <div className="h-12 border-t border-dashed border-stone-surface bg-stone-surface/10" />
+        </section>
+        <FeedSkeleton />
+      </div>
+    )
   }
 
-  if (error && !profile) {
-    return <ProfileState message={error} tone="error" />
+  if (profileError) {
+    return (
+      <ProfileState
+        message={(profileError as any)?.message || 'Failed to load profile.'}
+        tone="error"
+      />
+    )
   }
 
   if (!profile) {
-    return <ProfileState message="Profile not found in the current feed." />
+    return <ProfileState message="Profile not found." tone="error" />
   }
 
   return (
@@ -92,7 +111,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
             <ProfileAvatar profile={profile} />
             <div className="mb-2 flex gap-2">
               <button
-                className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[var(--shadow-subtle)] hover:bg-stone-surface sm:inline-flex"
+                className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-stone-surface sm:inline-flex"
                 onClick={() => {
                   if (typeof window !== 'undefined') {
                     void navigator.clipboard?.writeText(window.location.href)
@@ -160,6 +179,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
       <ProfileActivityTabs
         activeTab={activeTab}
         items={tabItems}
+        loading={isActivityLoading}
         onOpenMarket={(market) => router.push(`/markets/${market.id}`)}
         onOpenPost={(post) => router.push(`/posts/${post.id}`)}
         profile={profile}
@@ -182,7 +202,7 @@ function ProfileAvatar({ profile }: { profile: Profile }) {
   if (avatarUrl) {
     return (
       <div
-        className="h-20 w-20 shrink-0 rounded-[24px] bg-cover bg-center ring-4 ring-white shadow-[var(--shadow-subtle)] sm:h-24 sm:w-24 sm:rounded-[28px]"
+        className="h-20 w-20 shrink-0 rounded-[24px] bg-cover bg-center ring-4 ring-white shadow-[(--shadow-subtle)] sm:h-24 sm:w-24 sm:rounded-[28px]"
         style={{ backgroundImage: `url(${avatarUrl})` }}
       />
     )
@@ -243,7 +263,7 @@ function ProfileState({
   return (
     <div className="py-4">
       <section
-        className={`rounded-[12px] p-8 text-center text-sm font-medium tracking-[-0.18px] shadow-[var(--shadow-subtle)] ${
+        className={`rounded-[12px] p-8 text-center text-sm font-medium tracking-[-0.18px] shadow-[(--shadow-subtle)] ${
           tone === 'error'
             ? 'bg-ember-orange/10 text-charcoal-primary'
             : 'bg-white text-ash'

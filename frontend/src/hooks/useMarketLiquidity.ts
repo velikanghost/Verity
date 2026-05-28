@@ -2,7 +2,7 @@
 
 import { usePrivyWallet } from "@/hooks/usePrivyWallet";
 import { type Address, encodeFunctionData } from "viem";
-import { arcTestnet, arcUsdcAddress, FACTORY_ADDRESS, FPMM_ADDRESS, VAULT_ADDRESS, ROUTER_ADDRESS, erc20Abi, erc1155Abi, fpmmAbi, routerAbi, publicClient, formatWeb3Error } from "@/lib/arc";
+import { arcTestnet, arcUsdcAddress, FACTORY_ADDRESS, FPMM_ADDRESS, VAULT_ADDRESS, erc20Abi, erc1155Abi, fpmmAbi, factoryAbi, publicClient, formatWeb3Error } from "@/lib/arc";
 import { useFundPoolMutation, useAddLiquidityMutation, useRemoveLiquidityMutation, useExecuteMarketTradeMutation } from "@/store/verity/verityQueries";
 import { toast } from "react-hot-toast";
 
@@ -54,12 +54,12 @@ export function useMarketLiquidity() {
       const formattedId = formatMarketId(marketId);
       const calls: { to: Address; data: `0x${string}` }[] = [];
 
-      // Check USDC allowance to Router
+      // Check USDC allowance to Factory
       const allowance = await publicClient.readContract({
         abi: erc20Abi,
         address: arcUsdcAddress,
         functionName: "allowance",
-        args: [address as `0x${string}`, ROUTER_ADDRESS],
+        args: [address as `0x${string}`, FACTORY_ADDRESS],
       });
 
       if (allowance < rawAmount) {
@@ -68,16 +68,16 @@ export function useMarketLiquidity() {
           data: encodeFunctionData({
             abi: erc20Abi,
             functionName: "approve",
-            args: [ROUTER_ADDRESS, rawAmount],
+            args: [FACTORY_ADDRESS, rawAmount],
           }),
         });
       }
 
       calls.push({
-        to: ROUTER_ADDRESS,
+        to: FACTORY_ADDRESS,
         data: encodeFunctionData({
-          abi: routerAbi,
-          args: [FACTORY_ADDRESS, formattedId, rawAmount],
+          abi: factoryAbi,
+          args: [formattedId, rawAmount],
           functionName: "depositPreMarketLiquidity",
         }),
       });
@@ -124,12 +124,12 @@ export function useMarketLiquidity() {
       const formattedId = formatMarketId(marketId);
       const calls: { to: Address; data: `0x${string}` }[] = [];
 
-      // Check USDC allowance to Router
+      // Check USDC allowance to FPMM
       const allowance = await publicClient.readContract({
         abi: erc20Abi,
         address: arcUsdcAddress,
         functionName: "allowance",
-        args: [address as `0x${string}`, ROUTER_ADDRESS],
+        args: [address as `0x${string}`, FPMM_ADDRESS],
       });
 
       if (allowance < rawAmount) {
@@ -138,16 +138,16 @@ export function useMarketLiquidity() {
           data: encodeFunctionData({
             abi: erc20Abi,
             functionName: "approve",
-            args: [ROUTER_ADDRESS, rawAmount],
+            args: [FPMM_ADDRESS, rawAmount],
           }),
         });
       }
 
       calls.push({
-        to: ROUTER_ADDRESS,
+        to: FPMM_ADDRESS,
         data: encodeFunctionData({
-          abi: routerAbi,
-          args: [FPMM_ADDRESS, formattedId, rawAmount],
+          abi: fpmmAbi,
+          args: [formattedId, rawAmount],
           functionName: "addLiquidity",
         }),
       });
@@ -224,12 +224,12 @@ export function useMarketLiquidity() {
       const formattedId = formatMarketId(marketId);
       const calls: { to: Address; data: `0x${string}` }[] = [];
 
-      // Check USDC allowance to Router
+      // Check USDC allowance to FPMM
       const allowance = await publicClient.readContract({
         abi: erc20Abi,
         address: arcUsdcAddress,
         functionName: "allowance",
-        args: [address as `0x${string}`, ROUTER_ADDRESS],
+        args: [address as `0x${string}`, FPMM_ADDRESS],
       });
 
       if (allowance < rawAmount) {
@@ -238,16 +238,16 @@ export function useMarketLiquidity() {
           data: encodeFunctionData({
             abi: erc20Abi,
             functionName: "approve",
-            args: [ROUTER_ADDRESS, rawAmount],
+            args: [FPMM_ADDRESS, rawAmount],
           }),
         });
       }
 
       calls.push({
-        to: ROUTER_ADDRESS,
+        to: FPMM_ADDRESS,
         data: encodeFunctionData({
-          abi: routerAbi,
-          args: [FPMM_ADDRESS, formattedId, isYes, rawAmount],
+          abi: fpmmAbi,
+          args: [formattedId, isYes, rawAmount],
           functionName: "buy",
         }),
       });

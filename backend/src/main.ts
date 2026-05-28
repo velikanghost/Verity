@@ -22,6 +22,7 @@ async function bootstrap() {
     .setTitle("Verity Prediction Market API")
     .setDescription("The API specification for Verity on-chain prediction markets.")
     .setVersion("1.0")
+    .addBearerAuth()
     .addTag("auth", "User authentication and session management")
     .addTag("users", "User profiles, wallet links, and daily usage stats")
     .addTag("posts", "Market creation and feed operations")

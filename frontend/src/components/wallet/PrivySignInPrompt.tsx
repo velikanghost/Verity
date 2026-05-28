@@ -26,10 +26,10 @@ export default function PrivySignInPrompt() {
     <div
       aria-labelledby="privy-sign-in-title"
       aria-modal="true"
-      className="fixed inset-0 z-[90] flex items-end justify-center bg-obsidian/45 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-90 flex items-end justify-center bg-obsidian/45 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-6"
       role="dialog"
     >
-      <section className="w-full max-w-[430px] overflow-hidden rounded-[18px] bg-surface-solid shadow-[var(--shadow-sm)]">
+      <section className="w-full max-w-[430px] overflow-hidden rounded-[18px] bg-surface-solid shadow-[(--shadow-sm)]">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-3">
             <span className="verity-blob flex h-10 w-10 items-center justify-center bg-sunburst-yellow text-sm font-semibold text-midnight">
@@ -60,7 +60,7 @@ export default function PrivySignInPrompt() {
         </div>
 
         <div className="px-5 py-5">
-          <p className="text-[15px] leading-[1.5] tracking-[-0.2px] text-graphite">
+          <p className="text-[15px] leading-normal tracking-[-0.2px] text-graphite">
             Sign in with Privy to post Takes, create Markets, vote, fund pools,
             and manage your Arc wallet from one place.
           </p>
@@ -106,8 +106,8 @@ function PromptPoint({
   label: string
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[10px] bg-surface-muted px-3 py-2 shadow-[var(--shadow-subtle)]">
-      <span className="flex h-8 w-8 items-center justify-center rounded-[12px] bg-white-surface text-meadow-green shadow-[var(--shadow-subtle)]">
+    <div className="flex items-center gap-3 rounded-[10px] bg-surface-muted px-3 py-2 shadow-[(--shadow-subtle)]">
+      <span className="flex h-8 w-8 items-center justify-center rounded-[12px] bg-white-surface text-meadow-green shadow-[(--shadow-subtle)]">
         {icon}
       </span>
       <span className="text-sm font-semibold tracking-[-0.18px] text-charcoal-primary">

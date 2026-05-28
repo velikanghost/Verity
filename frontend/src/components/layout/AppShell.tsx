@@ -4,8 +4,23 @@ import Sidebar from '@/components/layout/Sidebar'
 import RightPanel from '@/components/layout/RightPanel'
 import MobileNav from '@/components/layout/MobileNav'
 import MobileComposeButton from '@/components/layout/MobileComposeButton'
+import { useSocket } from '@/hooks/useSocket'
+import { useWalletProfile } from '@/hooks/useWalletProfile'
+import { useEffect } from 'react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const { profile } = useWalletProfile()
+  const { joinRoom, leaveRoom } = useSocket()
+
+  useEffect(() => {
+    if (profile?.id) {
+      joinRoom(`user:${profile.id}`)
+      return () => {
+        leaveRoom(`user:${profile.id}`)
+      }
+    }
+  }, [profile?.id, joinRoom, leaveRoom])
+
   return (
     <>
       <div className="mx-auto flex min-h-screen w-full max-w-[1220px] justify-center gap-3 px-2 sm:px-3 xl:gap-6 xl:px-5">

@@ -1,7 +1,8 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards, Request } from "@nestjs/common";
 import { MarketsService } from "./markets.service";
 import { FetchMarketsQueryDto, CastFreeVoteDto, ExecuteTradeDto, ResolveMarketDto } from "./markets.dto";
-import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiQuery, ApiResponse } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiQuery, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 
 @ApiTags("markets")
 @Controller("markets")
@@ -62,6 +63,8 @@ export class MarketsController {
   }
 
   @Post(":marketId/vote")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Cast a free vote on a market (Alternative endpoint)" })
   @ApiParam({ name: "marketId", description: "Market ID", example: "60d0fe4f5311236168a109ca" })
@@ -70,12 +73,15 @@ export class MarketsController {
   async castFreeVoteDirect(
     @Param("marketId") marketId: string,
     @Body() dto: CastFreeVoteDto,
+    @Request() req: any,
   ) {
-    const authorId = dto.userId || dto.profileId;
-    return this.marketsService.castFreeVote(marketId, authorId!, dto.side);
+    const authorId = req.user.id;
+    return this.marketsService.castFreeVote(marketId, authorId, dto.side);
   }
 
   @Post(":marketId/free-vote")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Cast a free vote on a market" })
   @ApiParam({ name: "marketId", description: "Market ID", example: "60d0fe4f5311236168a109ca" })
@@ -84,12 +90,15 @@ export class MarketsController {
   async castFreeVote(
     @Param("marketId") marketId: string,
     @Body() dto: CastFreeVoteDto,
+    @Request() req: any,
   ) {
-    const authorId = dto.userId || dto.profileId;
-    return this.marketsService.castFreeVote(marketId, authorId!, dto.side);
+    const authorId = req.user.id;
+    return this.marketsService.castFreeVote(marketId, authorId, dto.side);
   }
 
   @Post(":marketId/approve-trading")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Admin: Approve a qualified market, moving it to funding_pool status" })
   @ApiParam({ name: "marketId", description: "Market ID", example: "60d0fe4f5311236168a109ca" })
@@ -99,6 +108,8 @@ export class MarketsController {
   }
 
   @Post(":marketId/trade")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Execute outcome token buy/sell trades on a market" })
   @ApiParam({ name: "marketId", description: "Market ID", example: "60d0fe4f5311236168a109ca" })
@@ -107,11 +118,16 @@ export class MarketsController {
   async executeMarketTrade(
     @Param("marketId") marketId: string,
     @Body() dto: ExecuteTradeDto,
+    @Request() req: any,
   ) {
+    // Override profileId with authenticated user
+    dto.profileId = req.user.id;
     return this.marketsService.executeMarketTrade(marketId, dto);
   }
 
   @Post(":marketId/resolve")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Admin: Resolve a market with winning outcome after trading is finished" })
   @ApiParam({ name: "marketId", description: "Market ID", example: "60d0fe4f5311236168a109ca" })
@@ -125,6 +141,8 @@ export class MarketsController {
   }
 
   @Post(":marketId/dev-qualify")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Dev: Skip vote qualification and set market to qualified (non-production only)" })
   @ApiParam({ name: "marketId", description: "Market ID", example: "60d0fe4f5311236168a109ca" })
@@ -133,4 +151,3 @@ export class MarketsController {
     return this.marketsService.devQualify(marketId);
   }
 }
-

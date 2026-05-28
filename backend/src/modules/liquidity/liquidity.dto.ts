@@ -49,3 +49,4 @@ export class RemoveLiquidityDto {
   @IsNotEmpty()
   txHash: string;
 }
+

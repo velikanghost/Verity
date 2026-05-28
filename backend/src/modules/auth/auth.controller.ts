@@ -1,29 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards, Request } from "@nestjs/common";
+import { Controller, Get, UseGuards, Request } from "@nestjs/common";
 import { AuthService } from "./auth.service";
-import { RegisterDto, LoginDto } from "./auth.dto";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
-import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
 
 @ApiTags("auth")
+@ApiBearerAuth()
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  @Post("register")
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: "Register a new user profile" })
-  @ApiResponse({ status: 201, description: "User registered successfully." })
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
-  }
-
-  @Post("login")
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Log in with email and password" })
-  @ApiResponse({ status: 200, description: "Login successful, JWT returned." })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
-  }
 
   @Get("me")
   @UseGuards(JwtAuthGuard)
