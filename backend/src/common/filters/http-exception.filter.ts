@@ -30,7 +30,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
           status = HttpStatus.UNPROCESSABLE_ENTITY; // 422 mapping
           message = 'Validation failed.';
           errors = resContent.message.map((msg: string) => {
-            // Replicate express-validator error item structure
             return {
               type: 'field',
               msg,
@@ -45,7 +44,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message = resContent || exception.message;
       }
     } else if (exception instanceof Error) {
-      // Map native status/http codes if present, or name patterns
       const code = (exception as any).statusCode || (exception as any).status;
       if (typeof code === 'number') {
         status = code;

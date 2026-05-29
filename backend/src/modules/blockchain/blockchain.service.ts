@@ -221,12 +221,12 @@ export class BlockchainService implements OnModuleInit {
       'USDC_ADDRESS',
     ) as `0x${string}`;
     this.pythAddress = (this.configService.get<string>('PYTH_ADDRESS') ||
-      '0x2880aB155794e7179c9eE2e38200202908C17B43') as `0x${string}`;
+      '') as `0x${string}`;
     this.resolverAddress = (this.configService.get<string>(
       'RESOLVER_ADDRESS',
-    ) || '0x0000000000000000000000000000000000000000') as `0x${string}`;
+    ) || '') as `0x${string}`;
     this.routerAddress = (this.configService.get<string>('ROUTER_ADDRESS') ||
-      '0x0000000000000000000000000000000000000000') as `0x${string}`;
+      '') as `0x${string}`;
 
     this.publicClient = createPublicClient({
       chain: arcTestnet,

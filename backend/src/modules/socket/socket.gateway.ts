@@ -6,15 +6,15 @@ import {
   OnGatewayDisconnect,
   MessageBody,
   ConnectedSocket,
-} from "@nestjs/websockets";
-import { Server, Socket } from "socket.io";
-import { Logger } from "@nestjs/common";
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
-    origin: "*",
+    origin: '*',
   },
-  namespace: "socket",
+  namespace: 'socket',
 })
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(SocketGateway.name);
@@ -30,29 +30,27 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage("join-room")
+  @SubscribeMessage('join-room')
   handleJoinRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() room: string,
   ) {
     if (!room) return;
     client.join(room);
-    this.logger.log(`Client ${client.id} joined room: ${room}`);
   }
 
-  @SubscribeMessage("leave-room")
+  @SubscribeMessage('leave-room')
   handleLeaveRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() room: string,
   ) {
     if (!room) return;
     client.leave(room);
-    this.logger.log(`Client ${client.id} left room: ${room}`);
   }
 
   broadcastToRoom(room: string, event: string, data?: any) {
     if (!this.server) {
-      this.logger.warn("WebSocket server not initialized yet.");
+      this.logger.warn('WebSocket server not initialized yet.');
       return;
     }
     this.server.to(room).emit(event, data);

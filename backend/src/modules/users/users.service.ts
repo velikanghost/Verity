@@ -21,7 +21,7 @@ export class UsersService {
   }
 
   private defaultUsername(address: string): string {
-    return `user_${address.slice(-4).toLowerCase()}_${Math.floor(Math.random() * 9000 + 1000)}`;
+    return `${address.slice(-4).toLowerCase()}_${Math.floor(Math.random() * 9000 + 1000)}`;
   }
 
   async getOrCreateByWallet(walletAddress: string) {
@@ -32,7 +32,7 @@ export class UsersService {
     const created = await this.userModel.create({
       walletAddress: wallet,
       username: this.defaultUsername(wallet),
-      displayName: `User ${wallet.slice(-4).toUpperCase()}`,
+      displayName: `V_${wallet.slice(-4).toUpperCase()}`,
     });
 
     return serializeUser(created);

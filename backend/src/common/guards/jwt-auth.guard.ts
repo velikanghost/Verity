@@ -21,7 +21,7 @@ let clientInstance: ReturnType<typeof jwksClient> | null = null;
 
 function getJwksClient() {
   if (clientInstance) return clientInstance;
-  const appId = process.env.PRIVY_APP_ID || 'cm6t6fff00000000000000000';
+  const appId = process.env.PRIVY_APP_ID || '';
   clientInstance = jwksClient({
     jwksUri: `https://auth.privy.io/api/v1/apps/${appId}/jwks.json`,
     cache: true,
@@ -49,7 +49,7 @@ function getKey(header: jwt.JwtHeader, callback: jwt.SigningKeyCallback) {
 async function fetchPrivyUserDetails(
   privyDid: string,
 ): Promise<{ email?: string; walletAddress?: string }> {
-  const appId = process.env.PRIVY_APP_ID || 'cm6t6fff00000000000000000';
+  const appId = process.env.PRIVY_APP_ID || '';
   const appSecret = process.env.PRIVY_APP_SECRET;
 
   if (!appSecret) {
@@ -79,9 +79,6 @@ async function fetchPrivyUserDetails(
     }
 
     const data = (await response.json()) as any;
-    console.log(
-      `JwtAuthGuard: Successfully fetched user details from Privy for DID: ${privyDid}`,
-    );
 
     let email: string | undefined;
     let walletAddress: string | undefined;
@@ -131,7 +128,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const appId = process.env.PRIVY_APP_ID || 'cm6t6fff00000000000000000';
+      const appId = process.env.PRIVY_APP_ID || '';
       const decoded = await new Promise<any>((resolve, reject) => {
         jwt.verify(
           token,

@@ -24,7 +24,6 @@ import {
   type Profile,
 } from '@/lib/verity'
 import {
-  useAddCommentMutation,
   useToggleLikeMutation,
   useToggleReshareMutation,
   useCastFreeVoteMutation,
