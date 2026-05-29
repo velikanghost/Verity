@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Length } from "class-validator";
+import { IsOptional, IsString, Length, IsBoolean } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class UpdateUserDto {
@@ -24,4 +24,9 @@ export class UpdateUserDto {
   @IsString()
   @Length(0, 280)
   bio?: string | null;
+
+  @ApiPropertyOptional({ description: "Onboarding completed flag", example: true })
+  @IsOptional()
+  @IsBoolean()
+  isOnboarded?: boolean;
 }

@@ -18,6 +18,9 @@ export class User {
   @Prop({ type: String, required: true, unique: true, trim: true })
   username: string;
 
+  @Prop({ type: Boolean, default: false })
+  isOnboarded: boolean;
+
   @Prop({ type: String, default: null, trim: true })
   displayName: string | null;
 

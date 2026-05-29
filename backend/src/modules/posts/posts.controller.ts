@@ -19,6 +19,7 @@ import {
   AddCommentDto,
   ToggleLikeDto,
   ToggleReshareDto,
+  ValidateMarketPostDto,
 } from './posts.dto';
 import { CommentsService } from '../comments/comments.service';
 import { InteractionsService } from '../interactions/interactions.service';
@@ -70,6 +71,21 @@ export class PostsController {
     @Query('viewerProfileId') viewerProfileId?: string,
   ) {
     return this.postsService.findPostById(postId, viewerProfileId);
+  }
+
+  @Post('validate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validate market post details before on-chain payment' })
+  @ApiBody({ type: ValidateMarketPostDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Market post details are valid.',
+  })
+  async validateMarket(@Body() dto: ValidateMarketPostDto) {
+    this.postsService.validateMarketHeuristics(dto as any);
+    return { success: true };
   }
 
   @Post()

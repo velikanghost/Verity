@@ -280,6 +280,11 @@ export class BlockchainService implements OnModuleInit {
     return `0x${clean.padEnd(64, '0')}` as `0x${string}`;
   }
 
+  private formatAddress(address: string): `0x${string}` {
+    const clean = address.trim().toLowerCase();
+    return (clean.startsWith('0x') ? clean : `0x${clean}`) as `0x${string}`;
+  }
+
   async readPoolBalances(marketId: string) {
     const formattedMarketId = this.formatMarketId(marketId);
     try {
@@ -314,12 +319,13 @@ export class BlockchainService implements OnModuleInit {
 
   async readLPShares(marketId: string, userAddress: string) {
     const formattedMarketId = this.formatMarketId(marketId);
+    const formattedUserAddress = this.formatAddress(userAddress);
     try {
       const result = await this.publicClient.readContract({
         address: this.fpmmAddress,
         abi: this.fpmmAbi,
         functionName: 'lpShares',
-        args: [formattedMarketId, userAddress as `0x${string}`],
+        args: [formattedMarketId, formattedUserAddress],
       });
       return result as bigint;
     } catch (error) {
@@ -576,12 +582,13 @@ export class BlockchainService implements OnModuleInit {
     walletAddress: string,
   ): Promise<boolean> {
     const formattedMarketId = this.formatMarketId(marketId);
+    const formattedWalletAddress = this.formatAddress(walletAddress);
     try {
       const result = await this.publicClient.readContract({
         address: this.fpmmAddress,
         abi: this.fpmmAbi,
         functionName: 'canRemoveLiquidity',
-        args: [formattedMarketId, walletAddress as `0x${string}`],
+        args: [formattedMarketId, formattedWalletAddress],
       });
       return result as boolean;
     } catch (error) {

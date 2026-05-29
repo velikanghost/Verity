@@ -80,7 +80,7 @@ export class CreateMarketPostDto {
 
   @ApiProperty({ description: "Resolution source description", example: "CoinGecko price feed" })
   @IsString()
-  @Length(1, 240)
+  @Length(1, 600)
   resolutionSource: string;
 
   @ApiProperty({ description: "Conditions for YES resolution", example: "BTC price >= $100,000 on CoinGecko" })
@@ -139,7 +139,7 @@ export class CreatePostUnifiedDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 240) question?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 60) category?: string;
   @ApiPropertyOptional() @IsOptional() @IsISO8601() deadline?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 240) resolutionSource?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 600) resolutionSource?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 500) yesCondition?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 500) noCondition?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() creationFeeTxHash?: string;
@@ -202,4 +202,39 @@ export class ToggleReshareDto {
   @ApiProperty({ description: "Set active reshare status", example: true })
   @IsBoolean()
   currentlyActive: boolean;
+}
+
+export class ValidateMarketPostDto {
+  @ApiProperty({ description: "Market question", example: "Will BTC reach $100k?" })
+  @IsString()
+  @IsNotEmpty()
+  question: string;
+
+  @ApiProperty({ description: "Category of the market", example: "Crypto" })
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 60)
+  category: string;
+
+  @ApiProperty({ description: "Betting deadline", example: "2026-12-31T23:59:59.000Z" })
+  @IsISO8601({}, { message: "A valid deadline date is required." })
+  deadline: string;
+
+  @ApiProperty({ description: "Resolution source", example: "CoinGecko" })
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 600)
+  resolutionSource: string;
+
+  @ApiProperty({ description: "YES resolution details", example: "Price >= $100,000" })
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 500)
+  yesCondition: string;
+
+  @ApiProperty({ description: "NO resolution details", example: "Price < $100,000" })
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 500)
+  noCondition: string;
 }

@@ -23,6 +23,7 @@ export interface Profile {
   created_at: string;
   createdAt?: string;
   updatedAt?: string;
+  isOnboarded?: boolean;
 }
 
 export interface MarketPost {

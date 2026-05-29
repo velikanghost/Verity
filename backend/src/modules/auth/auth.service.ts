@@ -28,6 +28,7 @@ export interface UserResponse {
   created_at: string;
   createdAt: string;
   updatedAt: string;
+  isOnboarded: boolean;
 }
 
 export function serializeUser(user: UserDocument): UserResponse {
@@ -59,6 +60,7 @@ export function serializeUser(user: UserDocument): UserResponse {
     created_at: createdAt,
     createdAt,
     updatedAt,
+    isOnboarded: user.isOnboarded || false,
   };
 }
 
@@ -86,6 +88,7 @@ export function placeholderUserProfile(authorId: string): UserResponse {
     created_at: now,
     createdAt: now,
     updatedAt: now,
+    isOnboarded: false,
   };
 }
 

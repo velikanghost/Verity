@@ -1,8 +1,8 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 export interface AgentResolutionResult {
-  outcome: "YES" | "NO" | "INVALID";
+  outcome: 'YES' | 'NO' | 'INVALID';
   reasoning: string;
   citations: string[];
 }
@@ -17,20 +17,22 @@ export class AgentService {
    * Search the web for information regarding the market question.
    */
   async searchWeb(query: string): Promise<string> {
-    const tavilyKey = this.configService.get<string>("TAVILY_API_KEY");
+    const tavilyKey = this.configService.get<string>('TAVILY_API_KEY');
     if (!tavilyKey) {
-      this.logger.warn("TAVILY_API_KEY is not set. Using empty search results fallback.");
-      return "No web search results available.";
+      this.logger.warn(
+        'TAVILY_API_KEY is not set. Using empty search results fallback.',
+      );
+      return 'No web search results available.';
     }
 
     try {
-      const response = await fetch("https://api.tavily.com/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           api_key: tavilyKey,
           query,
-          search_depth: "basic",
+          search_depth: 'basic',
           include_answer: false,
         }),
       });
@@ -39,18 +41,23 @@ export class AgentService {
         throw new Error(`Tavily search API returned status ${response.status}`);
       }
 
-      const data = (await response.json()) as { results?: Array<{ title: string; url: string; content: string }> };
+      const data = (await response.json()) as {
+        results?: Array<{ title: string; url: string; content: string }>;
+      };
       if (!data.results || data.results.length === 0) {
-        return "No relevant search results found.";
+        return 'No relevant search results found.';
       }
 
       return data.results
         .slice(0, 5)
-        .map((r, idx) => `[Source ${idx + 1}] Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.content}\n`)
-        .join("\n");
+        .map(
+          (r, idx) =>
+            `[Source ${idx + 1}] Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.content}\n`,
+        )
+        .join('\n');
     } catch (error) {
       this.logger.error(`Error performing web search: ${error.message}`);
-      return "Error performing web search.";
+      return 'Error performing web search.';
     }
   }
 
@@ -63,8 +70,10 @@ export class AgentService {
     noCondition: string,
     resolutionSource: string,
   ): Promise<AgentResolutionResult> {
-    const provider = (this.configService.get<string>("LLM_PROVIDER") || "mock").toLowerCase();
-    
+    const provider = (
+      this.configService.get<string>('LLM_PROVIDER') || 'mock'
+    ).toLowerCase();
+
     // Perform web search to gather context
     const searchContext = await this.searchWeb(question);
 
@@ -89,121 +98,142 @@ You must respond with a JSON object in exactly the following format:
 }
 Do not include any other markdown formatting, code block markers, or text outside the JSON.`;
 
-    if (provider === "openai") {
+    if (provider === 'openai') {
       return this.callOpenAI(prompt);
-    } else if (provider === "gemini") {
+    } else if (provider === 'gemini') {
       return this.callGemini(prompt);
-    } else if (provider === "claude") {
+    } else if (provider === 'claude') {
       return this.callClaude(prompt);
     } else {
       // Mock Fallback for local testing/dev
       this.logger.log(`Using mock LLM resolution for question: "${question}"`);
       const lower = question.toLowerCase();
-      const outcome = lower.includes("no") ? "NO" : lower.includes("invalid") ? "INVALID" : "YES";
+      const outcome = lower.includes('no')
+        ? 'NO'
+        : lower.includes('invalid')
+          ? 'INVALID'
+          : 'YES';
       return {
         outcome,
         reasoning: `Mock reasoning for question: ${question}. Web search returned ${searchContext.length} chars of context.`,
-        citations: ["https://mock-source.com/verity"],
+        citations: ['https://mock-source.com/verity'],
       };
     }
   }
 
   private async callOpenAI(prompt: string): Promise<AgentResolutionResult> {
-    const apiKey = this.configService.get<string>("OPENAI_API_KEY");
+    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY is not set but LLM_PROVIDER is openai.");
+      throw new Error('OPENAI_API_KEY is not set but LLM_PROVIDER is openai.');
     }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: 'gpt-4o-mini',
         messages: [
-          { role: "system", content: "You are a prediction market resolution agent." },
-          { role: "user", content: prompt },
+          {
+            role: 'system',
+            content: 'You are a prediction market resolution agent.',
+          },
+          { role: 'user', content: prompt },
         ],
-        response_format: { type: "json_object" },
+        response_format: { type: 'json_object' },
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API returned status ${response.status}: ${await response.text()}`);
+      throw new Error(
+        `OpenAI API returned status ${response.status}: ${await response.text()}`,
+      );
     }
 
-    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
     const content = data.choices?.[0]?.message?.content;
     if (!content) {
-      throw new Error("OpenAI API returned an empty completion response.");
+      throw new Error('OpenAI API returned an empty completion response.');
     }
 
     return this.parseJSONResponse(content);
   }
 
   private async callGemini(prompt: string): Promise<AgentResolutionResult> {
-    const apiKey = this.configService.get<string>("GEMINI_API_KEY");
+    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is not set but LLM_PROVIDER is gemini.");
+      throw new Error('GEMINI_API_KEY is not set but LLM_PROVIDER is gemini.');
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          responseMimeType: "application/json",
+          responseMimeType: 'application/json',
         },
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Gemini API returned status ${response.status}: ${await response.text()}`);
+      throw new Error(
+        `Gemini API returned status ${response.status}: ${await response.text()}`,
+      );
     }
 
-    const data = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const data = (await response.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!content) {
-      throw new Error("Gemini API returned an empty completion response.");
+      throw new Error('Gemini API returned an empty completion response.');
     }
 
     return this.parseJSONResponse(content);
   }
 
   private async callClaude(prompt: string): Promise<AgentResolutionResult> {
-    const apiKey = this.configService.get<string>("CLAUDE_API_KEY");
+    const apiKey = this.configService.get<string>('CLAUDE_API_KEY');
     if (!apiKey) {
-      throw new Error("CLAUDE_API_KEY is not set but LLM_PROVIDER is claude.");
+      throw new Error('CLAUDE_API_KEY is not set but LLM_PROVIDER is claude.');
     }
 
-    const modelName = this.configService.get<string>("CLAUDE_MODEL") || "claude-3-5-sonnet-latest";
+    const modelName =
+      this.configService.get<string>('CLAUDE_MODEL') ||
+      'claude-3-5-sonnet-latest';
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
       headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
         model: modelName,
         max_tokens: 1000,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: 'user', content: prompt }],
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Claude API returned status ${response.status}: ${await response.text()}`);
+      throw new Error(
+        `Claude API returned status ${response.status}: ${await response.text()}`,
+      );
     }
 
-    const data = (await response.json()) as { content?: Array<{ type: string; text?: string }> };
-    const content = data.content?.find((c) => c.type === "text")?.text;
+    const data = (await response.json()) as {
+      content?: Array<{ type: string; text?: string }>;
+    };
+    const content = data.content?.find((c) => c.type === 'text')?.text;
     if (!content) {
-      throw new Error("Claude API returned an empty completion response.");
+      throw new Error('Claude API returned an empty completion response.');
     }
 
     return this.parseJSONResponse(content);
@@ -212,7 +242,10 @@ Do not include any other markdown formatting, code block markers, or text outsid
   private parseJSONResponse(text: string): AgentResolutionResult {
     try {
       // Basic cleaning in case the LLM returned markdown blocks despite response format config
-      const clean = text.replace(/```json\s*/gi, "").replace(/```\s*$/g, "").trim();
+      const clean = text
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*$/g, '')
+        .trim();
       return JSON.parse(clean) as AgentResolutionResult;
     } catch (e) {
       this.logger.error(`Failed to parse LLM JSON: ${text}`);

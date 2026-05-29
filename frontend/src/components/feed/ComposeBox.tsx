@@ -8,6 +8,7 @@ import { useUsdcTransfer } from '@/hooks/useUsdcTransfer'
 import {
   useCreateMarketPostMutation,
   useCreateNormalPostMutation,
+  useValidateMarketPostMutation,
 } from '@/store/verity/verityQueries'
 import { toast } from 'react-hot-toast'
 import { formatWeb3Error } from '@/lib/arc'
@@ -139,6 +140,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const marketQuestionRef = useRef<HTMLInputElement>(null)
   const { createMarketPreDeposit } = useUsdcTransfer()
+  const { mutateAsync: validateMarketPost } = useValidateMarketPostMutation()
   const { mutateAsync: createMarketPost } = useCreateMarketPostMutation()
   const { mutateAsync: createNormalPost } = useCreateNormalPostMutation()
   const [content, setContent] = useState('')
@@ -156,6 +158,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
   const [agentReview, setAgentReview] = useState<VerityAgentReview | null>(null)
   const [reviewedSignature, setReviewedSignature] = useState('')
   const [saving, setSaving] = useState(false)
+  const [isValidating, setIsValidating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -264,23 +267,57 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
     reviewIsCurrent && agentReview ? agentReview : liveAgentReview
 
   const canUsePrimaryAction = useMemo(() => {
-    if (!profile || saving) return false
+    if (!profile || saving || isValidating) return false
     if (!isMarket) return content.trim().length > 0
     return hasMarketFields
-  }, [content, hasMarketFields, isMarket, profile, saving])
+  }, [content, hasMarketFields, isMarket, profile, saving, isValidating])
 
-  function runAgentReview() {
-    setAgentReview(liveAgentReview)
-    setReviewedSignature(marketSignature)
-    setError(liveAgentReview.approved ? null : liveAgentReview.summary)
+  async function runAgentReview() {
+    setIsValidating(true)
+    setError(null)
+
+    try {
+      // 1. Check client-side agent review first
+      if (!liveAgentReview.approved) {
+        setError(liveAgentReview.summary)
+        // Store review so UI displays agent's findings
+        setAgentReview(liveAgentReview)
+        setReviewedSignature(marketSignature)
+        return
+      }
+
+      // Build the final market payload for server-side validation
+      const finalMarket = { ...market }
+      if (detectedPyth.isPyth) {
+        finalMarket.resolutionSource = 'Pyth Network Price Oracle'
+        finalMarket.yesCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '>=' : '<'} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+        finalMarket.noCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '<' : '>='} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+      }
+
+      // 2. Run backend validation
+      await validateMarketPost(finalMarket)
+
+      // 3. Set approval only if backend validation successfully passes
+      setAgentReview(liveAgentReview)
+      setReviewedSignature(marketSignature)
+    } catch (validationErr: any) {
+      const msg = validationErr?.message || 'Market validation failed'
+      setError(msg)
+      // Reset approval so the user must resolve the error and review again
+      setAgentReview(null)
+      setReviewedSignature('')
+    } finally {
+      setIsValidating(false)
+    }
   }
 
   const primaryLabel = useMemo(() => {
     if (saving) return 'Posting'
+    if (isValidating) return 'Reviewing...'
     if (!isMarket) return 'Take'
     if (!predictionApproved) return 'Review'
     return 'Pay 11 USDC & Create Market'
-  }, [isMarket, predictionApproved, saving])
+  }, [isMarket, predictionApproved, saving, isValidating])
 
   const marketReadyText = useMemo(() => {
     return 'Verity AI reviews prediction quality before the Arc testnet USDC creation payment is enabled.'
@@ -290,7 +327,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
     if (!profile || !canUsePrimaryAction) return
 
     if (isMarket && !predictionApproved) {
-      runAgentReview()
+      await runAgentReview()
       return
     }
 
@@ -319,6 +356,9 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
           finalMarket.noCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '<' : '>='} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
         }
 
+        // Backend validation already passed during the Review step
+
+        // 2. Perform on-chain payment now that we know validation succeeded
         const marketId = generateObjectId()
         const payment = await createMarketPreDeposit(marketId, 10)
         const result = await createMarketPost({
@@ -379,7 +419,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
         {!isMarket && (
           <textarea
             ref={textareaRef}
-            disabled={!profile || saving}
+            disabled={!profile || saving || isValidating}
             onChange={(event) => setContent(event.target.value)}
             placeholder={
               profile ? "What's your conviction?" : 'Connect wallet to post'
@@ -402,7 +442,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
             <input
               ref={marketQuestionRef}
               className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-stone-surface"
-              disabled={!profile || saving}
+              disabled={!profile || saving || isValidating}
               onChange={(event) =>
                 setMarket((current) => ({
                   ...current,
@@ -415,7 +455,8 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
 
             <div className="grid gap-2 sm:grid-cols-2">
               <select
-                className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none"
+                className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none disabled:opacity-50"
+                disabled={!profile || saving || isValidating}
                 onChange={(event) =>
                   setMarket((current) => ({
                     ...current,
@@ -430,6 +471,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
               </select>
               <input
                 className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none"
+                disabled={!profile || saving || isValidating}
                 onChange={(event) =>
                   setMarket((current) => ({
                     ...current,
@@ -481,6 +523,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                 </label>
                 <input
                   className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash"
+                  disabled={!profile || saving || isValidating}
                   onChange={(event) =>
                     setMarket((current) => ({
                       ...current,
@@ -493,6 +536,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <input
                     className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-meadow-green/25"
+                    disabled={!profile || saving || isValidating}
                     onChange={(event) =>
                       setMarket((current) => ({
                         ...current,
@@ -504,6 +548,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                   />
                   <input
                     className="h-10 rounded-[10px] bg-white-surface px-3 text-sm tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] outline-none placeholder:text-ash focus:ring-2 focus:ring-ember-orange/20"
+                    disabled={!profile || saving || isValidating}
                     onChange={(event) =>
                       setMarket((current) => ({
                         ...current,
@@ -558,7 +603,8 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
             <button
               aria-label="Create market"
               aria-pressed={isMarket}
-              className={`clickable-icon p-2 hover:text-charcoal-primary ${
+              disabled={saving || isValidating}
+              className={`clickable-icon p-2 hover:text-charcoal-primary disabled:opacity-50 disabled:cursor-not-allowed ${
                 isMarket ? 'bg-meadow-green/10 text-meadow-green' : ''
               }`}
               onClick={() => setIsMarket((current) => !current)}

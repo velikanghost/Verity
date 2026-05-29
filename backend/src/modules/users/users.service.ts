@@ -17,7 +17,8 @@ export class UsersService {
   ) {}
 
   private normalizeWallet(address: string): string {
-    return address.trim().toLowerCase();
+    const clean = address.trim().toLowerCase();
+    return clean.startsWith('0x') ? clean : `0x${clean}`;
   }
 
   private defaultUsername(address: string): string {
@@ -39,14 +40,19 @@ export class UsersService {
   }
 
   async updateUser(id: string, input: UpdateUserDto) {
+    const updateData: any = {
+      username: input.username,
+      displayName: input.display_name || null,
+      avatarUrl: input.avatar_url || null,
+      bio: input.bio || null,
+    };
+    if (input.isOnboarded !== undefined) {
+      updateData.isOnboarded = input.isOnboarded;
+    }
+
     const updated = await this.userModel.findByIdAndUpdate(
       id,
-      {
-        username: input.username,
-        displayName: input.display_name || null,
-        avatarUrl: input.avatar_url || null,
-        bio: input.bio || null,
-      },
+      updateData,
       { new: true, runValidators: true },
     );
 

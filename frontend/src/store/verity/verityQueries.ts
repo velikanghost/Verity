@@ -52,7 +52,7 @@ export function useUpdateProfileMutation() {
       input,
     }: {
       profileId: string;
-      input: Pick<Profile, "username" | "display_name" | "avatar_url" | "bio">;
+      input: Pick<Profile, "username" | "display_name" | "avatar_url" | "bio"> & { isOnboarded?: boolean };
     }) =>
       apiRequest<Profile>(`/users/${profileId}`, {
         method: "PATCH",
@@ -151,6 +151,16 @@ export function useCreateNormalPostMutation() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["feed"] });
     },
+  });
+}
+
+export function useValidateMarketPostMutation() {
+  return useMutation({
+    mutationFn: (body: MarketInput) =>
+      apiRequest<unknown>('/posts/validate', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
   });
 }
 
