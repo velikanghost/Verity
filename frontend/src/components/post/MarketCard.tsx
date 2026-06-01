@@ -257,17 +257,15 @@ export default function MarketCard({
                 </span>
               </div>
               <button
-                className="clickable verity-pill flex h-10 items-center justify-center bg-inverse px-4 text-sm font-semibold tracking-[-0.18px] text-inverse-text hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                disabled={
-                  actionLoading || !isConnected || Number(lpAmount) <= 0
-                }
-                onClick={() => onAddLP?.(Number(lpAmount))}
+                className="clickable verity-pill flex h-10 items-center justify-center bg-inverse px-4 text-sm font-semibold tracking-[-0.18px] text-inverse-text hover:opacity-90"
+                onClick={() => onOpenDetails?.()}
                 type="button"
               >
-                {actionLoadingStatus === 'deposit' ? 'Saving...' : 'Fund'}
+                Fund
               </button>
             </div>
           ))}
+
       </div>
 
       <div className="mb-4 rounded-[12px] bg-white-surface p-3 shadow-[(--shadow-subtle)]">
@@ -321,7 +319,7 @@ export default function MarketCard({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
-              className="clickable verity-pill flex h-10 items-center justify-center gap-1 bg-meadow-green/12 text-sm font-semibold text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-meadow-green/20 disabled:cursor-not-allowed disabled:opacity-40"
+              className="clickable flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 bg-meadow-green/10 text-meadow-green border border-meadow-green/20 hover:bg-meadow-green/20 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={
                 actionLoading || !isConnected || Number(tradeAmount) <= 0
               }
@@ -331,7 +329,7 @@ export default function MarketCard({
               {actionLoadingStatus === 'buy_yes' ? 'Buying...' : 'BUY YES'}
             </button>
             <button
-              className="clickable verity-pill flex h-10 items-center justify-center gap-1 bg-ember-orange/10 text-sm font-semibold text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-ember-orange/15 disabled:cursor-not-allowed disabled:opacity-40"
+              className="clickable flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 bg-ember-orange/10 text-ember-orange border border-ember-orange/20 hover:bg-ember-orange/15 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={
                 actionLoading || !isConnected || Number(tradeAmount) <= 0
               }
@@ -346,7 +344,7 @@ export default function MarketCard({
         <div className="mb-3" onClick={stopClick}>
           <div className="mb-2 grid grid-cols-2 gap-2">
             <button
-              className="clickable verity-pill flex h-9 items-center justify-center gap-1 bg-meadow-green/20 text-sm font-semibold text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-meadow-green/30 disabled:cursor-not-allowed disabled:opacity-60"
+              className="clickable flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 bg-meadow-green/10 text-meadow-green border border-meadow-green/20 hover:bg-meadow-green/20 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
               onClick={() => onVote?.('YES')}
               title={yesCondition}
@@ -355,7 +353,7 @@ export default function MarketCard({
               Upvote
             </button>
             <button
-              className="clickable verity-pill flex h-9 items-center justify-center gap-1 bg-ember-orange/18 text-sm font-semibold text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-ember-orange/25 disabled:cursor-not-allowed disabled:opacity-60"
+              className="clickable flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 bg-ember-orange/10 text-ember-orange border border-ember-orange/20 hover:bg-ember-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
               onClick={() => onVote?.('NO')}
               title={noCondition}

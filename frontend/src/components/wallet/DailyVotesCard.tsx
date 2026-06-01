@@ -25,7 +25,7 @@ export default function DailyVotesCard() {
         </span>
       </div>
 
-      <p className="mt-4 text-3xl font-semibold tracking-[-0.9px] text-midnight">
+      <p className="mt-4 font-mono text-3xl font-semibold tracking-[-0.9px] text-midnight">
         {isLoading ? (
           '...'
         ) : (

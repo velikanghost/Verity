@@ -198,7 +198,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     }
     return activeMarket
       ? Number(activeMarket.usdc_yes_amount) +
-          Number(activeMarket.usdc_no_amount)
+      Number(activeMarket.usdc_no_amount)
       : 0
   }, [poolStateData, activeMarket])
 
@@ -261,7 +261,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           sum +
           (feedItem.market?.liquidity ??
             Number(feedItem.market?.usdc_yes_amount || 0) +
-              Number(feedItem.market?.usdc_no_amount || 0)),
+            Number(feedItem.market?.usdc_no_amount || 0)),
         0,
       )
   }, [item, items])
@@ -315,19 +315,19 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           }),
           ...(activeMarketId && activeMarketId !== detailMarketId
             ? [
-                queryClient.invalidateQueries({
-                  queryKey: ['pool-state', activeMarketId],
-                }),
-                queryClient.invalidateQueries({
-                  queryKey: ['lp-positions', activeMarketId],
-                }),
-                queryClient.invalidateQueries({
-                  queryKey: ['positions', activeMarketId],
-                }),
-                queryClient.invalidateQueries({
-                  queryKey: ['trades', activeMarketId],
-                }),
-              ]
+              queryClient.invalidateQueries({
+                queryKey: ['pool-state', activeMarketId],
+              }),
+              queryClient.invalidateQueries({
+                queryKey: ['lp-positions', activeMarketId],
+              }),
+              queryClient.invalidateQueries({
+                queryKey: ['positions', activeMarketId],
+              }),
+              queryClient.invalidateQueries({
+                queryKey: ['trades', activeMarketId],
+              }),
+            ]
             : []),
         ])
       } catch (caught) {
@@ -586,21 +586,19 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
                       <div className="mb-2 flex items-center justify-between gap-3">
                         {isResolved ? (
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold ${
-                              isWinner
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold ${isWinner
                                 ? 'bg-meadow-green/10 text-meadow-green shadow-[(--shadow-subtle)]'
                                 : 'bg-stone-surface text-ash'
-                            }`}
+                              }`}
                           >
                             {isWinner ? 'WINNING' : 'LOST'} {pos.side} POSITION
                           </span>
                         ) : (
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold shadow-[(--shadow-subtle)] ${
-                              pos.side === 'YES'
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold shadow-[(--shadow-subtle)] ${pos.side === 'YES'
                                 ? 'bg-meadow-green/10 text-meadow-green'
                                 : 'bg-ember-orange/10 text-ember-orange'
-                            }`}
+                              }`}
                           >
                             {pos.side} POSITION
                           </span>
@@ -959,13 +957,13 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
       {(activeMarket.status === 'resolving' ||
         activeMarket.status === 'resolved' ||
         isPastDeadline) && (
-        <ResolutionPanel
-          market={activeMarket}
-          onDispute={handleDispute}
-          actionLoading={actionPending}
-          profileId={profileId}
-        />
-      )}
+          <ResolutionPanel
+            market={activeMarket}
+            onDispute={handleDispute}
+            actionLoading={actionPending}
+            profileId={profileId}
+          />
+        )}
 
       {activeMarket.status === 'resolved' && (
         <RedeemPanel
@@ -1200,11 +1198,10 @@ function TradeTicket({
           {(['BUY', 'SELL'] as const).map((nextAction) => (
             <button
               aria-pressed={action === nextAction}
-              className={`relative h-8 text-sm font-semibold tracking-[-0.18px] transition-colors ${
-                action === nextAction
+              className={`relative h-8 text-sm font-semibold tracking-[-0.18px] transition-colors ${action === nextAction
                   ? 'text-charcoal-primary'
                   : 'text-ash hover:text-charcoal-primary'
-              }`}
+                }`}
               key={nextAction}
               onClick={() => onActionChange(nextAction)}
               type="button"
@@ -1360,24 +1357,22 @@ function OutcomeButton({
   return (
     <button
       aria-pressed={active}
-      className={`rounded-[12px] px-3 py-3 text-center shadow-[(--shadow-subtle)] transition-colors ${
-        active
+      className={`rounded-[12px] px-3 py-3 text-center shadow-[(--shadow-subtle)] transition-colors ${active
           ? side === 'YES'
             ? 'bg-meadow-green/12'
             : 'bg-ember-orange/10'
           : 'bg-parchment-card hover:bg-stone-surface'
-      }`}
+        }`}
       onClick={() => onClick(side)}
       type="button"
     >
       <span
-        className={`block text-sm font-semibold ${
-          active
+        className={`block text-sm font-semibold ${active
             ? side === 'YES'
               ? 'text-meadow-green'
               : 'text-ember-orange'
             : 'text-charcoal-primary'
-        }`}
+          }`}
       >
         {label}
       </span>
@@ -1878,13 +1873,12 @@ function IconAction({
 }) {
   return (
     <button
-      className={`flex items-center gap-2 transition-colors hover:text-charcoal-primary ${
-        active
+      className={`flex items-center gap-2 transition-colors hover:text-charcoal-primary ${active
           ? tone === 'yes'
             ? 'text-meadow-green'
             : 'text-ember-orange'
           : ''
-      }`}
+        }`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -2398,7 +2392,7 @@ function ResolutionPanel({
             !proposal.finalized &&
             !proposal.disputed &&
             proposal.proposer !==
-              '0x0000000000000000000000000000000000000000' && (
+            '0x0000000000000000000000000000000000000000' && (
               <div className="flex flex-col gap-3 rounded-[12px] bg-parchment-card p-4 shadow-[(--shadow-subtle)]">
                 <div>
                   <span className="font-mono text-[10px] font-semibold uppercase text-ash">
@@ -2796,11 +2790,10 @@ function OutcomesPanel({
                 <button
                   type="button"
                   onClick={() => onSelectOptionAndSide(child.id, 'YES')}
-                  className={`mt-4 w-full text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${
-                    isSelected
+                  className={`mt-4 w-full text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${isSelected
                       ? 'bg-sky-blue text-white border border-sky-blue shadow-[var(--shadow-sm)]'
                       : 'bg-sky-blue/10 text-sky-blue border border-sky-blue/20 hover:bg-sky-blue/20'
-                  }`}
+                    }`}
                 >
                   {isSelected ? '✓ Selected for Funding' : 'Select to Fund'}
                 </button>
@@ -2847,22 +2840,20 @@ function OutcomesPanel({
                 <button
                   type="button"
                   onClick={() => onSelectOptionAndSide(child.id, 'YES')}
-                  className={`flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${
-                    isYesSelected
+                  className={`flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${isYesSelected
                       ? 'bg-meadow-green text-white border border-meadow-green shadow-[var(--shadow-sm)]'
                       : 'bg-meadow-green/10 text-meadow-green border border-meadow-green/20 hover:bg-meadow-green/20'
-                  }`}
+                    }`}
                 >
                   YES: {(yesPrice * 100).toFixed(0)}¢
                 </button>
                 <button
                   type="button"
                   onClick={() => onSelectOptionAndSide(child.id, 'NO')}
-                  className={`flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${
-                    isNoSelected
+                  className={`flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${isNoSelected
                       ? 'bg-ember-orange text-white border border-ember-orange shadow-[var(--shadow-sm)]'
                       : 'bg-ember-orange/10 text-ember-orange border border-ember-orange/20 hover:bg-ember-orange/15'
-                  }`}
+                    }`}
                 >
                   NO: {(noPrice * 100).toFixed(0)}¢
                 </button>

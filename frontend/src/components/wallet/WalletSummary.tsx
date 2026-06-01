@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, CircleDollarSign, ExternalLink, Network, Wallet } from "lucide-react";
+import { CheckCircle2, CircleDollarSign, ExternalLink, Network, Wallet, Copy, Check } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthModals";
 import { useUsdcBalance } from "@/hooks/useUsdcBalance";
 import WalletConnectControl from "@/components/wallet/WalletConnectControl";
+import { useState } from "react";
 
 function shortAddress(addr?: string | null) {
   if (!addr) return "";
@@ -14,9 +15,18 @@ function shortAddress(addr?: string | null) {
 export default function WalletSummary() {
   const { user, authenticated } = useAuth();
   const { formattedBalance, isLoading } = useUsdcBalance();
+  const [copied, setCopied] = useState(false);
 
   const isConnected = authenticated && !!user;
   const address = user?.walletAddress;
+
+  const handleCopy = () => {
+    if (address) {
+      navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -41,7 +51,7 @@ export default function WalletSummary() {
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <p className="mt-4 text-3xl font-semibold tracking-[-0.9px] text-midnight">
+          <p className="mt-4 font-mono text-3xl font-semibold tracking-[-0.9px] text-midnight">
             {isLoading ? "..." : formattedBalance}
           </p>
           <p className="font-mono text-xs text-ash">
@@ -49,17 +59,28 @@ export default function WalletSummary() {
           </p>
         </div>
 
-        <div className="verity-card p-5 border border-border bg-surface-solid shadow-[(--shadow-subtle)]">
+        <div className="verity-card p-5 border border-border bg-surface-solid shadow-[(--shadow-subtle)] overflow-hidden">
           <div className="flex items-center gap-2 text-ash">
             <Wallet className="h-5 w-5" />
             <span className="font-mono text-xs font-semibold uppercase tracking-[0.16em]">
               Wallet
             </span>
           </div>
-          <p className="mt-4 break-all font-mono text-sm font-semibold text-charcoal-primary">
-            {isConnected ? shortAddress(address) : "Not connected"}
-          </p>
-          <p className="mt-1 font-mono text-xs text-ash">
+          <div className="mt-4 flex items-center gap-2">
+            <p className="font-mono text-sm font-semibold text-charcoal-primary">
+              {isConnected ? shortAddress(address) : "Not connected"}
+            </p>
+            {isConnected && (
+              <button
+                onClick={handleCopy}
+                className="text-ash hover:text-charcoal-primary transition-colors p-1 cursor-pointer"
+                title="Copy Address"
+              >
+                {copied ? <Check className="h-4 w-4 text-meadow-green" /> : <Copy className="h-4 w-4" />}
+              </button>
+            )}
+          </div>
+          <p className="mt-1 font-mono text-xs text-ash truncate" title={address || undefined}>
             {isConnected ? address : "Connect to create posts and send Upvote/Downvote signals"}
           </p>
         </div>
