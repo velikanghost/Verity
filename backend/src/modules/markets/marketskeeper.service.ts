@@ -12,6 +12,7 @@ import { BlockchainService } from "../blockchain/blockchain.service"
 import { AgentService } from "../agent/agent.service"
 import { SocketGateway } from "../socket/socket.gateway"
 import { ConfigService } from "@nestjs/config"
+import { PvpService } from "../pvp/pvp.service"
 
 @Injectable()
 export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
@@ -26,6 +27,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
     private readonly agentService: AgentService,
     private readonly configService: ConfigService,
     private readonly socketGateway: SocketGateway,
+    private readonly pvpService: PvpService,
   ) {}
 
   onModuleInit() {
@@ -306,6 +308,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
                   : "NO"
                 market.resolvedByAdmin = "0xKeeper"
                 await market.save()
+                await this.pvpService.resolvePvpMatchesForMarket(marketIdStr, market.resolvedOutcome)
                 this.logger.log(
                   `Synced finalized market ${marketIdStr} in database.`,
                 )
@@ -374,6 +377,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
                   : "NO"
                 market.resolvedByAdmin = "0xKeeper"
                 await market.save()
+                await this.pvpService.resolvePvpMatchesForMarket(marketIdStr, market.resolvedOutcome)
 
                 this.logger.log(
                   `Successfully finalized resolution for market ${marketIdStr}.`,
@@ -413,6 +417,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
       market.resolvedOutcome = winningOutcome
       market.resolvedByAdmin = "0xKeeper"
       await market.save()
+      await this.pvpService.resolvePvpMatchesForMarket(market._id.toString(), winningOutcome)
 
       // Emit Socket events
       this.socketGateway.broadcastToRoom("feed", "feed-updated", {})
@@ -492,6 +497,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
     market.resolvedOutcome = winningOutcome
     market.resolvedByAdmin = "0xKeeper" // Identifier for auto-resolution
     await market.save()
+    await this.pvpService.resolvePvpMatchesForMarket(market._id.toString(), winningOutcome)
 
     this.logger.log(
       `Successfully resolved market ${market._id} to ${winningOutcome} on-chain & database.`,

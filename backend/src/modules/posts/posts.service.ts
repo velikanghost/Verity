@@ -493,6 +493,22 @@ export class PostsService {
       filter = { type: "market" }
     }
 
+    // Exclude PvP Arena posts from default feed
+    const pvpMarkets = await this.marketModel.find({ category: "pvp" }).select("postId")
+    const pvpPostIds = pvpMarkets.map((m) => m.postId)
+    if (pvpPostIds.length > 0) {
+      if (filter._id) {
+        filter = {
+          $and: [
+            { _id: filter._id },
+            { _id: { $nin: pvpPostIds } }
+          ]
+        }
+      } else {
+        filter._id = { $nin: pvpPostIds }
+      }
+    }
+
     const posts = await this.postModel
       .find(filter)
       .sort({ createdAt: -1 })

@@ -19,6 +19,7 @@ import { MarketsKeeperService } from "./marketskeeper.service"
 import { MarketsController } from "./markets.controller"
 import { PostsModule } from "../posts/posts.module"
 import { AgentModule } from "../agent/agent.module"
+import { PvpModule } from "../pvp/pvp.module"
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AgentModule } from "../agent/agent.module"
       { name: Post.name, schema: PostSchema },
     ]),
     forwardRef(() => PostsModule),
+    PvpModule,
   ],
   controllers: [MarketsController],
   providers: [MarketsService, MarketsKeeperService],

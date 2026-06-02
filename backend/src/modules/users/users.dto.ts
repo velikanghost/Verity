@@ -41,4 +41,12 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   isOnboarded?: boolean
+
+  @ApiPropertyOptional({
+    description: "Referral code",
+    example: "johndoe",
+  })
+  @IsOptional()
+  @IsString()
+  referrerUsername?: string
 }

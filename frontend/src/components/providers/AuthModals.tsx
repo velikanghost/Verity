@@ -60,6 +60,7 @@ export default function AuthModals() {
   const email = useAuthStore((s) => s.email)
   const otpCode = useAuthStore((s) => s.otpCode)
   const usernameInput = useAuthStore((s) => s.usernameInput)
+  const referrerInput = useAuthStore((s) => s.referrerInput)
   const isSubmittingOtp = useAuthStore((s) => s.isSubmittingOtp)
   const isRequestingOtp = useAuthStore((s) => s.isRequestingOtp)
   const copied = useAuthStore((s) => s.copied)
@@ -72,6 +73,7 @@ export default function AuthModals() {
   const setEmail = useAuthStore((s) => s.setEmail)
   const setOtpCode = useAuthStore((s) => s.setOtpCode)
   const setUsernameInput = useAuthStore((s) => s.setUsernameInput)
+  const setReferrerInput = useAuthStore((s) => s.setReferrerInput)
   const setCopied = useAuthStore((s) => s.setCopied)
 
   const handleRequestOtp = useAuthStore((s) => s.handleRequestOtp)
@@ -249,6 +251,26 @@ export default function AuthModals() {
                   </div>
                   <p className="text-[10px] text-ash font-mono">
                     3-24 characters. Letters, numbers, and underscores only.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-ash">
+                    Referrer Username (Optional)
+                  </label>
+                  <div className="flex h-11 items-center rounded-[10px] border border-border bg-white-surface px-4 focus-within:border-sky-blue/50 transition-colors">
+                    <span className="text-sm font-mono text-ash mr-1">@</span>
+                    <input
+                      type="text"
+                      placeholder="referrer"
+                      value={referrerInput}
+                      onChange={(e) => setReferrerInput(e.target.value)}
+                      className="w-full bg-transparent text-sm text-charcoal-primary outline-none placeholder:text-stone-surface"
+                      disabled={isSubmittingOtp}
+                    />
+                  </div>
+                  <p className="text-[10px] text-ash font-mono">
+                    Enter the username of the user who referred you to earn co-op boosts.
                   </p>
                 </div>
 

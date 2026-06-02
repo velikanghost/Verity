@@ -40,24 +40,30 @@ export class UsersService {
   }
 
   async updateUser(id: string, input: UpdateUserDto) {
-    const updateData: any = {
-      username: input.username,
-      displayName: input.display_name || null,
-      avatarUrl: input.avatar_url || null,
-      bio: input.bio || null,
-    }
-    if (input.isOnboarded !== undefined) {
-      updateData.isOnboarded = input.isOnboarded
-    }
-
-    const updated = await this.userModel.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    })
-
-    if (!updated) {
+    const user = await this.userModel.findById(id)
+    if (!user) {
       throw new NotFoundException("User not found.")
     }
+
+    user.username = input.username
+    user.displayName = input.display_name || null
+    user.avatarUrl = input.avatar_url || null
+    user.bio = input.bio || null
+    
+    if (input.isOnboarded !== undefined) {
+      user.isOnboarded = input.isOnboarded
+    }
+
+    if (input.referrerUsername && !user.referredById) {
+      const referrer = await this.userModel.findOne({
+        username: { $regex: new RegExp(`^${input.referrerUsername.trim()}$`, "i") }
+      })
+      if (referrer && referrer._id.toString() !== id) {
+        user.referredById = referrer._id
+      }
+    }
+
+    const updated = await user.save()
     return serializeUser(updated)
   }
 

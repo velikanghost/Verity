@@ -54,6 +54,38 @@ export class User {
   @Prop({ type: Number, default: 0 })
   freeVotesTotal: number
 
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    default: null,
+    index: true,
+  })
+  referredById: Types.ObjectId | null
+
+  @Prop({ type: Number, default: 1000 })
+  eloRating: number
+
+  @Prop({ type: Number, default: 0 })
+  arenaXp: number
+
+  @Prop({ type: Number, default: 0 })
+  doubleBoostRemaining: number
+
+  @Prop({ type: Boolean, default: false })
+  hasWonFirstPvpDuel: boolean
+
+  @Prop({ type: Number, default: 0 })
+  pvpTicketsSubmittedCount: number
+
+  @Prop({ type: Number, default: 0 })
+  pvpMatchesWonCount: number
+
+  @Prop({ type: Number, default: 0 })
+  pvpMatchesLostCount: number
+
+  @Prop({ type: Number, default: 0 })
+  pvpMatchesDrawnCount: number
+
   createdAt?: Date
   updatedAt?: Date
 }

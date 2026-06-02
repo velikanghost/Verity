@@ -24,6 +24,7 @@ export interface AuthStore {
   email: string
   otpCode: string
   usernameInput: string
+  referrerInput: string
   isSubmittingOtp: boolean
   isRequestingOtp: boolean
   authError: string
@@ -39,6 +40,7 @@ export interface AuthStore {
   setEmail: (email: string) => void
   setOtpCode: (otpCode: string) => void
   setUsernameInput: (username: string) => void
+  setReferrerInput: (referrer: string) => void
   setAuthError: (error: string) => void
   setCopied: (copied: boolean) => void
   setTxConfirmState: (state: Partial<TxConfirmationState>) => void
@@ -65,6 +67,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   email: "",
   otpCode: "",
   usernameInput: "",
+  referrerInput: "",
   isSubmittingOtp: false,
   isRequestingOtp: false,
   authError: "",
@@ -91,6 +94,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   setEmail: (email) => set({ email }),
   setOtpCode: (otpCode) => set({ otpCode }),
   setUsernameInput: (usernameInput) => set({ usernameInput }),
+  setReferrerInput: (referrerInput) => set({ referrerInput }),
   setAuthError: (authError) => set({ authError }),
   setCopied: (copied) => set({ copied }),
   setTxConfirmState: (state) =>
@@ -199,7 +203,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = queryClient.getQueryData<Profile>(["profile"])
     if (!user) return
 
-    const { usernameInput } = get()
+    const { usernameInput, referrerInput } = get()
     const trimmed = usernameInput.trim().replace(/^@+/, "")
     if (trimmed.length < 3) {
       set({ authError: "Username must be at least 3 characters." })
@@ -222,6 +226,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           username: trimmed,
           display_name: trimmed.charAt(0).toUpperCase() + trimmed.slice(1),
           isOnboarded: true,
+          referrerUsername: referrerInput.trim() || undefined,
         }),
       })
 

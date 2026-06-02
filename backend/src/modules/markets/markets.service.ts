@@ -31,6 +31,7 @@ import { PostsService, MarketResponse } from "../posts/posts.service"
 import { BlockchainService } from "../blockchain/blockchain.service"
 import { SocketGateway } from "../socket/socket.gateway"
 import { NotificationsService } from "../notifications/notifications.service"
+import { PvpService } from "../pvp/pvp.service"
 
 export interface DailyVotesResponse {
   votesLimit: number
@@ -98,6 +99,7 @@ export class MarketsService {
     private readonly blockchainService: BlockchainService,
     private readonly socketGateway: SocketGateway,
     private readonly notificationsService: NotificationsService,
+    private readonly pvpService: PvpService,
   ) {}
 
   private todayKey(date = new Date()): string {
@@ -409,6 +411,11 @@ export class MarketsService {
 
     // We only want to show binary/parent markets, NOT child markets!
     query.marketType = { $ne: "child" }
+    
+    // Exclude PvP Arena markets from standard market queries
+    if (filters.category !== "pvp") {
+      query.category = { $ne: "pvp" }
+    }
 
     const sort: Record<string, any> = filters.trending
       ? { totalFreeVotes: -1, uniqueVotersCount: -1, createdAt: -1 }
@@ -788,6 +795,10 @@ export class MarketsService {
     market.resolvedOutcome = winningOutcome
     market.resolvedByAdmin = adminAddress
     await market.save()
+
+    // Trigger PvP match resolution check
+    await this.pvpService.resolvePvpMatchesForMarket(marketId, winningOutcome)
+
     this.logger.log(
       `Market ${marketId} status transitioned from ${oldStatus} to resolved (outcome: ${winningOutcome}, by admin: ${adminAddress})`,
     )

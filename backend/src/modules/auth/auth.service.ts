@@ -39,6 +39,15 @@ export interface UserResponse {
   createdAt: string
   updatedAt: string
   isOnboarded: boolean
+  referredById: string | null
+  eloRating: number
+  arenaXp: number
+  doubleBoostRemaining: number
+  hasWonFirstPvpDuel: boolean
+  pvpTicketsSubmittedCount: number
+  pvpMatchesWonCount: number
+  pvpMatchesLostCount: number
+  pvpMatchesDrawnCount: number
 }
 
 export function serializeUser(user: UserDocument): UserResponse {
@@ -70,6 +79,15 @@ export function serializeUser(user: UserDocument): UserResponse {
     createdAt,
     updatedAt,
     isOnboarded: user.isOnboarded || false,
+    referredById: user.referredById ? user.referredById.toString() : null,
+    eloRating: user.eloRating ?? 1000,
+    arenaXp: user.arenaXp ?? 0,
+    doubleBoostRemaining: user.doubleBoostRemaining ?? 0,
+    hasWonFirstPvpDuel: user.hasWonFirstPvpDuel ?? false,
+    pvpTicketsSubmittedCount: user.pvpTicketsSubmittedCount ?? 0,
+    pvpMatchesWonCount: user.pvpMatchesWonCount ?? 0,
+    pvpMatchesLostCount: user.pvpMatchesLostCount ?? 0,
+    pvpMatchesDrawnCount: user.pvpMatchesDrawnCount ?? 0,
   }
 }
 
@@ -98,6 +116,15 @@ export function placeholderUserProfile(authorId: string): UserResponse {
     createdAt: now,
     updatedAt: now,
     isOnboarded: false,
+    referredById: null,
+    eloRating: 1000,
+    arenaXp: 0,
+    doubleBoostRemaining: 0,
+    hasWonFirstPvpDuel: false,
+    pvpTicketsSubmittedCount: 0,
+    pvpMatchesWonCount: 0,
+    pvpMatchesLostCount: 0,
+    pvpMatchesDrawnCount: 0,
   }
 }
 
