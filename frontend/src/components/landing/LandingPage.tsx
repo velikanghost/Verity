@@ -181,7 +181,7 @@ export default function LandingPage({
               <h2 className="mt-5 text-[19px] font-semibold tracking-[-0.25px] text-charcoal-primary">
                 {step.label}
               </h2>
-              <p className="mt-2 text-sm leading-[1.5] tracking-[-0.18px] text-graphite">
+              <p className="mt-2 text-sm leading-normal tracking-[-0.18px] text-graphite">
                 {step.text}
               </p>
             </article>
@@ -208,7 +208,7 @@ function LandingVisual() {
         <MessageSquareText className="h-6 w-6" />
       </div>
 
-      <div className="absolute left-3 right-3 top-20 rounded-[24px] bg-obsidian p-3 text-white shadow-[var(--shadow-lg)] landing-pop sm:left-8 sm:right-8 sm:top-24 sm:p-4">
+      <div className="absolute left-3 right-3 top-20 rounded-[24px] bg-obsidian p-3 text-white shadow-[(--shadow-lg)] landing-pop sm:left-8 sm:right-8 sm:top-24 sm:p-4">
         <div className="rounded-[18px] bg-[#171717] p-4">
           <div className="flex items-start justify-between gap-4">
             <div>

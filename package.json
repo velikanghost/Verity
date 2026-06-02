@@ -1,6 +1,7 @@
 {
   "name": "verity-monorepo",
   "private": true,
+  "packageManager": "pnpm@10.15.1",
   "scripts": {
     "dev:frontend": "pnpm --filter verity dev",
     "dev:backend": "pnpm --filter verity-backend dev",
