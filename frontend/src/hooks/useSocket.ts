@@ -5,7 +5,8 @@ import { io, Socket } from "socket.io-client"
 import { useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 const SOCKET_URL = API_BASE_URL.replace(/\/api$/, "") + "/socket"
 
 let socketInstance: Socket | null = null
@@ -49,9 +50,15 @@ export function useSocket() {
 
     const handleMarketUpdated = (data: any) => {
       if (data?.marketId) {
-        queryClient.invalidateQueries({ queryKey: ["market-detail", data.marketId] })
-        queryClient.invalidateQueries({ queryKey: ["pool-state", data.marketId] })
-        queryClient.invalidateQueries({ queryKey: ["market-positions", data.marketId] })
+        queryClient.invalidateQueries({
+          queryKey: ["market-detail", data.marketId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["pool-state", data.marketId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["market-positions", data.marketId],
+        })
       }
     }
 

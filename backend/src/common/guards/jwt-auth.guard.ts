@@ -3,17 +3,17 @@ import {
   ExecutionContext,
   Injectable,
   UnauthorizedException,
-} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Request } from 'express';
-import * as jwt from 'jsonwebtoken';
-import { User, UserDocument } from '../../modules/users/users.model';
+} from "@nestjs/common"
+import { InjectModel } from "@nestjs/mongoose"
+import { Model } from "mongoose"
+import { Request } from "express"
+import * as jwt from "jsonwebtoken"
+import { User, UserDocument } from "../../modules/users/users.model"
 
 export interface AuthUser {
-  id: string;
-  email?: string;
-  walletAddress?: string;
+  id: string
+  email?: string
+  walletAddress?: string
 }
 
 @Injectable()
@@ -23,44 +23,44 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
-      .getRequest<Request & { user?: AuthUser }>();
-    const authHeader = request.headers['authorization'];
-    const token = authHeader?.startsWith('Bearer ')
+      .getRequest<Request & { user?: AuthUser }>()
+    const authHeader = request.headers["authorization"]
+    const token = authHeader?.startsWith("Bearer ")
       ? authHeader.substring(7)
-      : null;
+      : null
 
     if (!token) {
-      throw new UnauthorizedException('Missing bearer token.');
+      throw new UnauthorizedException("Missing bearer token.")
     }
 
     try {
-      const jwtSecret = process.env.JWT_SECRET || '';
-      const decoded = jwt.verify(token, jwtSecret) as any;
+      const jwtSecret = process.env.JWT_SECRET || ""
+      const decoded = jwt.verify(token, jwtSecret) as any
 
       if (!decoded || !decoded.id) {
-        throw new UnauthorizedException('Invalid token payload.');
+        throw new UnauthorizedException("Invalid token payload.")
       }
 
       // Look up user by ID
-      const user = await this.userModel.findById(decoded.id);
+      const user = await this.userModel.findById(decoded.id)
 
       if (!user) {
-        throw new UnauthorizedException('User not registered.');
+        throw new UnauthorizedException("User not registered.")
       }
 
       request.user = {
         id: user.id || (user as any)._id?.toString(),
         email: user.email || undefined,
         walletAddress: user.walletAddress || undefined,
-      };
+      }
 
-      return true;
+      return true
     } catch (error) {
       throw new UnauthorizedException(
         error instanceof Error
           ? error.message
-          : 'Invalid or expired session token.',
-      );
+          : "Invalid or expired session token.",
+      )
     }
   }
 }

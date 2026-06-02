@@ -1,9 +1,9 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { useWalletProfile } from '@/hooks/useWalletProfile'
-import ProfileForm from '@/components/profile/ProfileForm'
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
+import ProfileForm from "@/components/profile/ProfileForm"
 
 export default function EditProfilePage() {
   const { profile, isLoading } = useWalletProfile()
@@ -35,10 +35,7 @@ export default function EditProfilePage() {
             Please connect your wallet to edit your profile.
           </div>
         ) : (
-          <ProfileForm
-            profile={profile}
-            loading={isLoading}
-          />
+          <ProfileForm profile={profile} loading={isLoading} />
         )}
       </section>
     </div>

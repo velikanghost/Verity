@@ -1,18 +1,18 @@
-"use client";
+"use client"
 
-import { useAuth } from "@/components/providers/AuthModals";
-import { useUsdcBalance } from "@/hooks/useUsdcBalance";
-import { shortAddress } from "@/lib/arc";
-import { displayHandle, displayName as getDisplayName } from "@/lib/verity";
-import { LogOut, Copy, Check, Wallet } from "lucide-react";
-import { useState } from "react";
-import { toast } from "react-hot-toast";
-import Link from "next/link";
+import { useAuth } from "@/components/providers/AuthModals"
+import { useUsdcBalance } from "@/hooks/useUsdcBalance"
+import { shortAddress } from "@/lib/arc"
+import { displayHandle, displayName as getDisplayName } from "@/lib/verity"
+import { LogOut, Copy, Check, Wallet } from "lucide-react"
+import { useState } from "react"
+import { toast } from "react-hot-toast"
+import Link from "next/link"
 
 export default function SidebarProfile() {
-  const { user, authenticated, loading, login, logout } = useAuth();
-  const { formattedBalance, isLoading: isBalanceLoading } = useUsdcBalance();
-  const [copied, setCopied] = useState(false);
+  const { user, authenticated, loading, login, logout } = useAuth()
+  const { formattedBalance, isLoading: isBalanceLoading } = useUsdcBalance()
+  const [copied, setCopied] = useState(false)
 
   if (loading) {
     return (
@@ -25,7 +25,7 @@ export default function SidebarProfile() {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (!authenticated || !user) {
@@ -39,26 +39,29 @@ export default function SidebarProfile() {
         <span className="hidden xl:inline">Connect Wallet</span>
         <span className="inline xl:hidden">Connect</span>
       </button>
-    );
+    )
   }
 
-  const walletAddr = user.walletAddress || "";
-  const displayAddress = shortAddress(walletAddr);
+  const walletAddr = user.walletAddress || ""
+  const displayAddress = shortAddress(walletAddr)
 
   const handleCopy = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!walletAddr) return;
-    navigator.clipboard.writeText(walletAddr);
-    setCopied(true);
-    toast.success("Address copied!");
-    setTimeout(() => setCopied(false), 2000);
-  };
+    e.stopPropagation()
+    if (!walletAddr) return
+    navigator.clipboard.writeText(walletAddr)
+    setCopied(true)
+    toast.success("Address copied!")
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="verity-card flex flex-col gap-3 p-3 xl:p-4 border border-border bg-surface-solid shadow-[(--shadow-subtle)]">
       {/* Top Section: Avatar, User Details, Logout */}
       <div className="flex items-center justify-between gap-2">
-        <Link href="/profile" className="flex items-center gap-3 min-w-0 hover:opacity-85 transition-opacity">
+        <Link
+          href="/profile"
+          className="flex items-center gap-3 min-w-0 hover:opacity-85 transition-opacity"
+        >
           <div className="verity-blob h-10 w-10 bg-sky-blue shrink-0">
             <span className="verity-blob-smile" />
           </div>
@@ -105,5 +108,5 @@ export default function SidebarProfile() {
         </div>
       </div>
     </div>
-  );
+  )
 }

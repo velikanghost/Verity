@@ -1,13 +1,13 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
+import Link from "next/link"
 import {
   useCallback,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
-} from 'react'
+} from "react"
 import {
   ArrowDown,
   ArrowUp,
@@ -18,22 +18,22 @@ import {
   Share,
   ShieldCheck,
   Trophy,
-} from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
-import { toast } from 'react-hot-toast'
-import VerityAgentPanel from '@/components/markets/VerityAgentPanel'
-import CommentModal from '@/components/social/CommentModal'
-import { useDailyVotes } from '@/hooks/useDailyVotes'
-import { useFeed } from '@/hooks/useFeed'
-import { useSetRightPanelSlot } from '@/hooks/useRightPanelSlot'
-import { useUsdcBalance } from '@/hooks/useUsdcBalance'
-import { useAuth } from '@/components/providers/AuthModals'
-import { useSocket } from '@/hooks/useSocket'
+} from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { toast } from "react-hot-toast"
+import VerityAgentPanel from "@/components/markets/VerityAgentPanel"
+import CommentModal from "@/components/social/CommentModal"
+import { useDailyVotes } from "@/hooks/useDailyVotes"
+import { useFeed } from "@/hooks/useFeed"
+import { useSetRightPanelSlot } from "@/hooks/useRightPanelSlot"
+import { useUsdcBalance } from "@/hooks/useUsdcBalance"
+import { useAuth } from "@/components/providers/AuthModals"
+import { useSocket } from "@/hooks/useSocket"
 import {
   calculateGrossUsdc,
   calculateTradingFee,
   formatTradingFee,
-} from '@/lib/verity'
+} from "@/lib/verity"
 import {
   displayHandle,
   displayName,
@@ -45,7 +45,7 @@ import {
   type MarketTradeAction,
   type MarketPost,
   type VoteSide,
-} from '@/lib/verity'
+} from "@/lib/verity"
 import {
   useAddCommentMutation,
   useApproveMarketForTradingMutation,
@@ -59,10 +59,10 @@ import {
   useMarketTradesQuery,
   useResolveMarketMutation,
   useMarketDetailQuery,
-} from '@/store/verity/verityQueries'
-import { useMarketLiquidity } from '@/hooks/useMarketLiquidity'
-import { useMarketResolution } from '@/hooks/useMarketResolution'
-import { formatWeb3Error } from '@/lib/arc'
+} from "@/store/verity/verityQueries"
+import { useMarketLiquidity } from "@/hooks/useMarketLiquidity"
+import { useMarketResolution } from "@/hooks/useMarketResolution"
+import { formatWeb3Error } from "@/lib/arc"
 
 interface MarketDetailProps {
   marketId: string
@@ -80,11 +80,11 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
 
   // 1. All hooks and state declarations at the very top of the component
   const [actionPending, setActionPending] = useState<string | null>(null)
-  const [commentDraft, setCommentDraft] = useState('')
+  const [commentDraft, setCommentDraft] = useState("")
   const [commentLoading, setCommentLoading] = useState(false)
-  const [tradeAmount, setTradeAmount] = useState('1')
-  const [tradeAction, setTradeAction] = useState<MarketTradeAction>('BUY')
-  const [selectedSide, setSelectedSide] = useState<VoteSide>('YES')
+  const [tradeAmount, setTradeAmount] = useState("1")
+  const [tradeAction, setTradeAction] = useState<MarketTradeAction>("BUY")
+  const [selectedSide, setSelectedSide] = useState<VoteSide>("YES")
   const [replyingToComment, setReplyingToComment] =
     useState<MarketComment | null>(null)
 
@@ -107,7 +107,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   // Auto-select first child market if parent
   useEffect(() => {
     if (
-      market?.marketType === 'parent' &&
+      market?.marketType === "parent" &&
       market.childMarkets &&
       market.childMarkets.length > 0 &&
       !selectedChildId
@@ -119,7 +119,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const activeMarketId = selectedChildId || detailMarketId
 
   const activeOption = useMemo(() => {
-    if (market?.marketType === 'parent' && market.childMarkets) {
+    if (market?.marketType === "parent" && market.childMarkets) {
       return market.childMarkets.find((child) => child.id === selectedChildId)
     }
     return null
@@ -148,16 +148,16 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     }
   }, [activeMarketId, postId, joinRoom, leaveRoom])
 
-  const { data: poolStateData } = usePoolStateQuery(activeMarketId || '')
+  const { data: poolStateData } = usePoolStateQuery(activeMarketId || "")
   const { data: lpPositionsData } = useLPPositionsQuery(
-    activeMarketId || '',
-    profileId || '',
+    activeMarketId || "",
+    profileId || "",
   )
-  const { data: fetchedTrades } = useMarketTradesQuery(activeMarketId || '')
-  const { data: fetchedComments } = usePostCommentsQuery(postId || '')
+  const { data: fetchedTrades } = useMarketTradesQuery(activeMarketId || "")
+  const { data: fetchedComments } = usePostCommentsQuery(postId || "")
   const { data: fetchedPositions } = useMarketPositionsQuery(
-    activeMarketId || '',
-    profileId || '',
+    activeMarketId || "",
+    profileId || "",
   )
 
   const { mutateAsync: addComment } = useAddCommentMutation()
@@ -198,7 +198,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     }
     return activeMarket
       ? Number(activeMarket.usdc_yes_amount) +
-      Number(activeMarket.usdc_no_amount)
+          Number(activeMarket.usdc_no_amount)
       : 0
   }, [poolStateData, activeMarket])
 
@@ -213,19 +213,19 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const buyShares = validTradeAmount ? tradeAmountNumber / selectedPrice : 0
   const sellProceeds = validTradeAmount ? tradeAmountNumber * selectedPrice : 0
   const tradeBaseAmount =
-    tradeAction === 'BUY' ? tradeAmountNumber : sellProceeds
+    tradeAction === "BUY" ? tradeAmountNumber : sellProceeds
   const tradeFee =
     activeMarket && validTradeAmount
       ? calculateTradingFee(tradeBaseAmount, activeMarket.trading_fee_bps)
       : 0
   const tradeTotal =
     activeMarket && validTradeAmount
-      ? tradeAction === 'BUY'
+      ? tradeAction === "BUY"
         ? calculateGrossUsdc(tradeAmountNumber, activeMarket.trading_fee_bps)
         : Math.max(0, sellProceeds - tradeFee)
       : 0
 
-  const leadingSide: VoteSide = yesPercent >= noPercent ? 'YES' : 'NO'
+  const leadingSide: VoteSide = yesPercent >= noPercent ? "YES" : "NO"
   const leadingPercent = Math.max(yesPercent, noPercent)
 
   const createdAt = useMemo(
@@ -261,7 +261,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           sum +
           (feedItem.market?.liquidity ??
             Number(feedItem.market?.usdc_yes_amount || 0) +
-            Number(feedItem.market?.usdc_no_amount || 0)),
+              Number(feedItem.market?.usdc_no_amount || 0)),
         0,
       )
   }, [item, items])
@@ -290,7 +290,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const runAction = useCallback(
     async (actionType: string, action: () => Promise<unknown>) => {
       if (!profileId) {
-        toast.error('Connect your wallet first.')
+        toast.error("Connect your wallet first.")
         return
       }
 
@@ -302,32 +302,32 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           refetchMarket(),
           reloadDailyVotes(),
           queryClient.invalidateQueries({
-            queryKey: ['pool-state', detailMarketId],
+            queryKey: ["pool-state", detailMarketId],
           }),
           queryClient.invalidateQueries({
-            queryKey: ['lp-positions', detailMarketId],
+            queryKey: ["lp-positions", detailMarketId],
           }),
           queryClient.invalidateQueries({
-            queryKey: ['positions', detailMarketId],
+            queryKey: ["positions", detailMarketId],
           }),
           queryClient.invalidateQueries({
-            queryKey: ['trades', detailMarketId],
+            queryKey: ["trades", detailMarketId],
           }),
           ...(activeMarketId && activeMarketId !== detailMarketId
             ? [
-              queryClient.invalidateQueries({
-                queryKey: ['pool-state', activeMarketId],
-              }),
-              queryClient.invalidateQueries({
-                queryKey: ['lp-positions', activeMarketId],
-              }),
-              queryClient.invalidateQueries({
-                queryKey: ['positions', activeMarketId],
-              }),
-              queryClient.invalidateQueries({
-                queryKey: ['trades', activeMarketId],
-              }),
-            ]
+                queryClient.invalidateQueries({
+                  queryKey: ["pool-state", activeMarketId],
+                }),
+                queryClient.invalidateQueries({
+                  queryKey: ["lp-positions", activeMarketId],
+                }),
+                queryClient.invalidateQueries({
+                  queryKey: ["positions", activeMarketId],
+                }),
+                queryClient.invalidateQueries({
+                  queryKey: ["trades", activeMarketId],
+                }),
+              ]
             : []),
         ])
       } catch (caught) {
@@ -348,58 +348,43 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
 
   const handleDispute = useCallback(async () => {
     if (!activeMarket || !profileId) return
-    await runAction('dispute', async () => {
+    await runAction("dispute", async () => {
       await disputeResolution(activeMarket.id)
     })
   }, [activeMarket, profileId, disputeResolution, runAction])
 
   const handleRedeem = useCallback(async () => {
     if (!activeMarket || !profileId) return
-    await runAction('redeem', async () => {
-      const { txHash } = await redeemWinnings(activeMarket.id)
-      const winningOutcome = activeMarket.resolvedOutcome || 'YES'
-      await resolveMarketBackend({
-        marketId: activeMarket.id,
-        winningOutcome: winningOutcome as 'YES' | 'NO',
-        txHash,
-        adminAddress: profile?.walletAddress || '0xWinner',
-      })
+    await runAction("redeem", async () => {
+      await redeemWinnings(activeMarket.id)
       await balance.refetch()
     })
-  }, [
-    activeMarket,
-    profile,
-    profileId,
-    redeemWinnings,
-    resolveMarketBackend,
-    runAction,
-    balance,
-  ])
+  }, [activeMarket, profileId, redeemWinnings, runAction, balance])
 
   const handleClaimCreatorLP = useCallback(async () => {
     if (!activeMarket || !profileId) return
-    await runAction('claim_creator_lp', async () => {
+    await runAction("claim_creator_lp", async () => {
       await claimCreatorLP(activeMarket.id)
     })
   }, [activeMarket, profileId, claimCreatorLP, runAction])
 
   const handleClaimRefund = useCallback(async () => {
     if (!activeMarket || !profileId) return
-    await runAction('claim_refund', async () => {
+    await runAction("claim_refund", async () => {
       await claimRefund(activeMarket.id)
     })
   }, [activeMarket, profileId, claimRefund, runAction])
 
   const approveTrading = useCallback(async () => {
     if (!activeMarket) return
-    await runAction('approve_trading', () =>
+    await runAction("approve_trading", () =>
       approveMarketForTrading(activeMarket.id),
     )
   }, [activeMarket, runAction, approveMarketForTrading])
 
   const handleDevQualify = useCallback(async () => {
     if (!market) return
-    await runAction('dev_qualify', async () => {
+    await runAction("dev_qualify", async () => {
       await devQualifyMarket(market.id)
     })
   }, [market, devQualifyMarket, runAction])
@@ -407,7 +392,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const handleFundPreMarket = useCallback(
     async (amount: number) => {
       if (!activeMarketId || !profileId) return
-      await runAction('fund_pre_market', async () => {
+      await runAction("fund_pre_market", async () => {
         await fundPreMarket(activeMarketId, profileId, amount, true)
       })
     },
@@ -417,8 +402,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const handleAddLP = useCallback(
     async (amount: number) => {
       if (!activeMarketId || !profileId) return
-      await runAction('add_lp', async () => {
-        const isPoolActive = poolStateData?.pool?.status === 'active'
+      await runAction("add_lp", async () => {
+        const isPoolActive = poolStateData?.pool?.status === "active"
         if (!isPoolActive) {
           await fundPreMarket(activeMarketId, profileId, amount, false)
         } else {
@@ -439,7 +424,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const handleRemoveLP = useCallback(
     async (shares: number) => {
       if (!activeMarketId || !profileId) return
-      await runAction('remove_lp', async () => {
+      await runAction("remove_lp", async () => {
         await removePoolLiquidity(activeMarketId, profileId, shares)
       })
     },
@@ -451,25 +436,25 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     const url = `${window.location.origin}/markets/${marketId}`
 
     if (navigator.share) {
-      await navigator.share({ title: 'Verity', text, url })
+      await navigator.share({ title: "Verity", text, url })
       return
     }
 
     await navigator.clipboard.writeText(`${text}\n${url}`)
-    toast.success('Link copied to clipboard!')
+    toast.success("Link copied to clipboard!")
   }
 
   const executeTrade = useCallback(
     async (side: VoteSide) => {
       if (!activeMarket || !profileId) return
 
-      await runAction('trade', async () => {
+      await runAction("trade", async () => {
         const amount = Number(tradeAmount)
         if (!Number.isFinite(amount) || amount <= 0) {
-          throw new Error('Enter a valid USDC amount.')
+          throw new Error("Enter a valid USDC amount.")
         }
-        const isYes = side === 'YES'
-        if (tradeAction === 'BUY') {
+        const isYes = side === "YES"
+        if (tradeAction === "BUY") {
           await buyTokens(
             activeMarket.id,
             profileId,
@@ -508,7 +493,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   async function submitComment() {
     if (!item || !market || !commentDraft.trim()) return
     if (!profile) {
-      toast.error('Connect your wallet before commenting.')
+      toast.error("Connect your wallet before commenting.")
       return
     }
 
@@ -519,9 +504,9 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         authorId: profile.id,
         content: commentDraft,
       })
-      setCommentDraft('')
+      setCommentDraft("")
     } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : 'Comment failed.')
+      toast.error(caught instanceof Error ? caught.message : "Comment failed.")
     } finally {
       setCommentLoading(false)
     }
@@ -530,8 +515,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const sidebarPanels = useMemo(() => {
     if (!market || !postId) return null
 
-    const creatorHandle = item ? displayHandle(item.author) : ''
-    const creatorName = item ? displayName(item.author) : ''
+    const creatorHandle = item ? displayHandle(item.author) : ""
+    const creatorName = item ? displayName(item.author) : ""
 
     return (
       <>
@@ -543,15 +528,15 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
               </span>
               {item.viewerVote && (
                 <span className="font-mono text-[10px] text-ash">
-                  Signal:{' '}
+                  Signal:{" "}
                   <span
                     className={
-                      item.viewerVote === 'YES'
-                        ? 'font-semibold text-meadow-green'
-                        : 'font-semibold text-ember-orange'
+                      item.viewerVote === "YES"
+                        ? "font-semibold text-meadow-green"
+                        : "font-semibold text-ember-orange"
                     }
                   >
-                    {item.viewerVote === 'YES' ? 'Upvote' : 'Downvote'}
+                    {item.viewerVote === "YES" ? "Upvote" : "Downvote"}
                   </span>
                 </span>
               )}
@@ -564,7 +549,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
             ) : (
               <div className="flex flex-col gap-3">
                 {positions.map((pos) => {
-                  const isResolved = activeMarket.status === 'resolved'
+                  const isResolved = activeMarket.status === "resolved"
                   const isWinner =
                     isResolved && activeMarket.resolvedOutcome === pos.side
                   const currentPrice = isResolved
@@ -586,19 +571,21 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
                       <div className="mb-2 flex items-center justify-between gap-3">
                         {isResolved ? (
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold ${isWinner
-                                ? 'bg-meadow-green/10 text-meadow-green shadow-[(--shadow-subtle)]'
-                                : 'bg-stone-surface text-ash'
-                              }`}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold ${
+                              isWinner
+                                ? "bg-meadow-green/10 text-meadow-green shadow-[(--shadow-subtle)]"
+                                : "bg-stone-surface text-ash"
+                            }`}
                           >
-                            {isWinner ? 'WINNING' : 'LOST'} {pos.side} POSITION
+                            {isWinner ? "WINNING" : "LOST"} {pos.side} POSITION
                           </span>
                         ) : (
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold shadow-[(--shadow-subtle)] ${pos.side === 'YES'
-                                ? 'bg-meadow-green/10 text-meadow-green'
-                                : 'bg-ember-orange/10 text-ember-orange'
-                              }`}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold shadow-[(--shadow-subtle)] ${
+                              pos.side === "YES"
+                                ? "bg-meadow-green/10 text-meadow-green"
+                                : "bg-ember-orange/10 text-ember-orange"
+                            }`}
                           >
                             {pos.side} POSITION
                           </span>
@@ -608,7 +595,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
                           <button
                             className="font-mono text-[10px] font-semibold text-ember-orange underline underline-offset-2 hover:text-charcoal-primary"
                             onClick={() => {
-                              setTradeAction('SELL')
+                              setTradeAction("SELL")
                               setSelectedSide(pos.side)
                             }}
                             type="button"
@@ -642,8 +629,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
                           <span
                             className={
                               isProfit
-                                ? 'font-semibold text-meadow-green'
-                                : 'font-semibold text-ember-orange'
+                                ? "font-semibold text-meadow-green"
+                                : "font-semibold text-ember-orange"
                             }
                           >
                             ${currentValue.toFixed(2)}
@@ -656,12 +643,12 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
                         <span
                           className={
                             isProfit
-                              ? 'font-semibold text-meadow-green'
-                              : 'font-semibold text-ember-orange'
+                              ? "font-semibold text-meadow-green"
+                              : "font-semibold text-ember-orange"
                           }
                         >
-                          {isProfit ? '+' : ''}
-                          {pnl.toFixed(2)} USDC ({isProfit ? '+' : ''}
+                          {isProfit ? "+" : ""}
+                          {pnl.toFixed(2)} USDC ({isProfit ? "+" : ""}
                           {pnlPercent.toFixed(1)}%)
                         </span>
                       </div>
@@ -673,7 +660,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           </div>
         )}
 
-        {['open_for_votes', 'qualified', 'funding_pool'].includes(
+        {["open_for_votes", "qualified", "funding_pool"].includes(
           activeMarket.status,
         ) ? (
           <PreMarketFundingPanel
@@ -690,10 +677,10 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           <TradeTicket
             action={tradeAction}
             amount={tradeAmount}
-            balanceLabel={balance.isLoading ? '...' : balance.formattedBalance}
+            balanceLabel={balance.isLoading ? "..." : balance.formattedBalance}
             disabled={
               Boolean(actionPending) ||
-              activeMarket.status !== 'tradable' ||
+              activeMarket.status !== "tradable" ||
               !validTradeAmount
             }
             estimatedShares={buyShares}
@@ -710,7 +697,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
             total={tradeTotal}
             yesPrice={yesPercent}
             noPrice={noPercent}
-            actionPending={actionPending === 'trade'}
+            actionPending={actionPending === "trade"}
             maxSellShares={selectedSideShares}
           />
         )}
@@ -776,16 +763,16 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   )
 
   const rightPanelSlotKey = [
-    postId || 'no-post',
-    activeMarketId || 'no-market',
-    profileId || 'disconnected',
+    postId || "no-post",
+    activeMarketId || "no-market",
+    profileId || "disconnected",
     tradeAction,
     tradeAmount,
     selectedSide,
     selectedPrice,
     sellProceeds,
-    balance.isLoading ? 'loading' : balance.formattedBalance,
-    activeMarket?.status || 'unknown',
+    balance.isLoading ? "loading" : balance.formattedBalance,
+    activeMarket?.status || "unknown",
     activeMarket?.trading_fee_bps || 0,
     liveLiquidity,
     volume,
@@ -794,9 +781,9 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     creatorMarkets,
     creatorTotalVolume,
     JSON.stringify(positions),
-    actionPending || 'no-pending',
+    actionPending || "no-pending",
     JSON.stringify(poolStateData || {}),
-  ].join('|')
+  ].join("|")
 
   useSetRightPanelSlot(rightPanelSlot, rightPanelSlotKey)
 
@@ -855,7 +842,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   if (itemError) {
     return (
       <div className="rounded-[12px] bg-ember-orange/10 p-4 text-sm font-medium tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)]">
-        {(itemError as any)?.message || 'Failed to load market.'}
+        {(itemError as any)?.message || "Failed to load market."}
       </div>
     )
   }
@@ -863,7 +850,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   if (!item || !market) {
     return (
       <div className="verity-card p-8 text-center text-sm font-medium tracking-[-0.18px] text-ash">
-        Market not found.{' '}
+        Market not found.{" "}
         <Link className="font-semibold text-ember-orange underline" href="/">
           View feed
         </Link>
@@ -885,10 +872,10 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         time={relativeTime(item.created_at)}
         totalVotes={market.free_yes_votes + market.free_no_votes}
         onDevQualify={handleDevQualify}
-        devQualifyLoading={actionPending === 'dev_qualify'}
+        devQualifyLoading={actionPending === "dev_qualify"}
       />
 
-      {market.marketType === 'parent' && market.childMarkets && (
+      {market.marketType === "parent" && market.childMarkets && (
         <OutcomesPanel
           childMarkets={market.childMarkets}
           selectedChildId={selectedChildId}
@@ -897,7 +884,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           onSelectOptionAndSide={(childId, side) => {
             setSelectedChildId(childId)
             setSelectedSide(side)
-            setTradeAction('BUY')
+            setTradeAction("BUY")
           }}
         />
       )}
@@ -911,10 +898,10 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         dailyVotesRemaining={dailyVotes.votesRemaining}
         marketStatus={activeMarket.status}
         onComment={() =>
-          document.getElementById('market-comment-input')?.focus()
+          document.getElementById("market-comment-input")?.focus()
         }
         onReshare={() =>
-          runAction('reshare', () =>
+          runAction("reshare", () =>
             toggleReshare({
               postId: item.id,
               profileId: profile!.id,
@@ -924,7 +911,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         }
         onShare={() => sharePost(item)}
         onVote={(side) =>
-          runAction('free_vote', () =>
+          runAction("free_vote", () =>
             castFreeVote({ marketId: market.id, userId: profile!.id, side }),
           )
         }
@@ -942,7 +929,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         onReplyClick={setReplyingToComment}
       />
 
-      {activeMarket.status === 'tradable' && (
+      {activeMarket.status === "tradable" && (
         <ActiveMarketLPPanel
           actionLoading={actionPending}
           lpPositions={lpPositionsData || []}
@@ -954,18 +941,18 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         />
       )}
 
-      {(activeMarket.status === 'resolving' ||
-        activeMarket.status === 'resolved' ||
+      {(activeMarket.status === "resolving" ||
+        activeMarket.status === "resolved" ||
         isPastDeadline) && (
-          <ResolutionPanel
-            market={activeMarket}
-            onDispute={handleDispute}
-            actionLoading={actionPending}
-            profileId={profileId}
-          />
-        )}
+        <ResolutionPanel
+          market={activeMarket}
+          onDispute={handleDispute}
+          actionLoading={actionPending}
+          profileId={profileId}
+        />
+      )}
 
-      {activeMarket.status === 'resolved' && (
+      {activeMarket.status === "resolved" && (
         <RedeemPanel
           market={activeMarket}
           positions={positions}
@@ -977,7 +964,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         />
       )}
 
-      {activeMarket.status === 'voided' && (
+      {activeMarket.status === "voided" && (
         <RefundPanel
           market={activeMarket}
           lpPositions={lpPositionsData || []}
@@ -1001,7 +988,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         market={market}
         onSell={(side) => {
           setSelectedSide(side)
-          setTradeAction('SELL')
+          setTradeAction("SELL")
         }}
         positions={positions}
       />
@@ -1046,7 +1033,7 @@ function MarketHero({
 
   const targetVotes = market.qualificationThreshold ?? 50
   const votesProgress = Math.min(100, (totalVotes / targetVotes) * 100)
-  const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production'
+  const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== "production"
 
   return (
     <section className="verity-card relative overflow-hidden p-5 mt-4">
@@ -1061,23 +1048,23 @@ function MarketHero({
               {category}
             </span>
             <span>by {creator}</span>
-            <span>{'\u00B7'}</span>
+            <span>{"\u00B7"}</span>
             <span>{time}</span>
           </div>
         </div>
         <span
-          className={`verity-pill relative px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] ${market.status === 'voided' ? 'bg-stone-surface text-ash' : 'bg-meadow-green/12 text-meadow-green'}`}
+          className={`verity-pill relative px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] ${market.status === "voided" ? "bg-stone-surface text-ash" : "bg-meadow-green/12 text-meadow-green"}`}
         >
-          {market.status.replaceAll('_', ' ')}
+          {market.status.replaceAll("_", " ")}
         </span>
       </div>
 
       <div className="relative mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-dashed border-stone-surface pt-3 font-mono text-xs text-ash items-center">
         <span>
-          Leading outcome:{' '}
+          Leading outcome:{" "}
           <strong
             className={
-              leadingSide === 'YES' ? 'text-meadow-green' : 'text-ember-orange'
+              leadingSide === "YES" ? "text-meadow-green" : "text-ember-orange"
             }
           >
             {leadingSide} {leadingPercent.toFixed(1)}%
@@ -1085,22 +1072,22 @@ function MarketHero({
         </span>
         <span>{totalVotes} Upvote/Downvote signals</span>
         <span>
-          Sentiment:{' '}
+          Sentiment:{" "}
           <strong className="text-meadow-green">
             Yes {yesPercent.toFixed(1)}%
           </strong>
-          {' / '}
+          {" / "}
           <strong className="text-ember-orange">
             No {noPercent.toFixed(1)}%
           </strong>
         </span>
       </div>
 
-      {market.status === 'open_for_votes' && (
+      {market.status === "open_for_votes" && (
         <div className="relative mt-4 border-t border-dashed border-stone-surface pt-3">
           <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 font-mono text-xs text-ash">
             <span>
-              Signals cast progress:{' '}
+              Signals cast progress:{" "}
               <strong className="text-charcoal-primary">
                 {totalVotes} / {targetVotes}
               </strong>
@@ -1113,8 +1100,8 @@ function MarketHero({
                 type="button"
               >
                 {devQualifyLoading
-                  ? 'Fast-tracking...'
-                  : '[Skip signal review]'}
+                  ? "Fast-tracking..."
+                  : "[Skip signal review]"}
               </button>
             )}
           </div>
@@ -1188,25 +1175,26 @@ function TradeTicket({
 
   function setSellPercentage(percent: number) {
     const shares = (maxSellShares * percent) / 100
-    onAmountChange(shares > 0 ? shares.toFixed(4) : '0')
+    onAmountChange(shares > 0 ? shares.toFixed(4) : "0")
   }
 
   return (
     <section className="verity-card overflow-hidden">
       <div className="flex items-center justify-between border-b border-dashed border-stone-surface px-4 py-3">
         <div className="flex gap-4">
-          {(['BUY', 'SELL'] as const).map((nextAction) => (
+          {(["BUY", "SELL"] as const).map((nextAction) => (
             <button
               aria-pressed={action === nextAction}
-              className={`relative h-8 text-sm font-semibold tracking-[-0.18px] transition-colors ${action === nextAction
-                  ? 'text-charcoal-primary'
-                  : 'text-ash hover:text-charcoal-primary'
-                }`}
+              className={`relative h-8 text-sm font-semibold tracking-[-0.18px] transition-colors ${
+                action === nextAction
+                  ? "text-charcoal-primary"
+                  : "text-ash hover:text-charcoal-primary"
+              }`}
               key={nextAction}
               onClick={() => onActionChange(nextAction)}
               type="button"
             >
-              {nextAction === 'BUY' ? 'Buy' : 'Sell'}
+              {nextAction === "BUY" ? "Buy" : "Sell"}
               {action === nextAction && (
                 <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-charcoal-primary" />
               )}
@@ -1221,14 +1209,14 @@ function TradeTicket({
       <div className="p-4">
         <div className="mb-6 grid grid-cols-2 gap-3">
           <OutcomeButton
-            active={selectedSide === 'YES'}
+            active={selectedSide === "YES"}
             label="Yes"
             price={yesPrice}
             side="YES"
             onClick={onSideChange}
           />
           <OutcomeButton
-            active={selectedSide === 'NO'}
+            active={selectedSide === "NO"}
             label="No"
             price={noPrice}
             side="NO"
@@ -1242,16 +1230,16 @@ function TradeTicket({
               className="block text-[15px] font-semibold tracking-[-0.2px] text-charcoal-primary"
               htmlFor="market-trade-amount"
             >
-              {action === 'BUY' ? 'Amount' : 'Shares'}
+              {action === "BUY" ? "Amount" : "Shares"}
             </label>
             <p className="mt-0.5 font-mono text-[11px] text-ash">
-              {action === 'BUY'
+              {action === "BUY"
                 ? `${balanceLabel} USDC balance`
                 : `${maxSellShares.toFixed(4)} ${selectedSide} available`}
             </p>
           </div>
           <input
-            aria-label={action === 'BUY' ? 'USDC amount' : 'Shares to sell'}
+            aria-label={action === "BUY" ? "USDC amount" : "Shares to sell"}
             className="h-14 w-32 bg-transparent text-right font-mono text-[34px] font-semibold leading-none tracking-[-1px] text-midnight outline-none placeholder:text-ash"
             id="market-trade-amount"
             min="0"
@@ -1263,7 +1251,7 @@ function TradeTicket({
           />
         </div>
 
-        {action === 'BUY' ? (
+        {action === "BUY" ? (
           <div className="mb-4 flex flex-wrap justify-end gap-2">
             {quickBuyAmounts.map((value) => (
               <button
@@ -1286,7 +1274,7 @@ function TradeTicket({
                 onClick={() => setSellPercentage(percent)}
                 type="button"
               >
-                {percent === 100 ? 'Max' : `${percent}%`}
+                {percent === 100 ? "Max" : `${percent}%`}
               </button>
             ))}
           </div>
@@ -1299,10 +1287,10 @@ function TradeTicket({
           </div>
           <div className="flex justify-between">
             <span>
-              {action === 'BUY' ? 'Estimated shares' : 'Gross proceeds'}
+              {action === "BUY" ? "Estimated shares" : "Gross proceeds"}
             </span>
             <span>
-              {action === 'BUY'
+              {action === "BUY"
                 ? estimatedShares.toFixed(4)
                 : `${sellProceeds.toFixed(4)} USDC`}
             </span>
@@ -1312,13 +1300,13 @@ function TradeTicket({
             <span>{fee.toFixed(4)} USDC</span>
           </div>
           <div className="flex justify-between text-charcoal-primary">
-            <span>{action === 'BUY' ? 'Total' : 'Net proceeds'}</span>
+            <span>{action === "BUY" ? "Total" : "Net proceeds"}</span>
             <span>
               {previewValue > 0
-                ? action === 'BUY'
+                ? action === "BUY"
                   ? total.toFixed(4)
                   : netProceeds.toFixed(4)
-                : '0.0000'}{' '}
+                : "0.0000"}{" "}
               USDC
             </span>
           </div>
@@ -1331,10 +1319,10 @@ function TradeTicket({
           type="button"
         >
           {actionPending
-            ? 'Processing...'
+            ? "Processing..."
             : isConnected
-              ? `${action === 'BUY' ? 'Buy' : 'Sell'} ${selectedSide}`
-              : 'Connect Wallet'}
+              ? `${action === "BUY" ? "Buy" : "Sell"} ${selectedSide}`
+              : "Connect Wallet"}
         </button>
       </div>
     </section>
@@ -1357,22 +1345,24 @@ function OutcomeButton({
   return (
     <button
       aria-pressed={active}
-      className={`rounded-[12px] px-3 py-3 text-center shadow-[(--shadow-subtle)] transition-colors ${active
-          ? side === 'YES'
-            ? 'bg-meadow-green/12'
-            : 'bg-ember-orange/10'
-          : 'bg-parchment-card hover:bg-stone-surface'
-        }`}
+      className={`rounded-[12px] px-3 py-3 text-center shadow-[(--shadow-subtle)] transition-colors ${
+        active
+          ? side === "YES"
+            ? "bg-meadow-green/12"
+            : "bg-ember-orange/10"
+          : "bg-parchment-card hover:bg-stone-surface"
+      }`}
       onClick={() => onClick(side)}
       type="button"
     >
       <span
-        className={`block text-sm font-semibold ${active
-            ? side === 'YES'
-              ? 'text-meadow-green'
-              : 'text-ember-orange'
-            : 'text-charcoal-primary'
-          }`}
+        className={`block text-sm font-semibold ${
+          active
+            ? side === "YES"
+              ? "text-meadow-green"
+              : "text-ember-orange"
+            : "text-charcoal-primary"
+        }`}
       >
         {label}
       </span>
@@ -1447,14 +1437,14 @@ function SentimentRow({
 }: {
   label: string
   percent: number
-  tone: 'yes' | 'no'
+  tone: "yes" | "no"
 }) {
   return (
     <div className="grid grid-cols-[34px_minmax(0,1fr)_52px] items-center gap-3">
       <span className="text-charcoal-primary">{label}</span>
       <span className="h-2 overflow-hidden rounded-full bg-white-surface shadow-[(--shadow-subtle)]">
         <span
-          className={`block h-full ${tone === 'yes' ? 'bg-meadow-green' : 'bg-ember-orange'}`}
+          className={`block h-full ${tone === "yes" ? "bg-meadow-green" : "bg-ember-orange"}`}
           style={{ width: `${percent}%` }}
         />
       </span>
@@ -1502,7 +1492,7 @@ function RulesPanel({
 }
 
 function shortHash(hash?: string | null) {
-  if (!hash) return ''
+  if (!hash) return ""
   return `${hash.slice(0, 10)}...${hash.slice(-8)}`
 }
 
@@ -1546,13 +1536,13 @@ function PositionPanel({
                 key={position.id}
               >
                 <span className="text-ash">
-                  {position.side === 'YES' ? 'Yes' : 'No'}
+                  {position.side === "YES" ? "Yes" : "No"}
                 </span>
                 <span
                   className={
-                    position.side === 'YES'
-                      ? 'text-meadow-green'
-                      : 'text-ember-orange'
+                    position.side === "YES"
+                      ? "text-meadow-green"
+                      : "text-ember-orange"
                   }
                 >
                   ${position.payoutPreview.toFixed(2)}
@@ -1654,7 +1644,7 @@ function CommentsPanel({
                         {displayName(comment.author)}
                       </span>
                       <span>{displayHandle(comment.author)}</span>
-                      <span>{'\u00B7'}</span>
+                      <span>{"\u00B7"}</span>
                       <span>{relativeTime(comment.created_at)}</span>
                     </div>
                     <button
@@ -1681,7 +1671,7 @@ function CommentsPanel({
                           {displayName(reply.author)}
                         </span>
                         <span>{displayHandle(reply.author)}</span>
-                        <span>{'\u00B7'}</span>
+                        <span>{"\u00B7"}</span>
                         <span>{relativeTime(reply.created_at)}</span>
                       </div>
                       <button
@@ -1737,15 +1727,15 @@ function MarketStatsPanel({
       />
       <StatRow
         label="Created"
-        value={createdAt ? createdAt.toLocaleString() : 'Unknown'}
+        value={createdAt ? createdAt.toLocaleString() : "Unknown"}
       />
       <StatRow
         label="Closes"
-        value={closesAt ? closesAt.toLocaleString() : 'Unknown'}
+        value={closesAt ? closesAt.toLocaleString() : "Unknown"}
       />
       <StatRow
         label="Settles by"
-        value={settlesAt ? settlesAt.toLocaleString() : 'TBD'}
+        value={settlesAt ? settlesAt.toLocaleString() : "TBD"}
       />
     </section>
   )
@@ -1815,7 +1805,7 @@ function SocialActions({
   viewerVote: VoteSide | null
 }) {
   const votingDisabled =
-    !['open_for_votes', 'qualified', 'funding_pool', 'tradable'].includes(
+    !["open_for_votes", "qualified", "funding_pool", "tradable"].includes(
       marketStatus,
     ) ||
     Boolean(viewerVote) ||
@@ -1836,18 +1826,18 @@ function SocialActions({
           onClick={onReshare}
         />
         <IconAction
-          active={viewerVote === 'YES'}
+          active={viewerVote === "YES"}
           disabled={votingDisabled}
           icon={<ArrowUp className="h-4 w-4" />}
           label={freeYesVotes}
-          onClick={() => onVote('YES')}
+          onClick={() => onVote("YES")}
         />
         <IconAction
-          active={viewerVote === 'NO'}
+          active={viewerVote === "NO"}
           disabled={votingDisabled}
           icon={<ArrowDown className="h-4 w-4" />}
           label={freeNoVotes}
-          onClick={() => onVote('NO')}
+          onClick={() => onVote("NO")}
           tone="no"
         />
         <IconAction icon={<Share className="h-4 w-4" />} onClick={onShare} />
@@ -1862,23 +1852,24 @@ function IconAction({
   icon,
   label,
   onClick,
-  tone = 'yes',
+  tone = "yes",
 }: {
   active?: boolean
   disabled?: boolean
   icon: ReactNode
   label?: number
   onClick: () => void
-  tone?: 'yes' | 'no'
+  tone?: "yes" | "no"
 }) {
   return (
     <button
-      className={`flex items-center gap-2 transition-colors hover:text-charcoal-primary ${active
-          ? tone === 'yes'
-            ? 'text-meadow-green'
-            : 'text-ember-orange'
-          : ''
-        }`}
+      className={`flex items-center gap-2 transition-colors hover:text-charcoal-primary ${
+        active
+          ? tone === "yes"
+            ? "text-meadow-green"
+            : "text-ember-orange"
+          : ""
+      }`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -1886,7 +1877,7 @@ function IconAction({
       <span className="rounded-full p-2 transition-colors hover:bg-stone-surface">
         {icon}
       </span>
-      {typeof label === 'number' && <span className="text-xs">{label}</span>}
+      {typeof label === "number" && <span className="text-xs">{label}</span>}
     </button>
   )
 }
@@ -1925,7 +1916,7 @@ function VoteQualificationProgressPanel({
 
   const votesProgress = Math.min(100, (currentUpvotes / targetUpvotes) * 100)
 
-  const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== 'production'
+  const isDev = process.env.NEXT_PUBLIC_NODE_ENV !== "production"
 
   return (
     <section className="verity-card p-4 sm:p-5">
@@ -1968,7 +1959,7 @@ function VoteQualificationProgressPanel({
             onClick={onDevQualify}
             type="button"
           >
-            {loading ? 'Fast-tracking...' : 'Skip signal review'}
+            {loading ? "Fast-tracking..." : "Skip signal review"}
           </button>
         </div>
       )}
@@ -2004,7 +1995,7 @@ function PreMarketFundingPanel({
   )
   const progress = Math.min(100, (currentPoolBalance / minPoolBalance) * 100)
 
-  const [depositAmount, setDepositAmount] = useState('10')
+  const [depositAmount, setDepositAmount] = useState("10")
   const showCreatorEscrow = false
 
   return (
@@ -2014,7 +2005,7 @@ function PreMarketFundingPanel({
           <h2 className="text-[19px] font-semibold leading-[1.28] tracking-[-0.25px] text-charcoal-primary">
             {activeOptionName
               ? `Funding Pool: ${activeOptionName}`
-              : 'Pool Funding'}
+              : "Pool Funding"}
           </h2>
           <p className="mt-1 text-sm tracking-[-0.18px] text-ash">
             {activeOptionName
@@ -2032,7 +2023,7 @@ function PreMarketFundingPanel({
           <Info className="h-4 w-4 shrink-0 text-sky-blue mt-0.5" />
           <div>
             <span>
-              You are currently funding the <strong>{activeOptionName}</strong>{' '}
+              You are currently funding the <strong>{activeOptionName}</strong>{" "}
               pool. Each option pool is <strong>separate</strong> and must reach
               40 USDC to activate trading for that option.
             </span>
@@ -2043,7 +2034,7 @@ function PreMarketFundingPanel({
       <div className="mb-5 rounded-[12px] bg-parchment-card p-4 shadow-[(--shadow-subtle)]">
         <div className="mb-1 flex justify-between font-mono text-xs text-ash">
           <span>
-            {activeOptionName ? `${activeOptionName} Pool` : 'Pool Funding'}
+            {activeOptionName ? `${activeOptionName} Pool` : "Pool Funding"}
           </span>
           <span className="font-semibold text-charcoal-primary">
             {currentPoolBalance} USDC
@@ -2074,9 +2065,9 @@ function PreMarketFundingPanel({
                 onClick={() => onFundPreMarket(10)}
                 type="button"
               >
-                {actionLoading === 'fund_pre_market'
-                  ? 'Funding...'
-                  : 'Fund 10 USDC'}
+                {actionLoading === "fund_pre_market"
+                  ? "Funding..."
+                  : "Fund 10 USDC"}
               </button>
             ) : null}
           </div>
@@ -2114,7 +2105,7 @@ function PreMarketFundingPanel({
             <h3 className="mb-3 text-sm font-semibold text-charcoal-primary">
               {activeOptionName
                 ? `Fund the ${activeOptionName} Pool`
-                : 'Fund the Launch Pool'}
+                : "Fund the Launch Pool"}
             </h3>
             <div className="flex gap-2">
               <input
@@ -2135,11 +2126,11 @@ function PreMarketFundingPanel({
                 onClick={() => onAddLP(Number(depositAmount))}
                 type="button"
               >
-                {actionLoading === 'add_lp' ? 'Funding...' : 'Fund Pool'}
+                {actionLoading === "add_lp" ? "Funding..." : "Fund Pool"}
               </button>
             </div>
             <p className="mt-2 font-mono text-[10px] leading-relaxed text-ash">
-              Contributions convert to LP shares once the pool hits the{' '}
+              Contributions convert to LP shares once the pool hits the{" "}
               {minPoolBalance} USDC launch target.
             </p>
           </div>
@@ -2165,8 +2156,8 @@ function ActiveMarketLPPanel({
   onRemoveLP: (shares: number) => Promise<void>
   actionLoading: string | null
 }) {
-  const [addAmount, setAddAmount] = useState('10')
-  const [removeShares, setRemoveShares] = useState('10')
+  const [addAmount, setAddAmount] = useState("10")
+  const [removeShares, setRemoveShares] = useState("10")
 
   const myPosition = lpPositions?.[0]
   const myShares = myPosition?.lpShares ?? 0
@@ -2241,7 +2232,7 @@ function ActiveMarketLPPanel({
               onClick={() => onAddLP(Number(addAmount))}
               type="button"
             >
-              {actionLoading === 'add_lp' ? 'Adding...' : 'Add LP'}
+              {actionLoading === "add_lp" ? "Adding..." : "Add LP"}
             </button>
           </div>
         </div>
@@ -2272,7 +2263,7 @@ function ActiveMarketLPPanel({
               onClick={() => onRemoveLP(Number(removeShares))}
               type="button"
             >
-              {actionLoading === 'remove_lp' ? 'Removing...' : 'Remove'}
+              {actionLoading === "remove_lp" ? "Removing..." : "Remove"}
             </button>
           </div>
           {!canRemove && (
@@ -2325,7 +2316,7 @@ function ResolutionPanel({
       !proposal ||
       proposal.finalized ||
       proposal.disputed ||
-      proposal.proposer === '0x0000000000000000000000000000000000000000'
+      proposal.proposer === "0x0000000000000000000000000000000000000000"
     ) {
       setTimeLeft(null)
       return
@@ -2350,8 +2341,8 @@ function ResolutionPanel({
 
   const now = new Date()
   const isPastDeadline = now >= new Date(market.deadline)
-  const isResolving = market.status === 'resolving'
-  const isResolved = market.status === 'resolved'
+  const isResolving = market.status === "resolving"
+  const isResolved = market.status === "resolved"
 
   if (!isPastDeadline && !isResolving && !isResolved) return null
 
@@ -2392,22 +2383,22 @@ function ResolutionPanel({
             !proposal.finalized &&
             !proposal.disputed &&
             proposal.proposer !==
-            '0x0000000000000000000000000000000000000000' && (
+              "0x0000000000000000000000000000000000000000" && (
               <div className="flex flex-col gap-3 rounded-[12px] bg-parchment-card p-4 shadow-[(--shadow-subtle)]">
                 <div>
                   <span className="font-mono text-[10px] font-semibold uppercase text-ash">
                     Active Proposal
                   </span>
                   <p className="mt-1 text-sm font-semibold text-charcoal-primary">
-                    Proposed Outcome:{' '}
+                    Proposed Outcome:{" "}
                     <span
                       className={
                         proposal.proposedWinningOutcome
-                          ? 'text-meadow-green'
-                          : 'text-ember-orange'
+                          ? "text-meadow-green"
+                          : "text-ember-orange"
                       }
                     >
-                      {proposal.proposedWinningOutcome ? 'YES' : 'NO'}
+                      {proposal.proposedWinningOutcome ? "YES" : "NO"}
                     </span>
                   </p>
                   <p className="mt-1 font-mono text-xs text-ash">
@@ -2434,8 +2425,8 @@ function ResolutionPanel({
                       onClick={onDispute}
                       type="button"
                     >
-                      {actionLoading === 'dispute'
-                        ? 'Disputing...'
+                      {actionLoading === "dispute"
+                        ? "Disputing..."
                         : `Dispute Proposal (${bond} USDC)`}
                     </button>
                   </div>
@@ -2481,12 +2472,12 @@ function ResolutionPanel({
               Resolved Outcome
             </span>
             <p className="mt-1 text-lg font-semibold tracking-[-0.25px] text-charcoal-primary">
-              Resolved to:{' '}
+              Resolved to:{" "}
               <span
                 className={
-                  market.resolvedOutcome === 'YES'
-                    ? 'text-meadow-green'
-                    : 'text-ember-orange'
+                  market.resolvedOutcome === "YES"
+                    ? "text-meadow-green"
+                    : "text-ember-orange"
                 }
               >
                 {market.resolvedOutcome}
@@ -2606,9 +2597,9 @@ function RedeemPanel({
                 onClick={onRedeem}
                 type="button"
               >
-                {actionLoading === 'redeem'
-                  ? 'Redeeming...'
-                  : 'Redeem Winnings'}
+                {actionLoading === "redeem"
+                  ? "Redeeming..."
+                  : "Redeem Winnings"}
               </button>
             </div>
           )}
@@ -2640,9 +2631,9 @@ function RedeemPanel({
             onClick={onClaimCreatorLP}
             type="button"
           >
-            {actionLoading === 'claim_creator_lp'
-              ? 'Claiming...'
-              : 'Claim Creator LP'}
+            {actionLoading === "claim_creator_lp"
+              ? "Claiming..."
+              : "Claim Creator LP"}
           </button>
         </div>
       )}
@@ -2697,9 +2688,9 @@ function RefundPanel({
           onClick={onClaimRefund}
           type="button"
         >
-          {actionLoading === 'claim_refund'
-            ? 'Claiming Refund...'
-            : 'Claim USDC Refund'}
+          {actionLoading === "claim_refund"
+            ? "Claiming Refund..."
+            : "Claim USDC Refund"}
         </button>
       </div>
     </section>
@@ -2720,8 +2711,8 @@ function OutcomesPanel({
   marketStatus?: string
 }) {
   const isPreMarket = childMarkets.some((child) =>
-    ['open_for_votes', 'qualified', 'funding_pool'].includes(
-      child.status || '',
+    ["open_for_votes", "qualified", "funding_pool"].includes(
+      child.status || "",
     ),
   )
 
@@ -2741,10 +2732,10 @@ function OutcomesPanel({
         {childMarkets.map((child) => {
           const isSelected = child.id === selectedChildId
           const isChildPreMarket = [
-            'open_for_votes',
-            'qualified',
-            'funding_pool',
-          ].includes(child.status || '')
+            "open_for_votes",
+            "qualified",
+            "funding_pool",
+          ].includes(child.status || "")
 
           if (isChildPreMarket) {
             const currentFunding = child.liquidity ?? 0
@@ -2752,10 +2743,10 @@ function OutcomesPanel({
             const progress = Math.min(100, (currentFunding / minFunding) * 100)
 
             let borderClass =
-              'border-border bg-surface-muted/50 text-charcoal-primary'
+              "border-border bg-surface-muted/50 text-charcoal-primary"
             if (isSelected) {
               borderClass =
-                'border-sky-blue bg-sky-blue/[0.02] dark:bg-sky-blue/[0.04] shadow-[var(--shadow-sm)]'
+                "border-sky-blue bg-sky-blue/[0.02] dark:bg-sky-blue/[0.04] shadow-[var(--shadow-sm)]"
             }
 
             return (
@@ -2789,32 +2780,33 @@ function OutcomesPanel({
 
                 <button
                   type="button"
-                  onClick={() => onSelectOptionAndSide(child.id, 'YES')}
-                  className={`mt-4 w-full text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${isSelected
-                      ? 'bg-sky-blue text-white border border-sky-blue shadow-[var(--shadow-sm)]'
-                      : 'bg-sky-blue/10 text-sky-blue border border-sky-blue/20 hover:bg-sky-blue/20'
-                    }`}
+                  onClick={() => onSelectOptionAndSide(child.id, "YES")}
+                  className={`mt-4 w-full text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${
+                    isSelected
+                      ? "bg-sky-blue text-white border border-sky-blue shadow-[var(--shadow-sm)]"
+                      : "bg-sky-blue/10 text-sky-blue border border-sky-blue/20 hover:bg-sky-blue/20"
+                  }`}
                 >
-                  {isSelected ? '✓ Selected for Funding' : 'Select to Fund'}
+                  {isSelected ? "✓ Selected for Funding" : "Select to Fund"}
                 </button>
               </div>
             )
           }
 
-          const yesPrice = getMarketPrice(child, 'YES')
-          const noPrice = getMarketPrice(child, 'NO')
+          const yesPrice = getMarketPrice(child, "YES")
+          const noPrice = getMarketPrice(child, "NO")
 
-          const isYesSelected = isSelected && selectedSide === 'YES'
-          const isNoSelected = isSelected && selectedSide === 'NO'
+          const isYesSelected = isSelected && selectedSide === "YES"
+          const isNoSelected = isSelected && selectedSide === "NO"
 
           let borderClass =
-            'border-border bg-surface-muted/50 text-charcoal-primary'
+            "border-border bg-surface-muted/50 text-charcoal-primary"
           if (isYesSelected) {
             borderClass =
-              'border-meadow-green bg-meadow-green/[0.03] dark:bg-meadow-green/[0.06] shadow-[var(--shadow-sm)]'
+              "border-meadow-green bg-meadow-green/[0.03] dark:bg-meadow-green/[0.06] shadow-[var(--shadow-sm)]"
           } else if (isNoSelected) {
             borderClass =
-              'border-ember-orange bg-ember-orange/[0.03] dark:bg-ember-orange/[0.06] shadow-[var(--shadow-sm)]'
+              "border-ember-orange bg-ember-orange/[0.03] dark:bg-ember-orange/[0.06] shadow-[var(--shadow-sm)]"
           }
 
           return (
@@ -2827,11 +2819,11 @@ function OutcomesPanel({
                   {child.optionName || child.question}
                 </span>
                 <span className="text-[10px] font-mono text-ash">
-                  Pool:{' '}
+                  Pool:{" "}
                   {(
                     Number(child.usdc_yes_amount || 0) +
                     Number(child.usdc_no_amount || 0)
-                  ).toFixed(0)}{' '}
+                  ).toFixed(0)}{" "}
                   USDC
                 </span>
               </div>
@@ -2839,21 +2831,23 @@ function OutcomesPanel({
               <div className="mt-3.5 flex items-center gap-2 w-full">
                 <button
                   type="button"
-                  onClick={() => onSelectOptionAndSide(child.id, 'YES')}
-                  className={`flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${isYesSelected
-                      ? 'bg-meadow-green text-white border border-meadow-green shadow-[var(--shadow-sm)]'
-                      : 'bg-meadow-green/10 text-meadow-green border border-meadow-green/20 hover:bg-meadow-green/20'
-                    }`}
+                  onClick={() => onSelectOptionAndSide(child.id, "YES")}
+                  className={`flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${
+                    isYesSelected
+                      ? "bg-meadow-green text-white border border-meadow-green shadow-[var(--shadow-sm)]"
+                      : "bg-meadow-green/10 text-meadow-green border border-meadow-green/20 hover:bg-meadow-green/20"
+                  }`}
                 >
                   YES: {(yesPrice * 100).toFixed(0)}¢
                 </button>
                 <button
                   type="button"
-                  onClick={() => onSelectOptionAndSide(child.id, 'NO')}
-                  className={`flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${isNoSelected
-                      ? 'bg-ember-orange text-white border border-ember-orange shadow-[var(--shadow-sm)]'
-                      : 'bg-ember-orange/10 text-ember-orange border border-ember-orange/20 hover:bg-ember-orange/15'
-                    }`}
+                  onClick={() => onSelectOptionAndSide(child.id, "NO")}
+                  className={`flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 cursor-pointer ${
+                    isNoSelected
+                      ? "bg-ember-orange text-white border border-ember-orange shadow-[var(--shadow-sm)]"
+                      : "bg-ember-orange/10 text-ember-orange border border-ember-orange/20 hover:bg-ember-orange/15"
+                  }`}
                 >
                   NO: {(noPrice * 100).toFixed(0)}¢
                 </button>

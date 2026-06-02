@@ -1,12 +1,12 @@
-"use client";
+"use client"
 
-import { type ReactNode } from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "next-themes";
-import { RightPanelSlotProvider } from "@/hooks/useRightPanelSlot";
-import { Toaster } from "react-hot-toast";
-import { queryClient } from "@/lib/queryClient";
-import AuthModals from "./AuthModals";
+import { type ReactNode } from "react"
+import { QueryClientProvider } from "@tanstack/react-query"
+import { ThemeProvider } from "next-themes"
+import { RightPanelSlotProvider } from "@/hooks/useRightPanelSlot"
+import { Toaster } from "react-hot-toast"
+import { queryClient } from "@/lib/queryClient"
+import AuthModals from "./AuthModals"
 
 export default function AppProviders({ children }: { children: ReactNode }) {
   return (
@@ -19,6 +19,5 @@ export default function AppProviders({ children }: { children: ReactNode }) {
         </RightPanelSlotProvider>
       </ThemeProvider>
     </QueryClientProvider>
-  );
+  )
 }
-

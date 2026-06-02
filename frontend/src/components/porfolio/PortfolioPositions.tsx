@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { useUserPortfolio } from '@/hooks/useUserPortfolio'
-import Link from 'next/link'
-import { ArrowUpRight, TrendingUp } from 'lucide-react'
+import { useUserPortfolio } from "@/hooks/useUserPortfolio"
+import Link from "next/link"
+import { ArrowUpRight, TrendingUp } from "lucide-react"
 
 export default function PortfolioPositions() {
   const { positions, isLoading, stats } = useUserPortfolio()
@@ -60,7 +60,7 @@ export default function PortfolioPositions() {
         ) : (
           <div className="flex flex-col gap-3">
             {positions.map((pos) => {
-              const yes = pos.side === 'YES'
+              const yes = pos.side === "YES"
               return (
                 <div
                   key={pos.id}
@@ -68,12 +68,13 @@ export default function PortfolioPositions() {
                 >
                   <div className="flex-1 min-w-0">
                     <span
-                      className={`verity-pill inline-flex items-center px-2.5 py-0.5 font-mono text-[10px] font-semibold ${yes ? 'bg-meadow-green/10 text-meadow-green' : 'bg-ember-orange/10 text-ember-orange'}`}
+                      className={`verity-pill inline-flex items-center px-2.5 py-0.5 font-mono text-[10px] font-semibold ${yes ? "bg-meadow-green/10 text-meadow-green" : "bg-ember-orange/10 text-ember-orange"}`}
                     >
                       {pos.side}
                     </span>
                     <h3 className="mt-2 line-clamp-2 text-sm font-semibold leading-snug tracking-[-0.18px] text-charcoal-primary transition-colors group-hover:text-ember-orange">
-                      {pos.market_question || `Market ID: ${pos.market_id.slice(0, 12)}...`}
+                      {pos.market_question ||
+                        `Market ID: ${pos.market_id.slice(0, 12)}...`}
                     </h3>
                   </div>
 

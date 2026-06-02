@@ -1,4 +1,4 @@
-import PublicProfileView from '@/components/profile/PublicProfileView'
+import PublicProfileView from "@/components/profile/PublicProfileView"
 
 interface PublicProfilePageProps {
   params: Promise<{
@@ -6,7 +6,9 @@ interface PublicProfilePageProps {
   }>
 }
 
-export default async function PublicProfilePage({ params }: PublicProfilePageProps) {
+export default async function PublicProfilePage({
+  params,
+}: PublicProfilePageProps) {
   const { userId } = await params
 
   return <PublicProfileView userId={userId} />

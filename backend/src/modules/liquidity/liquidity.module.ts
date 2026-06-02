@@ -1,10 +1,17 @@
-import { Module } from "@nestjs/common";
-import { MongooseModule } from "@nestjs/mongoose";
-import { LiquidityService } from "./liquidity.service";
-import { LiquidityController } from "./liquidity.controller";
-import { LiquidityPool, LiquidityPoolSchema, LPPosition, LPPositionSchema, LiquidityEvent, LiquidityEventSchema } from "./liquidity.model";
-import { Market, MarketSchema } from "../markets/markets.model";
-import { User, UserSchema } from "../users/users.model";
+import { Module } from "@nestjs/common"
+import { MongooseModule } from "@nestjs/mongoose"
+import { LiquidityService } from "./liquidity.service"
+import { LiquidityController } from "./liquidity.controller"
+import {
+  LiquidityPool,
+  LiquidityPoolSchema,
+  LPPosition,
+  LPPositionSchema,
+  LiquidityEvent,
+  LiquidityEventSchema,
+} from "./liquidity.model"
+import { Market, MarketSchema } from "../markets/markets.model"
+import { User, UserSchema } from "../users/users.model"
 
 @Module({
   imports: [

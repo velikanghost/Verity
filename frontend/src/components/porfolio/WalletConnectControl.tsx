@@ -1,11 +1,11 @@
-"use client";
+"use client"
 
-import { useAuth } from "@/components/providers/AuthModals";
-import { shortAddress } from "@/lib/arc";
-import { ChevronDown, Wallet } from "lucide-react";
+import { useAuth } from "@/components/providers/AuthModals"
+import { shortAddress } from "@/lib/arc"
+import { ChevronDown, Wallet } from "lucide-react"
 
 export default function WalletConnectControl() {
-  const { user, authenticated, loading, login, logout } = useAuth();
+  const { user, authenticated, loading, login, logout } = useAuth()
 
   if (loading) {
     return (
@@ -16,7 +16,7 @@ export default function WalletConnectControl() {
       >
         Wallet
       </button>
-    );
+    )
   }
 
   if (!authenticated || !user) {
@@ -29,10 +29,12 @@ export default function WalletConnectControl() {
         <Wallet className="h-4 w-4" />
         Connect
       </button>
-    );
+    )
   }
 
-  const displayAddress = user.walletAddress ? shortAddress(user.walletAddress) : "Connected";
+  const displayAddress = user.walletAddress
+    ? shortAddress(user.walletAddress)
+    : "Connected"
 
   return (
     <button
@@ -44,5 +46,5 @@ export default function WalletConnectControl() {
       {displayAddress}
       <ChevronDown className="h-4 w-4" />
     </button>
-  );
+  )
 }

@@ -46,7 +46,7 @@ contract VerityMarketFactory {
 
     mapping(bytes32 => MarketInfo) public marketRegistry;
     mapping(bytes32 => PythMarketParams) public pythMarkets;
-    mapping(bytes32 => PreMarketDeposit[]) public preMarketDeposits;
+    mapping(bytes32 => mapping(address => uint256)) public preMarketDeposits;
     mapping(bytes32 => uint256) public escrowBalances;
     bytes32[] public allMarketIds;
 
@@ -117,10 +117,7 @@ contract VerityMarketFactory {
         // Send fee to fpmm's treasury
         usdc.safeTransfer(fpmm.treasury(), fee);
 
-        preMarketDeposits[marketId].push(PreMarketDeposit({
-            lp: msg.sender,
-            amount: creatorLpAmount
-        }));
+        preMarketDeposits[marketId][msg.sender] += creatorLpAmount;
 
         escrowBalances[marketId] = creatorLpAmount;
         info.creator = msg.sender;
@@ -146,10 +143,7 @@ contract VerityMarketFactory {
         // Send fee to fpmm's treasury
         usdc.safeTransfer(fpmm.treasury(), fee);
 
-        preMarketDeposits[marketId].push(PreMarketDeposit({
-            lp: beneficiary,
-            amount: creatorLpAmount
-        }));
+        preMarketDeposits[marketId][beneficiary] += creatorLpAmount;
 
         escrowBalances[marketId] = creatorLpAmount;
         info.creator = beneficiary;
@@ -273,10 +267,7 @@ contract VerityMarketFactory {
         // Pull USDC to this factory contract
         usdc.safeTransferFrom(msg.sender, address(this), amount);
 
-        preMarketDeposits[marketId].push(PreMarketDeposit({
-            lp: msg.sender,
-            amount: amount
-        }));
+        preMarketDeposits[marketId][msg.sender] += amount;
         
         escrowBalances[marketId] += amount;
 
@@ -315,10 +306,7 @@ contract VerityMarketFactory {
         // Pull USDC to this factory contract
         usdc.safeTransferFrom(msg.sender, address(this), amount);
 
-        preMarketDeposits[marketId].push(PreMarketDeposit({
-            lp: beneficiary,
-            amount: amount
-        }));
+        preMarketDeposits[marketId][beneficiary] += amount;
         
         escrowBalances[marketId] += amount;
 
@@ -345,17 +333,10 @@ contract VerityMarketFactory {
         MarketInfo storage info = marketRegistry[marketId];
         if (!info.voided) revert MarketNotRegistered();
 
-        uint256 refundAmount = 0;
-        PreMarketDeposit[] storage deposits = preMarketDeposits[marketId];
-        
-        for (uint256 i = 0; i < deposits.length; i++) {
-            if (deposits[i].lp == msg.sender) {
-                refundAmount += deposits[i].amount;
-                deposits[i].amount = 0; // Prevent double refund
-            }
-        }
-
+        uint256 refundAmount = preMarketDeposits[marketId][msg.sender];
         if (refundAmount == 0) revert ZeroAmount();
+
+        preMarketDeposits[marketId][msg.sender] = 0;
         usdc.safeTransfer(msg.sender, refundAmount);
     }
 
@@ -469,13 +450,13 @@ contract VerityMarketFactory {
 
     // ─── View Functions ──────────────────────────────────────────────────
 
-    function getPreMarketDepositCount(bytes32 marketId) external view returns (uint256) {
-        return preMarketDeposits[marketId].length;
-    }
-
-    function getPreMarketDeposit(bytes32 marketId, uint256 index) external view returns (address lp, uint256 amount) {
-        PreMarketDeposit memory dep = preMarketDeposits[marketId][index];
-        return (dep.lp, dep.amount);
+    function claimPreMarketDeposit(bytes32 marketId, address user) external returns (uint256) {
+        if (msg.sender != address(fpmm)) revert Unauthorized();
+        uint256 amount = preMarketDeposits[marketId][user];
+        if (amount > 0) {
+            preMarketDeposits[marketId][user] = 0;
+        }
+        return amount;
     }
 
     function getMarketCount() external view returns (uint256) {

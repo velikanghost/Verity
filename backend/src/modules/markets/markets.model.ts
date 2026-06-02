@@ -1,9 +1,9 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
+import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose"
 
-export type VoteSide = "YES" | "NO";
-export type VoteType = "free" | "usdc";
-export type MarketTradeAction = "BUY" | "SELL";
+export type VoteSide = "YES" | "NO"
+export type VoteType = "free" | "usdc"
+export type MarketTradeAction = "BUY" | "SELL"
 export type MarketStatus =
   | "draft"
   | "open_for_votes"
@@ -13,110 +13,130 @@ export type MarketStatus =
   | "closed"
   | "resolving"
   | "resolved"
-  | "voided";
+  | "voided"
 
-export type MarketDocument = HydratedDocument<Market>;
-export type VoteDocument = HydratedDocument<Vote>;
-export type DailyVoteUsageDocument = HydratedDocument<DailyVoteUsage>;
-export type MarketPositionDocument = HydratedDocument<MarketPosition>;
-export type MarketTradeDocument = HydratedDocument<MarketTrade>;
+export type MarketDocument = HydratedDocument<Market>
+export type VoteDocument = HydratedDocument<Vote>
+export type DailyVoteUsageDocument = HydratedDocument<DailyVoteUsage>
+export type MarketPositionDocument = HydratedDocument<MarketPosition>
+export type MarketTradeDocument = HydratedDocument<MarketTrade>
 
 @Schema({ timestamps: true, versionKey: false })
 export class Market {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Post", required: true, index: true })
-  postId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "Post",
+    required: true,
+    index: true,
+  })
+  postId: Types.ObjectId
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
-  authorId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  })
+  authorId: Types.ObjectId
 
   @Prop({ type: String, required: true, trim: true })
-  question: string;
+  question: string
 
   @Prop({ type: String, required: true, trim: true, index: true })
-  category: string;
+  category: string
 
   @Prop({ type: Date, required: true, index: true })
-  deadline: Date;
+  deadline: Date
 
   @Prop({ type: String, required: true, trim: true })
-  resolutionSource: string;
+  resolutionSource: string
 
   @Prop({ type: String, required: true, trim: true })
-  yesCondition: string;
+  yesCondition: string
 
   @Prop({ type: String, required: true, trim: true })
-  noCondition: string;
+  noCondition: string
 
   @Prop({
     type: String,
-    enum: ["draft", "open_for_votes", "qualified", "funding_pool", "tradable", "closed", "resolving", "resolved", "voided"],
+    enum: [
+      "draft",
+      "open_for_votes",
+      "qualified",
+      "funding_pool",
+      "tradable",
+      "closed",
+      "resolving",
+      "resolved",
+      "voided",
+    ],
     default: "open_for_votes",
     index: true,
   })
-  status: MarketStatus;
+  status: MarketStatus
 
   @Prop({ type: Number, default: 0 })
-  freeYesVotes: number;
+  freeYesVotes: number
 
   @Prop({ type: Number, default: 0 })
-  freeNoVotes: number;
+  freeNoVotes: number
 
   @Prop({ type: Number, default: 0 })
-  totalFreeVotes: number;
+  totalFreeVotes: number
 
   @Prop({ type: Number, default: 0 })
-  uniqueVotersCount: number;
+  uniqueVotersCount: number
 
   @Prop({ type: Number, default: 50 })
-  qualificationThreshold: number;
+  qualificationThreshold: number
 
   @Prop({ type: Number, default: 30 })
-  uniqueVoterThreshold: number;
+  uniqueVoterThreshold: number
 
   @Prop({ type: Number, default: 1 })
-  marketCreationFeeUsdc: number;
+  marketCreationFeeUsdc: number
 
   @Prop({ type: String, default: null, trim: true })
-  creationFeeTxHash: string | null;
+  creationFeeTxHash: string | null
 
   @Prop({ type: String, default: null, trim: true })
-  feeCollectorAddress: string | null;
+  feeCollectorAddress: string | null
 
   @Prop({ type: Number, default: 0 })
-  usdcYesAmount: number;
+  usdcYesAmount: number
 
   @Prop({ type: Number, default: 0 })
-  usdcNoAmount: number;
+  usdcNoAmount: number
 
   @Prop({ type: Number, default: 0 })
-  liquidity: number;
+  liquidity: number
 
   @Prop({ type: Number, default: 10 })
-  creatorLiquidityUsdc: number;
+  creatorLiquidityUsdc: number
 
   @Prop({ type: Number, default: 40 })
-  minimumPoolBalance: number;
+  minimumPoolBalance: number
 
   @Prop({ type: Date, default: null })
-  fundingDeadline: Date | null;
+  fundingDeadline: Date | null
 
   @Prop({ type: String, enum: ["YES", "NO", null], default: null })
-  resolvedOutcome: "YES" | "NO" | null;
+  resolvedOutcome: "YES" | "NO" | null
 
   @Prop({ type: String, default: null, trim: true })
-  resolvedByAdmin: string | null;
+  resolvedByAdmin: string | null
 
   @Prop({ type: String, default: null, trim: true })
-  priceFeedId: string | null;
+  priceFeedId: string | null
 
   @Prop({ type: Number, default: null })
-  targetPrice: number | null;
+  targetPrice: number | null
 
   @Prop({ type: Boolean, default: null })
-  resolveAbove: boolean | null;
+  resolveAbove: boolean | null
 
   @Prop({ type: Boolean, default: false })
-  isPythMarket: boolean;
+  isPythMarket: boolean
 
   @Prop({
     type: String,
@@ -124,149 +144,192 @@ export class Market {
     default: "binary",
     index: true,
   })
-  marketType: "binary" | "parent" | "child";
+  marketType: "binary" | "parent" | "child"
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Market", default: null, index: true })
-  parentMarketId: Types.ObjectId | null;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "Market",
+    default: null,
+    index: true,
+  })
+  parentMarketId: Types.ObjectId | null
 
   @Prop({ type: String, default: null, trim: true })
-  optionName: string | null;
+  optionName: string | null
 
   @Prop({ type: String, default: null })
-  proposalReasoning: string | null;
+  proposalReasoning: string | null
 
   @Prop({ type: [String], default: [] })
-  proposalCitations: string[];
+  proposalCitations: string[]
 
   @Prop({ type: String, default: null })
-  proposalProposer: string | null;
+  proposalProposer: string | null
 
   @Prop({ type: String, default: null })
-  proposalDisputer: string | null;
+  proposalDisputer: string | null
 
   @Prop({ type: Boolean, default: false })
-  disputed: boolean;
+  disputed: boolean
 
   @Prop({ type: Boolean, default: null })
-  proposedOutcome: boolean | null;
+  proposedOutcome: boolean | null
 
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: Date
+  updatedAt?: Date
 }
 
-export const MarketSchema = SchemaFactory.createForClass(Market);
+export const MarketSchema = SchemaFactory.createForClass(Market)
 
 MarketSchema.index(
   { creationFeeTxHash: 1 },
   { partialFilterExpression: { creationFeeTxHash: { $type: "string" } } },
-);
+)
 
 @Schema({ timestamps: true, versionKey: false })
 export class Vote {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Market", required: true, index: true })
-  marketId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "Market",
+    required: true,
+    index: true,
+  })
+  marketId: Types.ObjectId
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
-  userId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  })
+  userId: Types.ObjectId
 
   @Prop({ type: String, enum: ["YES", "NO"], required: true })
-  side: VoteSide;
+  side: VoteSide
 
   @Prop({ type: String, enum: ["free", "usdc"], default: "free" })
-  voteType: VoteType;
+  voteType: VoteType
 
   @Prop({ type: Number, default: 0 })
-  amount: number;
+  amount: number
 }
 
-export const VoteSchema = SchemaFactory.createForClass(Vote);
+export const VoteSchema = SchemaFactory.createForClass(Vote)
 
-VoteSchema.index({ marketId: 1, userId: 1, voteType: 1 }, { unique: true });
+VoteSchema.index({ marketId: 1, userId: 1, voteType: 1 }, { unique: true })
 
 @Schema({ timestamps: true, versionKey: false })
 export class DailyVoteUsage {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
-  userId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  })
+  userId: Types.ObjectId
 
   @Prop({ type: String, required: true })
-  date: string;
+  date: string
 
   @Prop({ type: Number, default: 0, min: 0, max: 10 })
-  votesUsed: number;
+  votesUsed: number
 
   @Prop({ type: Number, default: 10 })
-  votesLimit: number;
+  votesLimit: number
 }
 
-export const DailyVoteUsageSchema = SchemaFactory.createForClass(DailyVoteUsage);
+export const DailyVoteUsageSchema = SchemaFactory.createForClass(DailyVoteUsage)
 
-DailyVoteUsageSchema.index({ userId: 1, date: 1 }, { unique: true });
+DailyVoteUsageSchema.index({ userId: 1, date: 1 }, { unique: true })
 
 @Schema({ timestamps: true, versionKey: false })
 export class MarketPosition {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Market", required: true, index: true })
-  marketId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "Market",
+    required: true,
+    index: true,
+  })
+  marketId: Types.ObjectId
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
-  userId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  })
+  userId: Types.ObjectId
 
   @Prop({ type: String, enum: ["YES", "NO"], required: true })
-  side: VoteSide;
+  side: VoteSide
 
   @Prop({ type: Number, default: 0 })
-  shares: number;
+  shares: number
 
   @Prop({ type: Number, default: 0 })
-  avgPrice: number;
+  avgPrice: number
 
   @Prop({ type: Number, default: 0 })
-  investedUsdc: number;
+  investedUsdc: number
 
   @Prop({ type: Number, default: 0 })
-  realizedPnl: number;
+  realizedPnl: number
 
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: Date
+  updatedAt?: Date
 }
 
-export const MarketPositionSchema = SchemaFactory.createForClass(MarketPosition);
+export const MarketPositionSchema = SchemaFactory.createForClass(MarketPosition)
 
-MarketPositionSchema.index({ marketId: 1, userId: 1, side: 1 }, { unique: true });
+MarketPositionSchema.index(
+  { marketId: 1, userId: 1, side: 1 },
+  { unique: true },
+)
 
 @Schema({ versionKey: false })
 export class MarketTrade {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Market", required: true, index: true })
-  marketId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "Market",
+    required: true,
+    index: true,
+  })
+  marketId: Types.ObjectId
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
-  userId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  })
+  userId: Types.ObjectId
 
   @Prop({ type: String, enum: ["YES", "NO"], required: true })
-  side: VoteSide;
+  side: VoteSide
 
   @Prop({ type: String, enum: ["BUY", "SELL"], required: true })
-  action: MarketTradeAction;
+  action: MarketTradeAction
 
   @Prop({ type: Number, default: 0 })
-  shares: number;
+  shares: number
 
   @Prop({ type: Number, default: 0 })
-  price: number;
+  price: number
 
   @Prop({ type: Number, default: 0 })
-  amountUsdc: number;
+  amountUsdc: number
 
   @Prop({ type: Number, default: 0 })
-  feeUsdc: number;
+  feeUsdc: number
 
   @Prop({ type: Number, default: 0 })
-  grossUsdc: number;
+  grossUsdc: number
 
   @Prop({ type: String, default: null })
-  txHash: string | null;
+  txHash: string | null
 
   @Prop({ type: Date, default: Date.now, index: true })
-  createdAt: Date;
+  createdAt: Date
 }
 
-export const MarketTradeSchema = SchemaFactory.createForClass(MarketTrade);
+export const MarketTradeSchema = SchemaFactory.createForClass(MarketTrade)

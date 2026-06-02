@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useAuth } from '@/components/providers/AuthModals'
+import { useAuth } from "@/components/providers/AuthModals"
 
 import {
   arcUsdcAddress,
@@ -9,12 +9,12 @@ import {
   FPMM_ADDRESS,
   FACTORY_ADDRESS,
   publicClient,
-} from '@/lib/arc'
-import { toast } from 'react-hot-toast'
+} from "@/lib/arc"
+import { toast } from "react-hot-toast"
 
 function formatMarketId(marketId: string): `0x${string}` {
-  const clean = marketId.replace(/^0x/, '')
-  return `0x${clean.padEnd(64, '0')}` as `0x${string}`
+  const clean = marketId.replace(/^0x/, "")
+  return `0x${clean.padEnd(64, "0")}` as `0x${string}`
 }
 
 export function useMarketResolution() {
@@ -22,12 +22,12 @@ export function useMarketResolution() {
 
   function checkPreconditions() {
     if (!user) {
-      throw new Error('Wallet not connected.')
+      throw new Error("Wallet not connected.")
     }
   }
 
   async function disputeResolution(marketId: string) {
-    const toastId = toast.loading('Preparing to dispute resolution proposal...')
+    const toastId = toast.loading("Preparing to dispute resolution proposal...")
     try {
       checkPreconditions()
       const formattedMarketId = formatMarketId(marketId)
@@ -36,15 +36,15 @@ export function useMarketResolution() {
       const bondAmount = await publicClient.readContract({
         abi: [
           {
-            name: 'resolutionBond',
-            type: 'function',
-            stateMutability: 'view',
+            name: "resolutionBond",
+            type: "function",
+            stateMutability: "view",
             inputs: [],
-            outputs: [{ name: '', type: 'uint256' }],
+            outputs: [{ name: "", type: "uint256" }],
           },
         ] as const,
         address: RESOLVER_ADDRESS,
-        functionName: 'resolutionBond',
+        functionName: "resolutionBond",
       })
 
       const calls: Array<{
@@ -57,32 +57,32 @@ export function useMarketResolution() {
       const allowance = await publicClient.readContract({
         abi: [
           {
-            name: 'allowance',
-            type: 'function',
-            stateMutability: 'view',
+            name: "allowance",
+            type: "function",
+            stateMutability: "view",
             inputs: [
-              { name: 'owner', type: 'address' },
-              { name: 'spender', type: 'address' },
+              { name: "owner", type: "address" },
+              { name: "spender", type: "address" },
             ],
-            outputs: [{ name: '', type: 'uint256' }],
+            outputs: [{ name: "", type: "uint256" }],
           },
         ] as const,
         address: arcUsdcAddress,
-        functionName: 'allowance',
+        functionName: "allowance",
         args: [user!.walletAddress as `0x${string}`, RESOLVER_ADDRESS],
       })
 
       if (allowance < bondAmount) {
         calls.push({
           contractAddress: arcUsdcAddress,
-          abiFunctionSignature: 'approve(address,uint256)',
+          abiFunctionSignature: "approve(address,uint256)",
           abiParameters: [RESOLVER_ADDRESS, bondAmount],
         })
       }
 
       calls.push({
         contractAddress: RESOLVER_ADDRESS,
-        abiFunctionSignature: 'disputeResolution(bytes32)',
+        abiFunctionSignature: "disputeResolution(bytes32)",
         abiParameters: [formattedMarketId],
       })
 
@@ -95,19 +95,19 @@ export function useMarketResolution() {
         estimatedCost,
       )
 
-      toast.success('Resolution proposal disputed successfully! ✓')
+      toast.success("Resolution proposal disputed successfully! ✓")
       return { txHash }
     } catch (error: any) {
       toast.dismiss(toastId)
-      if (!error.message?.includes('rejected')) {
-        toast.error(error.message || 'Dispute failed.')
+      if (!error.message?.includes("rejected")) {
+        toast.error(error.message || "Dispute failed.")
       }
       throw error
     }
   }
 
   async function redeemWinnings(marketId: string) {
-    const toastId = toast.loading('Preparing to redeem winnings...')
+    const toastId = toast.loading("Preparing to redeem winnings...")
     try {
       checkPreconditions()
       const formattedMarketId = formatMarketId(marketId)
@@ -118,20 +118,20 @@ export function useMarketResolution() {
         [
           {
             contractAddress: VAULT_ADDRESS,
-            abiFunctionSignature: 'redeem(bytes32)',
+            abiFunctionSignature: "redeem(bytes32)",
             abiParameters: [formattedMarketId],
           },
         ],
-        'Redeem Winnings from Vault',
+        "Redeem Winnings from Vault",
         0, // No USDC paid (USDC is redeemed/received)
       )
 
-      toast.success('Winnings redeemed successfully! ✓')
+      toast.success("Winnings redeemed successfully! ✓")
       return { txHash }
     } catch (error: any) {
       toast.dismiss(toastId)
-      if (!error.message?.includes('rejected')) {
-        toast.error(error.message || 'Redemption failed.')
+      if (!error.message?.includes("rejected")) {
+        toast.error(error.message || "Redemption failed.")
       }
       throw error
     }
@@ -139,7 +139,7 @@ export function useMarketResolution() {
 
   async function claimCreatorLP(marketId: string) {
     const toastId = toast.loading(
-      'Preparing to claim locked creator liquidity...',
+      "Preparing to claim locked creator liquidity...",
     )
     try {
       checkPreconditions()
@@ -151,27 +151,27 @@ export function useMarketResolution() {
         [
           {
             contractAddress: FPMM_ADDRESS,
-            abiFunctionSignature: 'claimCreatorLiquidity(bytes32)',
+            abiFunctionSignature: "claimCreatorLiquidity(bytes32)",
             abiParameters: [formattedMarketId],
           },
         ],
-        'Claim Locked Creator LP Liquidity',
+        "Claim Locked Creator LP Liquidity",
         0, // No USDC paid
       )
 
-      toast.success('Creator liquidity claimed successfully! ✓')
+      toast.success("Creator liquidity claimed successfully! ✓")
       return { txHash }
     } catch (error: any) {
       toast.dismiss(toastId)
-      if (!error.message?.includes('rejected')) {
-        toast.error(error.message || 'LP claim failed.')
+      if (!error.message?.includes("rejected")) {
+        toast.error(error.message || "LP claim failed.")
       }
       throw error
     }
   }
 
   async function claimRefund(marketId: string) {
-    const toastId = toast.loading('Preparing to claim pre-market refund...')
+    const toastId = toast.loading("Preparing to claim pre-market refund...")
     try {
       checkPreconditions()
       const formattedMarketId = formatMarketId(marketId)
@@ -182,20 +182,20 @@ export function useMarketResolution() {
         [
           {
             contractAddress: FACTORY_ADDRESS,
-            abiFunctionSignature: 'claimRefund(bytes32)',
+            abiFunctionSignature: "claimRefund(bytes32)",
             abiParameters: [formattedMarketId],
           },
         ],
-        'Claim Pre-Market Deposit Refund',
+        "Claim Pre-Market Deposit Refund",
         0, // No USDC paid
       )
 
-      toast.success('USDC refund claimed successfully! ✓')
+      toast.success("USDC refund claimed successfully! ✓")
       return { txHash }
     } catch (error: any) {
       toast.dismiss(toastId)
-      if (!error.message?.includes('rejected')) {
-        toast.error(error.message || 'Claim refund failed.')
+      if (!error.message?.includes("rejected")) {
+        toast.error(error.message || "Claim refund failed.")
       }
       throw error
     }
@@ -207,22 +207,22 @@ export function useMarketResolution() {
       const result = await publicClient.readContract({
         abi: [
           {
-            name: 'proposals',
-            type: 'function',
-            stateMutability: 'view',
-            inputs: [{ name: '', type: 'bytes32' }],
+            name: "proposals",
+            type: "function",
+            stateMutability: "view",
+            inputs: [{ name: "", type: "bytes32" }],
             outputs: [
-              { name: 'proposer', type: 'address' },
-              { name: 'proposedWinningOutcome', type: 'bool' },
-              { name: 'proposalTime', type: 'uint256' },
-              { name: 'disputed', type: 'bool' },
-              { name: 'disputer', type: 'address' },
-              { name: 'finalized', type: 'bool' },
+              { name: "proposer", type: "address" },
+              { name: "proposedWinningOutcome", type: "bool" },
+              { name: "proposalTime", type: "uint256" },
+              { name: "disputed", type: "bool" },
+              { name: "disputer", type: "address" },
+              { name: "finalized", type: "bool" },
             ],
           },
         ] as const,
         address: RESOLVER_ADDRESS,
-        functionName: 'proposals',
+        functionName: "proposals",
         args: [formattedMarketId],
       })
       const [
@@ -243,7 +243,7 @@ export function useMarketResolution() {
         finalized,
       }
     } catch (error) {
-      console.error('Error reading proposal from contract:', error)
+      console.error("Error reading proposal from contract:", error)
       return null
     }
   }
@@ -253,19 +253,19 @@ export function useMarketResolution() {
       const result = await publicClient.readContract({
         abi: [
           {
-            name: 'resolutionBond',
-            type: 'function',
-            stateMutability: 'view',
+            name: "resolutionBond",
+            type: "function",
+            stateMutability: "view",
             inputs: [],
-            outputs: [{ name: '', type: 'uint256' }],
+            outputs: [{ name: "", type: "uint256" }],
           },
         ] as const,
         address: RESOLVER_ADDRESS,
-        functionName: 'resolutionBond',
+        functionName: "resolutionBond",
       })
       return Number(result) / 1e6 // USDC is 6 decimals
     } catch (error) {
-      console.error('Error reading resolution bond from contract:', error)
+      console.error("Error reading resolution bond from contract:", error)
       return 10.0 // default 10 USDC
     }
   }

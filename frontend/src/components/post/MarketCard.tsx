@@ -1,13 +1,13 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { useState, type MouseEvent } from 'react'
-import { ArrowDown, ArrowUp, MessageCircle, Repeat2, Share } from 'lucide-react'
-import UserHoverCard from '@/components/social/UserHoverCard'
-import type { Profile, VoteSide } from '@/lib/verity'
+import Link from "next/link"
+import { useState, type MouseEvent } from "react"
+import { ArrowDown, ArrowUp, MessageCircle, Repeat2, Share } from "lucide-react"
+import UserHoverCard from "@/components/social/UserHoverCard"
+import type { Profile, VoteSide } from "@/lib/verity"
 
 export interface MarketCardProps {
-  variant?: 'compact' | 'detail'
+  variant?: "compact" | "detail"
   name: string
   handle: string
   time: string
@@ -53,7 +53,7 @@ export interface MarketCardProps {
 }
 
 export default function MarketCard({
-  variant = 'compact',
+  variant = "compact",
   name,
   handle,
   time,
@@ -64,7 +64,7 @@ export default function MarketCard({
   resolutionSource,
   yesCondition,
   noCondition,
-  status = 'open',
+  status = "open",
   usdcYes,
   usdcNo,
   marketCreationFeeUsdc = 1,
@@ -91,14 +91,14 @@ export default function MarketCard({
   profileHref,
   profile,
 }: MarketCardProps) {
-  const [lpAmount, setLpAmount] = useState('10')
-  const [tradeAmount, setTradeAmount] = useState('10')
+  const [lpAmount, setLpAmount] = useState("10")
+  const [tradeAmount, setTradeAmount] = useState("10")
   const totalUsdc = usdcYes + usdcNo
   const totalVotes = totalFreeVotes ?? freeYesVotes + freeNoVotes
-  const isOpenForVotes = status === 'open_for_votes'
-  const isQualified = status === 'qualified'
-  const isTradable = status === 'tradable'
-  const isClosed = ['closed', 'resolving', 'resolved', 'voided'].includes(
+  const isOpenForVotes = status === "open_for_votes"
+  const isQualified = status === "qualified"
+  const isTradable = status === "tradable"
+  const isClosed = ["closed", "resolving", "resolved", "voided"].includes(
     status,
   )
   const canFreeVote = isOpenForVotes || isQualified
@@ -109,8 +109,8 @@ export default function MarketCard({
   const votesToReview = Math.max(0, 30 - freeYesVotes)
   const upvoteRatio = totalVotes > 0 ? (freeYesVotes / totalVotes) * 100 : 0
   const downvoteRatio = totalVotes > 0 ? (freeNoVotes / totalVotes) * 100 : 0
-  const isDetail = variant === 'detail'
-  const creatorLabel = handle === '@unknown' ? name : handle
+  const isDetail = variant === "detail"
+  const creatorLabel = handle === "@unknown" ? name : handle
   const statusTone = getStatusTone(status)
   const openDetails = () => {
     if (!isDetail) onOpenDetails?.()
@@ -119,15 +119,15 @@ export default function MarketCard({
 
   return (
     <article
-      className={`verity-card p-4 sm:p-5 ${isDetail ? '' : 'clickable-card'}`}
+      className={`verity-card p-4 sm:p-5 ${isDetail ? "" : "clickable-card"}`}
       onClick={openDetails}
       onKeyDown={(event) => {
-        if (!isDetail && (event.key === 'Enter' || event.key === ' ')) {
+        if (!isDetail && (event.key === "Enter" || event.key === " ")) {
           event.preventDefault()
           openDetails()
         }
       }}
-      role={isDetail ? undefined : 'link'}
+      role={isDetail ? undefined : "link"}
       tabIndex={isDetail ? undefined : 0}
     >
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -152,7 +152,7 @@ export default function MarketCard({
                 {creatorLabel}
               </span>
             )}
-            <span className="text-ash">{'\u00B7'}</span>
+            <span className="text-ash">{"\u00B7"}</span>
             <span className="font-mono">{time}</span>
           </div>
         </div>
@@ -160,7 +160,7 @@ export default function MarketCard({
         <span
           className={`verity-pill w-fit shrink-0 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusTone}`}
         >
-          {status.replaceAll('_', ' ')}
+          {status.replaceAll("_", " ")}
         </span>
       </div>
 
@@ -210,8 +210,8 @@ export default function MarketCard({
         )}
 
         {!isClosed &&
-          (isTradable ? null : status === 'funding_pool' ||
-            (status === 'qualified' && liquidity >= 40) ? (
+          (isTradable ? null : status === "funding_pool" ||
+            (status === "qualified" && liquidity >= 40) ? (
             <div className="flex flex-col items-center justify-center py-3 text-center">
               <svg
                 className="mb-2 h-7 w-7 animate-spin text-meadow-green"
@@ -265,7 +265,6 @@ export default function MarketCard({
               </button>
             </div>
           ))}
-
       </div>
 
       <div className="mb-4 rounded-[12px] bg-white-surface p-3 shadow-[(--shadow-subtle)]">
@@ -281,7 +280,7 @@ export default function MarketCard({
           </span>
           <span className="font-mono text-[11px] text-ash">
             {voteThresholdMet
-              ? 'Review threshold met'
+              ? "Review threshold met"
               : `${votesToReview} to review`}
           </span>
         </div>
@@ -323,20 +322,20 @@ export default function MarketCard({
               disabled={
                 actionLoading || !isConnected || Number(tradeAmount) <= 0
               }
-              onClick={() => onUsdcVote?.('YES', Number(tradeAmount))}
+              onClick={() => onUsdcVote?.("YES", Number(tradeAmount))}
               type="button"
             >
-              {actionLoadingStatus === 'buy_yes' ? 'Buying...' : 'BUY YES'}
+              {actionLoadingStatus === "buy_yes" ? "Buying..." : "BUY YES"}
             </button>
             <button
               className="clickable flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 bg-ember-orange/10 text-ember-orange border border-ember-orange/20 hover:bg-ember-orange/15 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={
                 actionLoading || !isConnected || Number(tradeAmount) <= 0
               }
-              onClick={() => onUsdcVote?.('NO', Number(tradeAmount))}
+              onClick={() => onUsdcVote?.("NO", Number(tradeAmount))}
               type="button"
             >
-              {actionLoadingStatus === 'buy_no' ? 'Buying...' : 'BUY NO'}
+              {actionLoadingStatus === "buy_no" ? "Buying..." : "BUY NO"}
             </button>
           </div>
         </div>
@@ -346,7 +345,7 @@ export default function MarketCard({
             <button
               className="clickable flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 bg-meadow-green/10 text-meadow-green border border-meadow-green/20 hover:bg-meadow-green/20 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
-              onClick={() => onVote?.('YES')}
+              onClick={() => onVote?.("YES")}
               title={yesCondition}
               type="button"
             >
@@ -355,7 +354,7 @@ export default function MarketCard({
             <button
               className="clickable flex-1 text-center py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all duration-150 bg-ember-orange/10 text-ember-orange border border-ember-orange/20 hover:bg-ember-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={voteDisabled}
-              onClick={() => onVote?.('NO')}
+              onClick={() => onVote?.("NO")}
               title={noCondition}
               type="button"
             >
@@ -422,7 +421,7 @@ export default function MarketCard({
         <button
           aria-label={`Reshare ${question}`}
           aria-pressed={reshared}
-          className={`clickable-icon group flex items-center gap-2 px-1 hover:text-foreground ${reshared ? 'text-meadow-green' : 'text-ash'}`}
+          className={`clickable-icon group flex items-center gap-2 px-1 hover:text-foreground ${reshared ? "text-meadow-green" : "text-ash"}`}
           onClick={onReshare}
           type="button"
         >
@@ -434,12 +433,12 @@ export default function MarketCard({
 
         <button
           aria-label={`Upvote ${question}`}
-          aria-pressed={viewerVote === 'YES'}
+          aria-pressed={viewerVote === "YES"}
           className={`clickable-icon group flex items-center gap-2 px-1 hover:text-meadow-green ${
-            viewerVote === 'YES' ? 'text-meadow-green' : 'text-ash'
+            viewerVote === "YES" ? "text-meadow-green" : "text-ash"
           }`}
           disabled={voteDisabled}
-          onClick={() => onVote?.('YES')}
+          onClick={() => onVote?.("YES")}
           type="button"
         >
           <span className="rounded-full p-2">
@@ -450,12 +449,12 @@ export default function MarketCard({
 
         <button
           aria-label={`Downvote ${question}`}
-          aria-pressed={viewerVote === 'NO'}
+          aria-pressed={viewerVote === "NO"}
           className={`clickable-icon group flex items-center gap-2 px-1 hover:text-ember-orange ${
-            viewerVote === 'NO' ? 'text-ember-orange' : 'text-ash'
+            viewerVote === "NO" ? "text-ember-orange" : "text-ash"
           }`}
           disabled={voteDisabled}
-          onClick={() => onVote?.('NO')}
+          onClick={() => onVote?.("NO")}
           type="button"
         >
           <span className="rounded-full p-2">
@@ -480,21 +479,21 @@ export default function MarketCard({
 
 function getStatusTone(status: string) {
   switch (status) {
-    case 'open_for_votes':
-      return 'bg-sky-blue/10 text-sky-blue'
-    case 'qualified':
-      return 'bg-sunburst-yellow/25 text-charcoal-primary'
-    case 'funding_pool':
-      return 'bg-ember-orange/10 text-ember-orange'
-    case 'tradable':
-      return 'bg-meadow-green/12 text-meadow-green'
-    case 'resolved':
-      return 'bg-brand-primary text-white shadow-[(--shadow-sm)]'
-    case 'voided':
-      return 'bg-stone-surface text-ash'
-    case 'resolving':
-      return 'bg-parchment-card text-charcoal-primary'
+    case "open_for_votes":
+      return "bg-sky-blue/10 text-sky-blue"
+    case "qualified":
+      return "bg-sunburst-yellow/25 text-charcoal-primary"
+    case "funding_pool":
+      return "bg-ember-orange/10 text-ember-orange"
+    case "tradable":
+      return "bg-meadow-green/12 text-meadow-green"
+    case "resolved":
+      return "bg-brand-primary text-white shadow-[(--shadow-sm)]"
+    case "voided":
+      return "bg-stone-surface text-ash"
+    case "resolving":
+      return "bg-parchment-card text-charcoal-primary"
     default:
-      return 'bg-parchment-card text-graphite'
+      return "bg-parchment-card text-graphite"
   }
 }

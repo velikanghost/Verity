@@ -1,33 +1,33 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { HydratedDocument, Types } from "mongoose";
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
+import { HydratedDocument, Types } from "mongoose"
 
-export type NotificationDocument = HydratedDocument<Notification>;
+export type NotificationDocument = HydratedDocument<Notification>
 
 @Schema({ timestamps: true, versionKey: false })
 export class Notification {
   @Prop({ type: Types.ObjectId, ref: "User", required: true, index: true })
-  recipientId: Types.ObjectId;
+  recipientId: Types.ObjectId
 
   @Prop({ type: Types.ObjectId, ref: "User", required: true })
-  actorId: Types.ObjectId;
+  actorId: Types.ObjectId
 
   @Prop({ type: String, required: true })
-  type: string; // e.g. "reply" | "like" | "reshare" | "settlement"
+  type: string // e.g. "reply" | "like" | "reshare" | "settlement"
 
   @Prop({ type: String, required: true })
-  title: string;
+  title: string
 
   @Prop({ type: String, required: true })
-  body: string;
+  body: string
 
   @Prop({ type: String, default: null })
-  targetId: string | null;
+  targetId: string | null
 
   @Prop({ type: Boolean, default: false, index: true })
-  read: boolean;
+  read: boolean
 
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: Date
+  updatedAt?: Date
 }
 
-export const NotificationSchema = SchemaFactory.createForClass(Notification);
+export const NotificationSchema = SchemaFactory.createForClass(Notification)

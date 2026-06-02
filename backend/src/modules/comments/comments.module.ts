@@ -1,11 +1,11 @@
-import { Module, forwardRef } from "@nestjs/common";
-import { MongooseModule } from "@nestjs/mongoose";
-import { Comment, CommentSchema } from "./comments.model";
-import { User, UserSchema } from "../users/users.model";
-import { Post, PostSchema } from "../posts/posts.model";
-import { CommentsService } from "./comments.service";
-import { CommentsController } from "./comments.controller";
-import { PostsModule } from "../posts/posts.module";
+import { Module, forwardRef } from "@nestjs/common"
+import { MongooseModule } from "@nestjs/mongoose"
+import { Comment, CommentSchema } from "./comments.model"
+import { User, UserSchema } from "../users/users.model"
+import { Post, PostSchema } from "../posts/posts.model"
+import { CommentsService } from "./comments.service"
+import { CommentsController } from "./comments.controller"
+import { PostsModule } from "../posts/posts.module"
 
 @Module({
   imports: [

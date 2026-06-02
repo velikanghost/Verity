@@ -1,9 +1,9 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { type ReactNode } from 'react'
-import FollowButton from '@/components/profile/FollowButton'
-import { displayHandle, displayName, type Profile } from '@/lib/verity'
+import Link from "next/link"
+import { type ReactNode } from "react"
+import FollowButton from "@/components/profile/FollowButton"
+import { displayHandle, displayName, type Profile } from "@/lib/verity"
 
 interface UserHoverCardProps {
   profile?: Profile | null
@@ -21,7 +21,9 @@ export default function UserHoverCard({
   const profileHref = href || `/profile/${encodeURIComponent(profile.id)}`
   const accuracy =
     profile.freeVotesTotal && profile.freeVotesTotal > 0
-      ? Math.round(((profile.freeVotesCorrect || 0) / profile.freeVotesTotal) * 100)
+      ? Math.round(
+          ((profile.freeVotesCorrect || 0) / profile.freeVotesTotal) * 100,
+        )
       : 0
 
   return (
@@ -54,8 +56,14 @@ export default function UserHoverCard({
           )}
 
           <span className="grid grid-cols-3 gap-2">
-            <HoverStat label="Followers" value={(profile.followersCount || 0).toLocaleString()} />
-            <HoverStat label="Markets" value={(profile.freeVotesTotal || 0).toLocaleString()} />
+            <HoverStat
+              label="Followers"
+              value={(profile.followersCount || 0).toLocaleString()}
+            />
+            <HoverStat
+              label="Markets"
+              value={(profile.freeVotesTotal || 0).toLocaleString()}
+            />
             <HoverStat label="Accuracy" value={`${accuracy}%`} />
           </span>
         </span>

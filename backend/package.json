@@ -13,6 +13,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "seed": "ts-node src/seed.ts",
+    "seed:admin": "ts-node src/scripts/seed-admin.ts",
     "test:backend-e2e": "ts-node src/scripts/test-backend-e2e.ts",
     "test:pyth-live": "ts-node src/scripts/test-pyth-live.ts",
     "test:resolver-live": "ts-node src/scripts/test-resolver-live.ts",

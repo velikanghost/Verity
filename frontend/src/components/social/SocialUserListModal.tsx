@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { Search, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import FollowButton from '@/components/profile/FollowButton'
-import { displayHandle, displayName, type Profile } from '@/lib/verity'
+import Link from "next/link"
+import { Search, X } from "lucide-react"
+import { useMemo, useState } from "react"
+import FollowButton from "@/components/profile/FollowButton"
+import { displayHandle, displayName, type Profile } from "@/lib/verity"
 
 interface SocialUserListModalProps {
   open: boolean
@@ -21,7 +21,7 @@ export default function SocialUserListModal({
   users,
   onClose,
 }: SocialUserListModalProps) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState("")
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase()
     if (!normalized) return users
@@ -30,7 +30,7 @@ export default function SocialUserListModal({
       return (
         displayName(user).toLowerCase().includes(normalized) ||
         displayHandle(user).toLowerCase().includes(normalized) ||
-        (user.bio || '').toLowerCase().includes(normalized)
+        (user.bio || "").toLowerCase().includes(normalized)
       )
     })
   }, [query, users])

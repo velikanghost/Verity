@@ -1,8 +1,8 @@
-import { Module } from "@nestjs/common";
-import { MongooseModule } from "@nestjs/mongoose";
-import { CircleWalletService } from "./circle-wallet.service";
-import { CircleWalletController } from "./circle-wallet.controller";
-import { User, UserSchema } from "../users/users.model";
+import { Module } from "@nestjs/common"
+import { MongooseModule } from "@nestjs/mongoose"
+import { CircleWalletService } from "./circle-wallet.service"
+import { CircleWalletController } from "./circle-wallet.controller"
+import { User, UserSchema } from "../users/users.model"
 
 @Module({
   imports: [

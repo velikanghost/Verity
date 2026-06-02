@@ -9,14 +9,14 @@ import {
   Query,
   UseGuards,
   Request,
-} from '@nestjs/common';
-import { MarketsService } from './markets.service';
+} from "@nestjs/common"
+import { MarketsService } from "./markets.service"
 import {
   FetchMarketsQueryDto,
   CastFreeVoteDto,
   ExecuteTradeDto,
   ResolveMarketDto,
-} from './markets.dto';
+} from "./markets.dto"
 import {
   ApiTags,
   ApiOperation,
@@ -25,17 +25,18 @@ import {
   ApiQuery,
   ApiResponse,
   ApiBearerAuth,
-} from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+} from "@nestjs/swagger"
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard"
+import { AdminGuard } from "../../common/guards/admin.guard"
 
-@ApiTags('markets')
-@Controller('markets')
+@ApiTags("markets")
+@Controller("markets")
 export class MarketsController {
   constructor(private readonly marketsService: MarketsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Fetch all prediction markets with filters' })
-  @ApiResponse({ status: 200, description: 'Markets fetched successfully.' })
+  @ApiOperation({ summary: "Fetch all prediction markets with filters" })
+  @ApiResponse({ status: 200, description: "Markets fetched successfully." })
   async fetchMarkets(@Query() query: FetchMarketsQueryDto) {
     return this.marketsService.fetchMarkets({
       status: query.status as any,
@@ -44,167 +45,176 @@ export class MarketsController {
       newest: query.newest,
       qualified: query.qualified,
       open_for_votes: query.open_for_votes,
-    });
+    })
   }
 
-  @Get('user-positions/:userId')
+  @Get("user-positions/:userId")
   @ApiOperation({
-    summary: 'Fetch all trading positions for a user across all markets',
+    summary: "Fetch all trading positions for a user across all markets",
   })
-  @ApiParam({ name: 'userId', description: 'User profile ID' })
-  async fetchAllUserPositions(@Param('userId') userId: string) {
-    return this.marketsService.fetchAllUserPositions(userId);
+  @ApiParam({ name: "userId", description: "User profile ID" })
+  async fetchAllUserPositions(@Param("userId") userId: string) {
+    return this.marketsService.fetchAllUserPositions(userId)
   }
 
-  @Get(':marketId')
+  @Get("user-trades/:userId")
   @ApiOperation({
-    summary: 'Get detailed information about a single prediction market',
+    summary: "Fetch all trading history for a user across all markets",
+  })
+  @ApiParam({ name: "userId", description: "User profile ID" })
+  async fetchAllUserTrades(@Param("userId") userId: string) {
+    return this.marketsService.fetchAllUserTrades(userId)
+  }
+
+  @Get(":marketId")
+  @ApiOperation({
+    summary: "Get detailed information about a single prediction market",
   })
   @ApiParam({
-    name: 'marketId',
-    description: 'Market ID',
-    example: '60d0fe4f5311236168a109ca',
+    name: "marketId",
+    description: "Market ID",
+    example: "60d0fe4f5311236168a109ca",
   })
   @ApiQuery({
-    name: 'userId',
+    name: "userId",
     required: false,
-    description: 'Optional user ID to get viewer vote status',
+    description: "Optional user ID to get viewer vote status",
   })
   @ApiResponse({
     status: 200,
-    description: 'Market detail fetched successfully.',
+    description: "Market detail fetched successfully.",
   })
   async fetchMarketDetail(
-    @Param('marketId') marketId: string,
-    @Query('userId') userId?: string,
+    @Param("marketId") marketId: string,
+    @Query("userId") userId?: string,
   ) {
-    return this.marketsService.fetchMarketDetail(marketId, userId);
+    return this.marketsService.fetchMarketDetail(marketId, userId)
   }
 
-  @Get(':marketId/positions')
+  @Get(":marketId/positions")
   @ApiOperation({
-    summary: 'Get trading positions in a market for a specific user',
+    summary: "Get trading positions in a market for a specific user",
   })
   @ApiParam({
-    name: 'marketId',
-    description: 'Market ID',
-    example: '60d0fe4f5311236168a109ca',
+    name: "marketId",
+    description: "Market ID",
+    example: "60d0fe4f5311236168a109ca",
   })
   @ApiQuery({
-    name: 'profileId',
-    description: 'User profile ID to fetch positions for',
+    name: "profileId",
+    description: "User profile ID to fetch positions for",
   })
   @ApiResponse({
     status: 200,
-    description: 'Positions retrieved successfully.',
+    description: "Positions retrieved successfully.",
   })
   async fetchMarketPositions(
-    @Param('marketId') marketId: string,
-    @Query('profileId') profileId: string,
+    @Param("marketId") marketId: string,
+    @Query("profileId") profileId: string,
   ) {
-    return this.marketsService.fetchMarketPositions(marketId, profileId);
+    return this.marketsService.fetchMarketPositions(marketId, profileId)
   }
 
-  @Get(':marketId/trades')
-  @ApiOperation({ summary: 'Get list of recent trades in a prediction market' })
+  @Get(":marketId/trades")
+  @ApiOperation({ summary: "Get list of recent trades in a prediction market" })
   @ApiParam({
-    name: 'marketId',
-    description: 'Market ID',
-    example: '60d0fe4f5311236168a109ca',
+    name: "marketId",
+    description: "Market ID",
+    example: "60d0fe4f5311236168a109ca",
   })
   @ApiResponse({
     status: 200,
-    description: 'Recent trades retrieved successfully.',
+    description: "Recent trades retrieved successfully.",
   })
-  async fetchMarketTrades(@Param('marketId') marketId: string) {
-    return this.marketsService.fetchMarketTrades(marketId);
+  async fetchMarketTrades(@Param("marketId") marketId: string) {
+    return this.marketsService.fetchMarketTrades(marketId)
   }
 
-  @Post(':marketId/vote')
+  @Post(":marketId/vote")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Cast a free vote on a market',
+    summary: "Cast a free vote on a market",
   })
   @ApiParam({
-    name: 'marketId',
-    description: 'Market ID',
-    example: '60d0fe4f5311236168a109ca',
+    name: "marketId",
+    description: "Market ID",
+    example: "60d0fe4f5311236168a109ca",
   })
   @ApiBody({ type: CastFreeVoteDto })
-  @ApiResponse({ status: 200, description: 'Free vote cast successfully.' })
+  @ApiResponse({ status: 200, description: "Free vote cast successfully." })
   async castFreeVote(
-    @Param('marketId') marketId: string,
+    @Param("marketId") marketId: string,
     @Body() dto: CastFreeVoteDto,
     @Request() req: any,
   ) {
-    const authorId = req.user.id;
-    return this.marketsService.castFreeVote(marketId, authorId, dto.side);
+    const authorId = req.user.id
+    return this.marketsService.castFreeVote(marketId, authorId, dto.side)
   }
 
-  @Post(':marketId/approve-trading')
-  @UseGuards(JwtAuthGuard)
+  @Post(":marketId/approve-trading")
+  @UseGuards(JwtAuthGuard, AdminGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Admin: Approve a qualified market, moving it to funding_pool status',
+      "Admin: Approve a qualified market, moving it to funding_pool status",
   })
   @ApiParam({
-    name: 'marketId',
-    description: 'Market ID',
-    example: '60d0fe4f5311236168a109ca',
+    name: "marketId",
+    description: "Market ID",
+    example: "60d0fe4f5311236168a109ca",
   })
   @ApiResponse({
     status: 200,
-    description: 'Market approved and transitioned to funding_pool.',
+    description: "Market approved and transitioned to funding_pool.",
   })
-  async approveMarketForTrading(@Param('marketId') marketId: string) {
-    return this.marketsService.approveMarketForTrading(marketId);
+  async approveMarketForTrading(@Param("marketId") marketId: string) {
+    return this.marketsService.approveMarketForTrading(marketId)
   }
 
-  @Post(':marketId/trade')
+  @Post(":marketId/trade")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Execute outcome token buy/sell trades on a market',
+    summary: "Execute outcome token buy/sell trades on a market",
   })
   @ApiParam({
-    name: 'marketId',
-    description: 'Market ID',
-    example: '60d0fe4f5311236168a109ca',
+    name: "marketId",
+    description: "Market ID",
+    example: "60d0fe4f5311236168a109ca",
   })
   @ApiBody({ type: ExecuteTradeDto })
-  @ApiResponse({ status: 200, description: 'Trade processed successfully.' })
+  @ApiResponse({ status: 200, description: "Trade processed successfully." })
   async executeMarketTrade(
-    @Param('marketId') marketId: string,
+    @Param("marketId") marketId: string,
     @Body() dto: ExecuteTradeDto,
     @Request() req: any,
   ) {
     // Override profileId with authenticated user
-    dto.profileId = req.user.id;
-    return this.marketsService.executeMarketTrade(marketId, dto);
+    dto.profileId = req.user.id
+    return this.marketsService.executeMarketTrade(marketId, dto)
   }
 
-  @Post(':marketId/resolve')
-  @UseGuards(JwtAuthGuard)
+  @Post(":marketId/resolve")
+  @UseGuards(JwtAuthGuard, AdminGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Admin: Resolve a market with winning outcome after trading is finished',
+      "Admin: Resolve a market with winning outcome after trading is finished",
   })
   @ApiParam({
-    name: 'marketId',
-    description: 'Market ID',
-    example: '60d0fe4f5311236168a109ca',
+    name: "marketId",
+    description: "Market ID",
+    example: "60d0fe4f5311236168a109ca",
   })
   @ApiBody({ type: ResolveMarketDto })
-  @ApiResponse({ status: 200, description: 'Market resolved successfully.' })
+  @ApiResponse({ status: 200, description: "Market resolved successfully." })
   async resolveMarket(
-    @Param('marketId') marketId: string,
+    @Param("marketId") marketId: string,
     @Body() dto: ResolveMarketDto,
   ) {
     return this.marketsService.resolveMarket(
@@ -212,27 +222,27 @@ export class MarketsController {
       dto.winningOutcome,
       dto.txHash,
       dto.adminAddress,
-    );
+    )
   }
 
-  @Post(':marketId/dev-qualify')
+  @Post(":marketId/dev-qualify")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Dev: Skip vote qualification and set market to qualified (non-production only)',
+      "Dev: Skip vote qualification and set market to qualified (non-production only)",
   })
   @ApiParam({
-    name: 'marketId',
-    description: 'Market ID',
-    example: '60d0fe4f5311236168a109ca',
+    name: "marketId",
+    description: "Market ID",
+    example: "60d0fe4f5311236168a109ca",
   })
   @ApiResponse({
     status: 200,
-    description: 'Market fast-tracked to qualified status.',
+    description: "Market fast-tracked to qualified status.",
   })
-  async devQualify(@Param('marketId') marketId: string) {
-    return this.marketsService.devQualify(marketId);
+  async devQualify(@Param("marketId") marketId: string) {
+    return this.marketsService.devQualify(marketId)
   }
 }

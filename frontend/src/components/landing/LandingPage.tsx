@@ -1,7 +1,7 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { useAuth } from "@/components/providers/AuthModals";
+import Link from "next/link"
+import { useAuth } from "@/components/providers/AuthModals"
 import {
   ArrowRight,
   BadgeCheck,
@@ -12,8 +12,8 @@ import {
   Sparkles,
   TrendingUp,
   UsersRound,
-} from "lucide-react";
-import ThemeToggle from "@/components/layout/ThemeToggle";
+} from "lucide-react"
+import ThemeToggle from "@/components/layout/ThemeToggle"
 
 const steps = [
   {
@@ -36,27 +36,34 @@ const steps = [
     label: "Trade outcomes",
     text: "Qualified markets open for USDC-backed trading and rewards.",
   },
-];
+]
 
 const stats = [
   ["Signal first", "Markets start with social conviction"],
   ["Zero Signing", "Developer-controlled smart contract wallets"],
   ["Pool rewards", "Creators and LPs can earn after bonding"],
-];
+]
 
 const statIcons = {
   "Signal first": MessageSquareText,
   "Zero Signing": ShieldCheck,
   "Pool rewards": CircleDollarSign,
-};
+}
 
-export default function LandingPage({ loading = false }: { loading?: boolean }) {
-  const { login } = useAuth();
+export default function LandingPage({
+  loading = false,
+}: {
+  loading?: boolean
+}) {
+  const { login } = useAuth()
 
   return (
     <main className="min-h-screen overflow-hidden bg-warm-canvas text-charcoal-primary">
       <header className="mx-auto flex w-full max-w-[1180px] items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-        <Link className="clickable-surface flex items-center gap-3 rounded-[14px] p-2" href="/">
+        <Link
+          className="clickable-surface flex items-center gap-3 rounded-[14px] p-2"
+          href="/"
+        >
           <span className="verity-blob landing-wiggle flex h-10 w-10 items-center justify-center bg-sunburst-yellow font-semibold text-midnight [--landing-rotate:-6deg]">
             V
             <span className="verity-blob-smile" />
@@ -111,7 +118,7 @@ export default function LandingPage({ loading = false }: { loading?: boolean }) 
 
           <div className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-4">
             {stats.map(([label, text]) => {
-              const Icon = statIcons[label as keyof typeof statIcons];
+              const Icon = statIcons[label as keyof typeof statIcons]
               return (
                 <div
                   className="landing-pop rounded-[12px] bg-white-surface p-5 border border-border/60 shadow-[var(--shadow-subtle)] hover:shadow-[var(--shadow-sm)] hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3.5"
@@ -131,7 +138,7 @@ export default function LandingPage({ loading = false }: { loading?: boolean }) 
                     {text}
                   </p>
                 </div>
-              );
+              )
             })}
           </div>
         </div>
@@ -182,7 +189,7 @@ export default function LandingPage({ loading = false }: { loading?: boolean }) 
         </div>
       </section>
     </main>
-  );
+  )
 }
 
 function LandingVisual() {
@@ -256,7 +263,9 @@ function LandingVisual() {
             <p className="text-sm font-semibold tracking-[-0.18px]">
               120 people rallied
             </p>
-            <p className="font-mono text-[11px] text-ash">signals before trading</p>
+            <p className="font-mono text-[11px] text-ash">
+              signals before trading
+            </p>
           </div>
         </div>
       </div>
@@ -270,10 +279,12 @@ function LandingVisual() {
             <p className="text-sm font-semibold tracking-[-0.18px]">
               Zero signing latency
             </p>
-            <p className="font-mono text-[11px] text-ash">developer-controlled wallet flow</p>
+            <p className="font-mono text-[11px] text-ash">
+              developer-controlled wallet flow
+            </p>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

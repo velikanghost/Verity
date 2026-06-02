@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import {
   Bell,
   CheckCircle2,
@@ -9,15 +9,15 @@ import {
   Heart,
   UserPlus,
   Loader2,
-} from 'lucide-react'
-import PagePanel from '@/components/layout/PagePanel'
+} from "lucide-react"
+import PagePanel from "@/components/layout/PagePanel"
 import {
   useNotificationsQuery,
   useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
-} from '@/store/verity/verityQueries'
-import { useWalletProfile } from '@/hooks/useWalletProfile'
-import { relativeTime } from '@/lib/verity'
+} from "@/store/verity/verityQueries"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
+import { relativeTime } from "@/lib/verity"
 
 const ICON_MAP: Record<string, any> = {
   reply: MessageCircle,
@@ -37,13 +37,14 @@ export default function NotificationsPage() {
     data: notifications = [],
     isLoading: notificationsLoading,
     refetch,
-  } = useNotificationsQuery(profile?.id || '')
+  } = useNotificationsQuery(profile?.id || "")
   const { mutateAsync: markRead } = useMarkNotificationReadMutation()
-  const { mutateAsync: markAllRead, isPending: markAllReadPending } = useMarkAllNotificationsReadMutation()
+  const { mutateAsync: markAllRead, isPending: markAllReadPending } =
+    useMarkAllNotificationsReadMutation()
 
   async function handleMarkRead(id: string) {
     try {
-      await markRead({ notificationId: id, userId: profile?.id || '' })
+      await markRead({ notificationId: id, userId: profile?.id || "" })
       await refetch()
     } catch (e) {
       // Ignore
@@ -130,8 +131,8 @@ export default function NotificationsPage() {
               <article
                 className={`flex gap-3 border-b border-dashed border-stone-surface p-4 transition-colors last:border-b-0 cursor-pointer sm:gap-4 sm:p-5 ${
                   notification.read
-                    ? 'hover:bg-stone-surface/30 opacity-70'
-                    : 'bg-sky-blue/5 hover:bg-sky-blue/10'
+                    ? "hover:bg-stone-surface/30 opacity-70"
+                    : "bg-sky-blue/5 hover:bg-sky-blue/10"
                 }`}
                 key={notification.id}
                 onClick={() => {
@@ -139,7 +140,14 @@ export default function NotificationsPage() {
                     void handleMarkRead(notification.id)
                   }
                   if (notification.targetId) {
-                    if (['settlement', 'market_move', 'market_funded', 'market_registered'].includes(notification.type?.toLowerCase())) {
+                    if (
+                      [
+                        "settlement",
+                        "market_move",
+                        "market_funded",
+                        "market_registered",
+                      ].includes(notification.type?.toLowerCase())
+                    ) {
                       router.push(`/markets/${notification.targetId}`)
                     } else {
                       router.push(`/posts/${notification.targetId}`)
@@ -150,8 +158,8 @@ export default function NotificationsPage() {
                 <div
                   className={`verity-blob flex h-10 w-10 shrink-0 items-center justify-center text-midnight ${
                     notification.read
-                      ? 'bg-stone-surface text-ash'
-                      : 'bg-sky-blue text-midnight'
+                      ? "bg-stone-surface text-ash"
+                      : "bg-sky-blue text-midnight"
                   }`}
                 >
                   <IconComponent className="h-5 w-5" />
@@ -162,8 +170,8 @@ export default function NotificationsPage() {
                     <h3
                       className={`font-semibold tracking-[-0.18px] truncate ${
                         notification.read
-                          ? 'text-graphite font-normal'
-                          : 'text-charcoal-primary'
+                          ? "text-graphite font-normal"
+                          : "text-charcoal-primary"
                       }`}
                     >
                       {notification.title}

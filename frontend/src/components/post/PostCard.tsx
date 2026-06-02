@@ -1,9 +1,9 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import UserHoverCard from '@/components/social/UserHoverCard'
-import { Heart, MessageCircle, Repeat2, Share } from 'lucide-react'
-import type { Profile } from '@/lib/verity'
+import Link from "next/link"
+import UserHoverCard from "@/components/social/UserHoverCard"
+import { Heart, MessageCircle, Repeat2, Share } from "lucide-react"
+import type { Profile } from "@/lib/verity"
 
 export interface PostCardProps {
   name: string
@@ -40,7 +40,7 @@ export default function PostCard({
   onReshare,
   onShare,
   onOpenDetails,
-  avatarColor = 'bg-sunburst-yellow',
+  avatarColor = "bg-sunburst-yellow",
   profileHref,
   profile,
 }: PostCardProps) {
@@ -49,12 +49,12 @@ export default function PostCard({
       className="clickable-card verity-card flex gap-3 p-4 sm:gap-4 sm:p-5"
       onClick={onOpenDetails}
       onKeyDown={(event) => {
-        if (onOpenDetails && (event.key === 'Enter' || event.key === ' ')) {
+        if (onOpenDetails && (event.key === "Enter" || event.key === " ")) {
           event.preventDefault()
           onOpenDetails()
         }
       }}
-      role={onOpenDetails ? 'link' : undefined}
+      role={onOpenDetails ? "link" : undefined}
       tabIndex={onOpenDetails ? 0 : undefined}
     >
       <div className="shrink-0">
@@ -105,7 +105,7 @@ export default function PostCard({
               {handle}
             </span>
           )}
-          <span className="text-ash">{'\u00B7'}</span>
+          <span className="text-ash">{"\u00B7"}</span>
           <span className="font-mono text-xs text-ash hover:underline">
             {time}
           </span>
@@ -134,7 +134,7 @@ export default function PostCard({
           <button
             aria-label="Reshare"
             aria-pressed={reshared}
-            className={`clickable-icon group flex items-center gap-2 px-1 hover:text-foreground ${reshared ? 'text-meadow-green' : 'text-ash'}`}
+            className={`clickable-icon group flex items-center gap-2 px-1 hover:text-foreground ${reshared ? "text-meadow-green" : "text-ash"}`}
             onClick={onReshare}
             type="button"
           >
@@ -147,12 +147,12 @@ export default function PostCard({
           <button
             aria-label="Like"
             aria-pressed={liked}
-            className={`clickable-icon group flex items-center gap-2 px-1 hover:text-ember-orange ${liked ? 'text-ember-orange' : 'text-ash'}`}
+            className={`clickable-icon group flex items-center gap-2 px-1 hover:text-ember-orange ${liked ? "text-ember-orange" : "text-ash"}`}
             onClick={onLike}
             type="button"
           >
             <span className="rounded-full p-2">
-              <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+              <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
             </span>
             <span className="text-xs">{likes}</span>
           </button>

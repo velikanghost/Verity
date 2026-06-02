@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { Save } from 'lucide-react'
-import { type Profile } from '@/lib/verity'
-import { useUpdateProfileMutation } from '@/store/verity/verityQueries'
-import { toast } from 'react-hot-toast'
+import { useState } from "react"
+import { Save } from "lucide-react"
+import { type Profile } from "@/lib/verity"
+import { useUpdateProfileMutation } from "@/store/verity/verityQueries"
+import { toast } from "react-hot-toast"
 
 interface ProfileFormProps {
   profile: Profile | null
@@ -17,12 +17,12 @@ export default function ProfileForm({
   loading,
   error = null,
 }: ProfileFormProps) {
-  const [username, setUsername] = useState(profile?.username || '')
-  const [display, setDisplay] = useState(profile?.display_name || '')
-  const [avatar, setAvatar] = useState(profile?.avatar_url || '')
-  const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || '')
+  const [username, setUsername] = useState(profile?.username || "")
+  const [display, setDisplay] = useState(profile?.display_name || "")
+  const [avatar, setAvatar] = useState(profile?.avatar_url || "")
+  const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || "")
   const [avatarNotice, setAvatarNotice] = useState<string | null>(null)
-  const [bio, setBio] = useState(profile?.bio || '')
+  const [bio, setBio] = useState(profile?.bio || "")
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const { mutateAsync: updateProfile } = useUpdateProfileMutation()
@@ -31,8 +31,8 @@ export default function ProfileForm({
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file.')
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.")
       return
     }
 
@@ -40,7 +40,7 @@ export default function ProfileForm({
     reader.onload = (e) => {
       const img = new Image()
       img.onload = () => {
-        const canvas = document.createElement('canvas')
+        const canvas = document.createElement("canvas")
         const MAX_WIDTH = 160
         const MAX_HEIGHT = 160
         let width = img.width
@@ -60,23 +60,25 @@ export default function ProfileForm({
 
         canvas.width = width
         canvas.height = height
-        const ctx = canvas.getContext('2d')
+        const ctx = canvas.getContext("2d")
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.8)
           setAvatarPreview(dataUrl)
 
           if (dataUrl.length <= 500) {
             setAvatar(dataUrl)
-            setAvatarNotice('Image compressed and ready to save.')
-            toast.success('Image loaded.')
+            setAvatarNotice("Image compressed and ready to save.")
+            toast.success("Image loaded.")
             return
           }
 
           setAvatarNotice(
-            'Preview loaded, but direct image uploads need backend storage. Paste a hosted image URL below to save it publicly.'
+            "Preview loaded, but direct image uploads need backend storage. Paste a hosted image URL below to save it publicly.",
           )
-          toast.error('Upload preview loaded. Use an image URL to save it for now.')
+          toast.error(
+            "Upload preview loaded. Use an image URL to save it for now.",
+          )
         }
       }
       img.src = e.target?.result as string
@@ -94,14 +96,15 @@ export default function ProfileForm({
       /^data:image\//i.test(trimmedAvatar)
 
     if (!isAvatarLikeUrl) {
-      const errMsg = 'Avatar must be a hosted image URL.'
+      const errMsg = "Avatar must be a hosted image URL."
       setMessage(errMsg)
       toast.error(errMsg)
       return
     }
 
     if (trimmedAvatar.length > 500) {
-      const errMsg = 'Avatar URL is too long. Use a hosted image link instead of a direct file upload.'
+      const errMsg =
+        "Avatar URL is too long. Use a hosted image link instead of a direct file upload."
       setMessage(errMsg)
       toast.error(errMsg)
       return
@@ -120,10 +123,11 @@ export default function ProfileForm({
           bio: bio.trim() || null,
         },
       })
-      setMessage('Profile saved.')
-      toast.success('Profile updated successfully!')
+      setMessage("Profile saved.")
+      toast.success("Profile updated successfully!")
     } catch (caught) {
-      const errMsg = caught instanceof Error ? caught.message : 'Unable to save profile.'
+      const errMsg =
+        caught instanceof Error ? caught.message : "Unable to save profile."
       setMessage(errMsg)
       toast.error(errMsg)
     } finally {
@@ -159,7 +163,7 @@ export default function ProfileForm({
             value={display}
           />
         </div>
-        
+
         <div>
           <label className="block text-xs font-semibold text-ash uppercase tracking-wider mb-1">
             Avatar Picture
@@ -203,9 +207,7 @@ export default function ProfileForm({
             value={avatar}
           />
           {avatarNotice && (
-            <p className="mt-2 text-xs leading-5 text-ash">
-              {avatarNotice}
-            </p>
+            <p className="mt-2 text-xs leading-5 text-ash">{avatarNotice}</p>
           )}
         </div>
 
@@ -225,7 +227,7 @@ export default function ProfileForm({
 
       {(message || error || loading) && (
         <p className="mt-3 text-sm text-ash">
-          {loading ? 'Loading profile...' : message || error}
+          {loading ? "Loading profile..." : message || error}
         </p>
       )}
 
@@ -235,7 +237,7 @@ export default function ProfileForm({
         onClick={save}
         type="button"
       >
-        {saving ? 'Saving' : 'Save Profile'} <Save className="h-4 w-4" />
+        {saving ? "Saving" : "Save Profile"} <Save className="h-4 w-4" />
       </button>
     </>
   )

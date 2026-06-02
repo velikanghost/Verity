@@ -1,5 +1,5 @@
-import PagePanel from '@/components/layout/PagePanel'
-import MarketDetail from '@/components/markets/MarketDetail'
+import PagePanel from "@/components/layout/PagePanel"
+import MarketDetail from "@/components/markets/MarketDetail"
 
 export default async function MarketDetailPage({
   params,

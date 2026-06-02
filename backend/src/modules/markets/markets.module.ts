@@ -1,5 +1,5 @@
-import { Module, forwardRef } from "@nestjs/common";
-import { MongooseModule } from "@nestjs/mongoose";
+import { Module, forwardRef } from "@nestjs/common"
+import { MongooseModule } from "@nestjs/mongoose"
 import {
   Market,
   MarketSchema,
@@ -11,14 +11,14 @@ import {
   MarketPositionSchema,
   MarketTrade,
   MarketTradeSchema,
-} from "./markets.model";
-import { User, UserSchema } from "../users/users.model";
-import { Post, PostSchema } from "../posts/posts.model";
-import { MarketsService } from "./markets.service";
-import { MarketsKeeperService } from "./marketskeeper.service";
-import { MarketsController } from "./markets.controller";
-import { PostsModule } from "../posts/posts.module";
-import { AgentModule } from "../agent/agent.module";
+} from "./markets.model"
+import { User, UserSchema } from "../users/users.model"
+import { Post, PostSchema } from "../posts/posts.model"
+import { MarketsService } from "./markets.service"
+import { MarketsKeeperService } from "./marketskeeper.service"
+import { MarketsController } from "./markets.controller"
+import { PostsModule } from "../posts/posts.module"
+import { AgentModule } from "../agent/agent.module"
 
 @Module({
   imports: [

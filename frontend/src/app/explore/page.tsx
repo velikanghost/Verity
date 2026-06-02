@@ -1,8 +1,15 @@
-import { Search, Sparkles, TrendingUp } from "lucide-react";
-import PagePanel from "@/components/layout/PagePanel";
-import PeopleDiscovery from "@/components/profile/PeopleDiscovery";
+import { Search, Sparkles, TrendingUp } from "lucide-react"
+import PagePanel from "@/components/layout/PagePanel"
+import PeopleDiscovery from "@/components/profile/PeopleDiscovery"
 
-const TOPICS = ["AI/Tech", "Crypto", "Culture", "Economics", "Politics", "Sports"];
+const TOPICS = [
+  "AI/Tech",
+  "Crypto",
+  "Culture",
+  "Economics",
+  "Politics",
+  "Sports",
+]
 
 const DISCOVERIES = [
   {
@@ -20,7 +27,7 @@ const DISCOVERIES = [
     meta: "5.0k USDC · 41% YES",
     trend: "+4%",
   },
-];
+]
 
 export default function ExplorePage() {
   return (
@@ -74,14 +81,18 @@ export default function ExplorePage() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="font-semibold leading-snug tracking-[-0.18px] text-charcoal-primary">{item.title}</h3>
+                <h3 className="font-semibold leading-snug tracking-[-0.18px] text-charcoal-primary">
+                  {item.title}
+                </h3>
                 <p className="mt-2 font-mono text-xs text-ash">{item.meta}</p>
               </div>
-              <span className="font-mono text-sm font-semibold text-meadow-green">{item.trend}</span>
+              <span className="font-mono text-sm font-semibold text-meadow-green">
+                {item.trend}
+              </span>
             </div>
           </article>
         ))}
       </section>
     </PagePanel>
-  );
+  )
 }

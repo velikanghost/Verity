@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Home,
   Search,
@@ -14,20 +14,20 @@ import {
   TrendingUp,
   MessageSquareText,
   X,
-} from 'lucide-react'
-import { useState } from 'react'
-import ThemeToggle from '@/components/layout/ThemeToggle'
-import SidebarProfile from '@/components/layout/SidebarProfile'
-import { useWalletProfile } from '@/hooks/useWalletProfile'
-import { useNotificationsQuery } from '@/store/verity/verityQueries'
+} from "lucide-react"
+import { useState } from "react"
+import ThemeToggle from "@/components/layout/ThemeToggle"
+import SidebarProfile from "@/components/layout/SidebarProfile"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
+import { useNotificationsQuery } from "@/store/verity/verityQueries"
 
 const NAV_ITEMS = [
-  { icon: Home, label: 'Home', href: '/' },
-  { icon: Search, label: 'Explore', href: '/explore' },
-  { icon: CircleHelp, label: 'How it works', href: '/how-it-works' },
-  { icon: Bell, label: 'Notifications', href: '/notifications' },
-  { icon: Wallet, label: 'Wallet', href: '/wallet' },
-  { icon: User, label: 'Profile', href: '/profile' },
+  { icon: Home, label: "Home", href: "/" },
+  { icon: Search, label: "Explore", href: "/explore" },
+  { icon: CircleHelp, label: "How it works", href: "/how-it-works" },
+  { icon: Bell, label: "Notifications", href: "/notifications" },
+  { icon: Wallet, label: "Portfolio", href: "/portfolio" },
+  { icon: User, label: "Profile", href: "/profile" },
 ]
 
 export default function Sidebar() {
@@ -36,22 +36,22 @@ export default function Sidebar() {
   const [composeOpen, setComposeOpen] = useState(false)
 
   const { profile } = useWalletProfile()
-  const { data: notifications = [] } = useNotificationsQuery(profile?.id || '')
+  const { data: notifications = [] } = useNotificationsQuery(profile?.id || "")
   const unreadCount = notifications.filter((n: any) => !n.read).length
 
-  function openComposer(intent: 'take' | 'market') {
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem('verity-compose-intent', intent)
+  function openComposer(intent: "take" | "market") {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("verity-compose-intent", intent)
       window.dispatchEvent(
-        new CustomEvent('verity-compose-intent', { detail: intent }),
+        new CustomEvent("verity-compose-intent", { detail: intent }),
       )
     }
     setComposeOpen(false)
-    if (pathname !== '/') router.push('/')
+    if (pathname !== "/") router.push("/")
   }
 
   return (
-    <div className="verity-card flex h-full flex-col p-2">
+    <div className="verity-card flex h-full flex-col p-4">
       {/* Logo */}
       <div className="mb-3 flex items-center justify-between">
         <Link
@@ -75,7 +75,7 @@ export default function Sidebar() {
       <nav className="flex-1 space-y-1.5">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href
-          const href = item.href === '/profile' ? `/profile` : item.href
+          const href = item.href === "/profile" ? `/profile` : item.href
           return (
             <Link
               key={item.label}
@@ -85,13 +85,13 @@ export default function Sidebar() {
               <div
                 className={`flex items-center gap-3 rounded-[10px] p-3 text-[15px] transition-all duration-200 xl:w-full xl:px-4 xl:py-3 ${
                   isActive
-                    ? 'bg-inverse text-inverse-text font-semibold'
-                    : 'clickable-surface text-graphite'
+                    ? "bg-inverse text-inverse-text font-semibold"
+                    : "clickable-surface text-graphite"
                 }`}
               >
                 <div className="relative flex items-center justify-center shrink-0">
                   <item.icon className="h-6 w-6 xl:h-5 xl:w-5" />
-                  {item.href === '/notifications' && unreadCount > 0 && (
+                  {item.href === "/notifications" && unreadCount > 0 && (
                     <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-coral-red text-[8px] font-bold text-white shadow-sm ring-1.5 ring-surface-solid">
                       {unreadCount}
                     </span>
@@ -127,7 +127,7 @@ export default function Sidebar() {
 
               <button
                 className="clickable-surface flex w-full items-center gap-3 rounded-[10px] p-3 text-left"
-                onClick={() => openComposer('market')}
+                onClick={() => openComposer("market")}
                 type="button"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-ember-orange/10 text-ember-orange">
@@ -145,7 +145,7 @@ export default function Sidebar() {
 
               <button
                 className="clickable-surface mt-1 flex w-full items-center gap-3 rounded-[10px] p-3 text-left"
-                onClick={() => openComposer('take')}
+                onClick={() => openComposer("take")}
                 type="button"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-sky-blue/10 text-sky-blue">

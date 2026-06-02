@@ -1,17 +1,17 @@
-'use client'
+"use client"
 
-import { useMemo, useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import ComposeBox from '@/components/feed/ComposeBox'
-import FeedTabs, { type FeedTabId } from '@/components/feed/FeedTabs'
-import MarketCard from '@/components/post/MarketCard'
-import PostCard from '@/components/post/PostCard'
-import CommentModal from '@/components/social/CommentModal'
-import { useDailyVotes } from '@/hooks/useDailyVotes'
-import { useFeed } from '@/hooks/useFeed'
-import { useWalletProfile } from '@/hooks/useWalletProfile'
-import { useMarketLiquidity } from '@/hooks/useMarketLiquidity'
-import { useSocket } from '@/hooks/useSocket'
+import { useMemo, useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import ComposeBox from "@/components/feed/ComposeBox"
+import FeedTabs, { type FeedTabId } from "@/components/feed/FeedTabs"
+import MarketCard from "@/components/post/MarketCard"
+import PostCard from "@/components/post/PostCard"
+import CommentModal from "@/components/social/CommentModal"
+import { useDailyVotes } from "@/hooks/useDailyVotes"
+import { useFeed } from "@/hooks/useFeed"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
+import { useMarketLiquidity } from "@/hooks/useMarketLiquidity"
+import { useSocket } from "@/hooks/useSocket"
 import {
   displayHandle,
   displayName,
@@ -22,28 +22,28 @@ import {
   type MarketPost,
   type VoteSide,
   type Profile,
-} from '@/lib/verity'
+} from "@/lib/verity"
 import {
   useToggleLikeMutation,
   useToggleReshareMutation,
   useCastFreeVoteMutation,
-} from '@/store/verity/verityQueries'
-import { toast } from 'react-hot-toast'
+} from "@/store/verity/verityQueries"
+import { toast } from "react-hot-toast"
 
 const FEED_CATEGORIES = [
-  'Crypto',
-  'Culture',
-  'Economics',
-  'Miscellaneous',
-  'Politics',
-  'Sports',
+  "Crypto",
+  "Culture",
+  "Economics",
+  "Miscellaneous",
+  "Politics",
+  "Sports",
 ] as const
 
 type FeedCategory = (typeof FEED_CATEGORIES)[number]
 
 export default function FeedShell() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<FeedTabId>('for-you')
+  const [activeTab, setActiveTab] = useState<FeedTabId>("for-you")
   const [activeCategory, setActiveCategory] = useState<FeedCategory | null>(
     null,
   )
@@ -51,18 +51,18 @@ export default function FeedShell() {
   const { dailyVotes, refetch: reloadDailyVotes } = useDailyVotes(profile?.id)
   const { items, loading, error, reload } = useFeed(
     profile?.id,
-    activeTab === 'markets',
+    activeTab === "markets",
   )
 
   const { joinRoom, leaveRoom } = useSocket()
 
   useEffect(() => {
-    joinRoom('feed')
+    joinRoom("feed")
     if (profile?.id) {
       joinRoom(`user:${profile.id}`)
     }
     return () => {
-      leaveRoom('feed')
+      leaveRoom("feed")
       if (profile?.id) {
         leaveRoom(`user:${profile.id}`)
       }
@@ -78,12 +78,12 @@ export default function FeedShell() {
 
   async function handleAddLP(market: MarketPost, amount: number) {
     if (!profile) {
-      toast.error('Connect a wallet before taking that action.')
+      toast.error("Connect a wallet before taking that action.")
       return
     }
     setLpLoading(market.id)
     try {
-      const isPoolActive = market.status === 'tradable'
+      const isPoolActive = market.status === "tradable"
       if (!isPoolActive) {
         await fundPreMarket(market.id, profile.id, amount, false)
       } else {
@@ -92,7 +92,7 @@ export default function FeedShell() {
       await reload()
     } catch (caught) {
       toast.error(
-        caught instanceof Error ? caught.message : 'Failed to add liquidity.',
+        caught instanceof Error ? caught.message : "Failed to add liquidity.",
       )
     } finally {
       setLpLoading(null)
@@ -105,12 +105,12 @@ export default function FeedShell() {
     amount: number,
   ) {
     if (!profile) {
-      toast.error('Connect a wallet before taking that action.')
+      toast.error("Connect a wallet before taking that action.")
       return
     }
     setLpLoading(market.id)
     try {
-      const isYes = side === 'YES'
+      const isYes = side === "YES"
       const feeBps = market.trading_fee_bps ?? TRADING_FEE_BPS
       const feeAmount = (amount * feeBps) / 10000
       const selectedPrice = getMarketPrice(market, side)
@@ -127,7 +127,7 @@ export default function FeedShell() {
       await reload()
     } catch (caught) {
       toast.error(
-        caught instanceof Error ? caught.message : 'Failed to buy tokens.',
+        caught instanceof Error ? caught.message : "Failed to buy tokens.",
       )
     } finally {
       setLpLoading(null)
@@ -141,7 +141,7 @@ export default function FeedShell() {
 
   async function runAction(action: () => Promise<unknown>) {
     if (!profile) {
-      toast.error('Connect a wallet before taking that action.')
+      toast.error("Connect a wallet before taking that action.")
       return
     }
 
@@ -149,7 +149,7 @@ export default function FeedShell() {
       await action()
       await Promise.all([reload(), reloadDailyVotes()])
     } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : 'Action failed.')
+      toast.error(caught instanceof Error ? caught.message : "Action failed.")
     }
   }
 
@@ -160,12 +160,12 @@ export default function FeedShell() {
       : `${window.location.origin}/`
 
     if (navigator.share) {
-      await navigator.share({ title: 'Verity', text, url })
+      await navigator.share({ title: "Verity", text, url })
       return
     }
 
     await navigator.clipboard.writeText(`${text}\n${url}`)
-    toast.success('Link copied to clipboard!')
+    toast.success("Link copied to clipboard!")
   }
 
   return (
@@ -254,7 +254,7 @@ export default function FeedShell() {
               profile={profile}
               onComment={() => {
                 if (!profile) {
-                  toast.error('Connect a wallet to leave a comment.')
+                  toast.error("Connect a wallet to leave a comment.")
                   return
                 }
                 setCommentingPost(item)
@@ -313,7 +313,7 @@ function FeedCard({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      {item.type === 'market' && item.market ? (
+      {item.type === "market" && item.market ? (
         <MarketCard
           category={item.market.category}
           comments={item.commentsCount}
@@ -350,7 +350,7 @@ function FeedCard({
           viewerVote={item.viewerVote}
           votingDisabledMessage={
             dailyVotesRemaining <= 0
-              ? 'You have used all 10 Upvote/Downvote signals today. They reset tomorrow.'
+              ? "You have used all 10 Upvote/Downvote signals today. They reset tomorrow."
               : null
           }
           yesCondition={item.market.yes_condition}
@@ -361,7 +361,7 @@ function FeedCard({
           )}
           actionLoadingStatus={
             actionLoading && actionLoading.startsWith(item.market.id)
-              ? actionLoading.replace(`${item.market.id}_`, '')
+              ? actionLoading.replace(`${item.market.id}_`, "")
               : null
           }
           isConnected={isConnected}

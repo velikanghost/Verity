@@ -1,4 +1,4 @@
-import PostDetailView from '@/components/post/PostDetailView'
+import PostDetailView from "@/components/post/PostDetailView"
 
 interface PostDetailPageProps {
   params: Promise<{

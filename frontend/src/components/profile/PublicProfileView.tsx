@@ -1,21 +1,21 @@
-'use client'
+"use client"
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Share } from 'lucide-react'
-import FollowButton from '@/components/profile/FollowButton'
+import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Share } from "lucide-react"
+import FollowButton from "@/components/profile/FollowButton"
 import ProfileActivityTabs, {
   type ProfileActivityTab,
-} from '@/components/social/ProfileActivityTabs'
-import SocialUserListModal from '@/components/social/SocialUserListModal'
-import { useFeed } from '@/hooks/useFeed'
-import { useWalletProfile } from '@/hooks/useWalletProfile'
-import { displayHandle, displayName, type Profile } from '@/lib/verity'
+} from "@/components/social/ProfileActivityTabs"
+import SocialUserListModal from "@/components/social/SocialUserListModal"
+import { useFeed } from "@/hooks/useFeed"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
+import { displayHandle, displayName, type Profile } from "@/lib/verity"
 import {
   useProfileActivityQuery,
   useUserProfileQuery,
-} from '@/store/verity/verityQueries'
-import { FeedSkeleton } from '@/components/feed/FeedShell'
+} from "@/store/verity/verityQueries"
+import { FeedSkeleton } from "@/components/feed/FeedShell"
 
 interface PublicProfileViewProps {
   userId: string
@@ -25,9 +25,9 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
   const router = useRouter()
   const { profile: viewerProfile } = useWalletProfile()
   const { items, loading, error } = useFeed()
-  const [activeTab, setActiveTab] = useState<ProfileActivityTab>('posts')
+  const [activeTab, setActiveTab] = useState<ProfileActivityTab>("posts")
   const [peopleModal, setPeopleModal] = useState<
-    'followers' | 'following' | null
+    "followers" | "following" | null
   >(null)
 
   const decodedUserId = decodeURIComponent(userId)
@@ -38,7 +38,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
   } = useUserProfileQuery(decodedUserId)
 
   const { data: tabItems = [], isLoading: isActivityLoading } =
-    useProfileActivityQuery(profile?.id || '', activeTab, viewerProfile?.id)
+    useProfileActivityQuery(profile?.id || "", activeTab, viewerProfile?.id)
 
   const localProfileItems = useMemo(() => {
     if (!profile) return []
@@ -91,7 +91,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
   if (profileError) {
     return (
       <ProfileState
-        message={(profileError as any)?.message || 'Failed to load profile.'}
+        message={(profileError as any)?.message || "Failed to load profile."}
         tone="error"
       />
     )
@@ -113,7 +113,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
               <button
                 className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-stone-surface sm:inline-flex"
                 onClick={() => {
-                  if (typeof window !== 'undefined') {
+                  if (typeof window !== "undefined") {
                     void navigator.clipboard?.writeText(window.location.href)
                   }
                 }}
@@ -142,22 +142,22 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm tracking-[-0.18px] text-graphite">
               <button
                 className="hover:text-ember-orange"
-                onClick={() => setPeopleModal('following')}
+                onClick={() => setPeopleModal("following")}
                 type="button"
               >
                 <strong className="font-semibold text-midnight">
                   {(profile.followingCount || 0).toLocaleString()}
-                </strong>{' '}
+                </strong>{" "}
                 Following
               </button>
               <button
                 className="hover:text-ember-orange"
-                onClick={() => setPeopleModal('followers')}
+                onClick={() => setPeopleModal("followers")}
                 type="button"
               >
                 <strong className="font-semibold text-midnight">
                   {(profile.followersCount || 0).toLocaleString()}
-                </strong>{' '}
+                </strong>{" "}
                 Followers
               </button>
               <span className="font-mono text-xs text-ash">
@@ -189,7 +189,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
         open={peopleModal !== null}
         onClose={() => setPeopleModal(null)}
         subtitle="People already active on Verity."
-        title={peopleModal === 'followers' ? 'Followers' : 'Following'}
+        title={peopleModal === "followers" ? "Followers" : "Following"}
         users={knownUsers}
       />
     </div>
@@ -223,11 +223,11 @@ function ProfileTabs({
   onChange: (tab: ProfileActivityTab) => void
 }) {
   const tabs: Array<{ id: ProfileActivityTab; label: string }> = [
-    { id: 'posts', label: 'Posts' },
-    { id: 'markets', label: 'Markets' },
-    { id: 'comments', label: 'Comments' },
-    { id: 'likes', label: 'Likes' },
-    { id: 'reshares', label: 'Reshares' },
+    { id: "posts", label: "Posts" },
+    { id: "markets", label: "Markets" },
+    { id: "comments", label: "Comments" },
+    { id: "likes", label: "Likes" },
+    { id: "reshares", label: "Reshares" },
   ]
 
   return (
@@ -236,8 +236,8 @@ function ProfileTabs({
         <button
           className={`relative h-12 rounded-[10px] text-[13px] sm:text-sm font-semibold tracking-[-0.18px] ${
             activeTab === tab.id
-              ? 'text-charcoal-primary'
-              : 'clickable-tab text-ash'
+              ? "text-charcoal-primary"
+              : "clickable-tab text-ash"
           }`}
           key={tab.id}
           onClick={() => onChange(tab.id)}
@@ -255,18 +255,18 @@ function ProfileTabs({
 
 function ProfileState({
   message,
-  tone = 'neutral',
+  tone = "neutral",
 }: {
   message: string
-  tone?: 'neutral' | 'error'
+  tone?: "neutral" | "error"
 }) {
   return (
     <div className="py-4">
       <section
         className={`rounded-[12px] p-8 text-center text-sm font-medium tracking-[-0.18px] shadow-[(--shadow-subtle)] ${
-          tone === 'error'
-            ? 'bg-ember-orange/10 text-charcoal-primary'
-            : 'bg-white text-ash'
+          tone === "error"
+            ? "bg-ember-orange/10 text-charcoal-primary"
+            : "bg-white text-ash"
         }`}
       >
         {message}

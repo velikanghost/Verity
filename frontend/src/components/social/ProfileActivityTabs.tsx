@@ -1,11 +1,11 @@
-'use client'
+"use client"
 
-import { useMemo } from 'react'
-import Link from 'next/link'
-import UserHoverCard from '@/components/social/UserHoverCard'
-import MarketCard from '@/components/post/MarketCard'
-import PostCard from '@/components/post/PostCard'
-import { FeedSkeleton } from '@/components/feed/FeedShell'
+import { useMemo } from "react"
+import Link from "next/link"
+import UserHoverCard from "@/components/social/UserHoverCard"
+import MarketCard from "@/components/post/MarketCard"
+import PostCard from "@/components/post/PostCard"
+import { FeedSkeleton } from "@/components/feed/FeedShell"
 import {
   displayHandle,
   displayName,
@@ -13,9 +13,14 @@ import {
   type FeedPost,
   type MarketPost,
   type Profile,
-} from '@/lib/verity'
+} from "@/lib/verity"
 
-export type ProfileActivityTab = 'posts' | 'markets' | 'comments' | 'likes' | 'reshares'
+export type ProfileActivityTab =
+  | "posts"
+  | "markets"
+  | "comments"
+  | "likes"
+  | "reshares"
 
 interface ProfileActivityTabsProps {
   activeTab: ProfileActivityTab
@@ -41,7 +46,7 @@ export default function ProfileActivityTabs({
   // Items are pre-filtered by the backend when using the profile activity query.
   const rows = items
 
-  if (activeTab === 'comments') {
+  if (activeTab === "comments") {
     return (
       <section className="flex flex-col gap-3">
         {rows.length > 0 ? (
@@ -90,7 +95,8 @@ function ActivityItem({
 }) {
   if (item.market) {
     const market = item.market
-    const totalUsdc = Number(market.usdc_yes_amount) + Number(market.usdc_no_amount)
+    const totalUsdc =
+      Number(market.usdc_yes_amount) + Number(market.usdc_no_amount)
     const yesPercent =
       totalUsdc > 0 ? (Number(market.usdc_yes_amount) / totalUsdc) * 100 : 50
 
@@ -156,7 +162,7 @@ function CommentActivityRow({
   onOpenPost?: (post: FeedPost) => void
 }) {
   const profileHref = `/profile/${encodeURIComponent(item.author.id)}`
-  const avatarColor = 'bg-sunburst-yellow'
+  const avatarColor = "bg-sunburst-yellow"
 
   return (
     <article className="verity-card flex gap-3 p-4 sm:gap-4 sm:p-5">
@@ -208,7 +214,7 @@ function CommentActivityRow({
               {displayHandle(item.author)}
             </span>
           )}
-          <span className="text-ash">{'\u00B7'}</span>
+          <span className="text-ash">{"\u00B7"}</span>
           <span className="font-mono text-xs text-ash hover:underline">
             {relativeTime(item.created_at)}
           </span>
@@ -216,7 +222,10 @@ function CommentActivityRow({
 
         {item.parentPost?.author && (
           <div className="mb-2 text-xs font-mono text-ash">
-            Replying to <span className="text-graphite font-semibold">@{displayHandle(item.parentPost.author)}</span>
+            Replying to{" "}
+            <span className="text-graphite font-semibold">
+              @{displayHandle(item.parentPost.author)}
+            </span>
           </div>
         )}
 
@@ -238,8 +247,12 @@ function CommentActivityRow({
           >
             <div className="p-3.5 sm:p-4">
               <div className="flex items-center gap-1.5 text-xs mb-1.5">
-                <span className="font-semibold text-charcoal-primary">{displayName(item.parentPost.author)}</span>
-                <span className="font-mono text-ash">{displayHandle(item.parentPost.author)}</span>
+                <span className="font-semibold text-charcoal-primary">
+                  {displayName(item.parentPost.author)}
+                </span>
+                <span className="font-mono text-ash">
+                  {displayHandle(item.parentPost.author)}
+                </span>
               </div>
               {item.parentPost.market ? (
                 <div>
@@ -268,15 +281,15 @@ function CommentActivityRow({
 
 function EmptyActivity({ tab }: { tab: ProfileActivityTab }) {
   const label =
-    tab === 'posts'
-      ? 'posts'
-      : tab === 'markets'
-        ? 'markets'
-        : tab === 'comments'
-          ? 'comments'
-          : tab === 'reshares'
-            ? 'reshares'
-            : 'liked posts or markets'
+    tab === "posts"
+      ? "posts"
+      : tab === "markets"
+        ? "markets"
+        : tab === "comments"
+          ? "comments"
+          : tab === "reshares"
+            ? "reshares"
+            : "liked posts or markets"
 
   return (
     <div className="verity-card p-8 text-center text-sm tracking-[-0.18px] text-ash">

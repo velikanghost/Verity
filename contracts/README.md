@@ -37,15 +37,6 @@ Dispute-window resolution system for subjective markets:
 - `finalizeResolution` — settles undisputed proposals after the dispute window (configurable: 120s for testing, 2 hours in production)
 - Bond payouts: winner gets both bonds back; disputed outcomes are settled by the arbitrator
 
-### `VerityRouter.sol`
-
-User-facing proxy that bundles approve + execute into single transactions. Used by smart wallets (Account Abstraction / ERC-4337) to perform actions in one call:
-
-- `createMarketPreDeposit` — pull USDC, approve factory, call `createMarketPreDepositFor`
-- `depositPreMarketLiquidity` — pull USDC, approve factory, deposit on behalf of user
-- `buy` — pull USDC, buy tokens via FPMM, transfer outcome tokens back to user
-- `addLiquidity` — pull USDC, deposit LP via FPMM on behalf of user
-- `proposeResolution` / `disputeResolution` — pull bond USDC, execute via resolver
 
 ## Dependencies
 
@@ -62,7 +53,6 @@ Four test files covering the core contracts:
 | `ConditionalTokenVault.t.sol`    | Token minting, redemption, collateral escrow                           |
 | `VerityFPMM.t.sol`               | AMM pricing, buy/sell, LP add/remove, fee collection, lock enforcement |
 | `VerityOptimisticResolver.t.sol` | Proposal, dispute, finalization, bond payouts                          |
-| `VerityRouter.t.sol`             | Router proxy operations, USDC flow through approve-execute patterns    |
 
 ## Development
 

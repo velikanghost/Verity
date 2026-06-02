@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from "next/link"
 import {
   ArrowRight,
   BadgeCheck,
@@ -11,87 +11,87 @@ import {
   TrendingUp,
   UserPlus,
   Vote,
-} from 'lucide-react'
+} from "lucide-react"
 
 const STEPS = [
   {
-    title: 'Post a claim',
-    body: 'Start with a normal post or a prediction question. A good market has a clear deadline, source, and YES/NO conditions.',
+    title: "Post a claim",
+    body: "Start with a normal post or a prediction question. A good market has a clear deadline, source, and YES/NO conditions.",
     icon: Sparkles,
-    color: 'bg-sunburst-yellow/25 text-deep-amber',
+    color: "bg-sunburst-yellow/25 text-deep-amber",
   },
   {
-    title: 'Signal early',
-    body: 'Upvote or Downvote signals are free daily social signals. They help the community decide which ideas deserve a real market.',
+    title: "Signal early",
+    body: "Upvote or Downvote signals are free daily social signals. They help the community decide which ideas deserve a real market.",
     icon: Vote,
-    color: 'bg-sky-blue/10 text-sky-blue',
+    color: "bg-sky-blue/10 text-sky-blue",
   },
   {
-    title: 'Pool Funding',
-    body: 'Qualified markets gather launch-pool USDC. If the market completes bonding and opens, creators and liquidity providers may earn fees and rewards from market activity.',
+    title: "Pool Funding",
+    body: "Qualified markets gather launch-pool USDC. If the market completes bonding and opens, creators and liquidity providers may earn fees and rewards from market activity.",
     icon: CircleDollarSign,
-    color: 'bg-meadow-green/10 text-meadow-green',
+    color: "bg-meadow-green/10 text-meadow-green",
   },
   {
-    title: 'Trade conviction',
-    body: 'Buy YES if you think the event resolves true. Buy NO if you think it resolves false. Sell lets you reduce or exit a position.',
+    title: "Trade conviction",
+    body: "Buy YES if you think the event resolves true. Buy NO if you think it resolves false. Sell lets you reduce or exit a position.",
     icon: TrendingUp,
-    color: 'bg-ember-orange/10 text-ember-orange',
+    color: "bg-ember-orange/10 text-ember-orange",
   },
 ]
 
 const GLOSSARY = [
   {
-    term: 'Upvote / Downvote',
+    term: "Upvote / Downvote",
     detail:
-      'Free daily signals used before a market is fully tradable. They measure social conviction, not paid exposure.',
+      "Free daily signals used before a market is fully tradable. They measure social conviction, not paid exposure.",
   },
   {
-    term: 'Buy YES / Buy NO',
+    term: "Buy YES / Buy NO",
     detail:
-      'USDC-backed positions. YES backs the event happening; NO backs the event not happening.',
+      "USDC-backed positions. YES backs the event happening; NO backs the event not happening.",
   },
   {
-    term: 'Sell',
+    term: "Sell",
     detail:
-      'Use Sell to close part or all of your outcome shares before resolution, based on available liquidity.',
+      "Use Sell to close part or all of your outcome shares before resolution, based on available liquidity.",
   },
   {
-    term: 'Liquidity',
+    term: "Liquidity",
     detail:
-      'USDC available in a market pool. Liquidity providers help trades execute and may earn fees or rewards after a market completes bonding and trades.',
+      "USDC available in a market pool. Liquidity providers help trades execute and may earn fees or rewards after a market completes bonding and trades.",
   },
   {
-    term: 'Pool Funding',
+    term: "Pool Funding",
     detail:
-      'USDC contributions that help a qualified market reach its launch threshold. If bonding completes, those contributions can become reward-earning liquidity.',
+      "USDC contributions that help a qualified market reach its launch threshold. If bonding completes, those contributions can become reward-earning liquidity.",
   },
   {
-    term: 'Resolution',
+    term: "Resolution",
     detail:
-      'The final outcome process. Markets resolve using their stated source, deadline, and YES/NO conditions.',
+      "The final outcome process. Markets resolve using their stated source, deadline, and YES/NO conditions.",
   },
 ]
 
 const SOCIAL = [
   {
-    title: 'Profiles',
-    body: 'Your profile shows posts, markets, comments, likes, followers, and following.',
+    title: "Profiles",
+    body: "Your profile shows posts, markets, comments, likes, followers, and following.",
     icon: BadgeCheck,
   },
   {
-    title: 'Follow graph',
-    body: 'Follow creators whose markets, posts, or signal history you want to track.',
+    title: "Follow graph",
+    body: "Follow creators whose markets, posts, or signal history you want to track.",
     icon: UserPlus,
   },
   {
-    title: 'Comments',
-    body: 'Discuss evidence, ask for clarification, and leave context below posts and markets.',
+    title: "Comments",
+    body: "Discuss evidence, ask for clarification, and leave context below posts and markets.",
     icon: MessageCircle,
   },
   {
-    title: 'Reshares',
-    body: 'Bring useful claims and markets back into the feed when they deserve attention.',
+    title: "Reshares",
+    body: "Bring useful claims and markets back into the feed when they deserve attention.",
     icon: Repeat2,
   },
 ]

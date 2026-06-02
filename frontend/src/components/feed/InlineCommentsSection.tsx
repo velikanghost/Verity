@@ -1,43 +1,57 @@
-"use client";
+"use client"
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { Send, Loader2 } from "lucide-react";
-import { usePostCommentsQuery, useAddCommentMutation } from "@/store/verity/verityQueries";
-import { displayName, displayHandle, relativeTime, type Profile } from "@/lib/verity";
-import toast from "react-hot-toast";
+import React, { useState } from "react"
+import Link from "next/link"
+import { Send, Loader2 } from "lucide-react"
+import {
+  usePostCommentsQuery,
+  useAddCommentMutation,
+} from "@/store/verity/verityQueries"
+import {
+  displayName,
+  displayHandle,
+  relativeTime,
+  type Profile,
+} from "@/lib/verity"
+import toast from "react-hot-toast"
 
 interface InlineCommentsSectionProps {
-  postId: string;
-  profile: Profile | null;
+  postId: string
+  profile: Profile | null
 }
 
-export default function InlineCommentsSection({ postId, profile }: InlineCommentsSectionProps) {
-  const { data: comments, isLoading } = usePostCommentsQuery(postId);
-  const { mutateAsync: addComment, isPending: isSubmitting } = useAddCommentMutation();
-  const [commentText, setCommentText] = useState("");
+export default function InlineCommentsSection({
+  postId,
+  profile,
+}: InlineCommentsSectionProps) {
+  const { data: comments, isLoading } = usePostCommentsQuery(postId)
+  const { mutateAsync: addComment, isPending: isSubmitting } =
+    useAddCommentMutation()
+  const [commentText, setCommentText] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (!profile) {
-      toast.error("Connect a wallet to leave a comment.");
-      return;
+      toast.error("Connect a wallet to leave a comment.")
+      return
     }
-    const text = commentText.trim();
-    if (!text) return;
+    const text = commentText.trim()
+    if (!text) return
 
     try {
       await addComment({
         postId,
         authorId: profile.id,
         content: text,
-      });
-      setCommentText("");
-      toast.success("Comment posted!");
+      })
+      setCommentText("")
+      toast.success("Comment posted!")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to post comment.");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to post comment.",
+      )
     }
-  };
+  }
 
   return (
     <div className="mt-4 border-t border-dashed border-stone-surface pt-4">
@@ -125,5 +139,5 @@ export default function InlineCommentsSection({ postId, profile }: InlineComment
         </div>
       )}
     </div>
-  );
+  )
 }

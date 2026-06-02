@@ -7,7 +7,6 @@ import "../src/ConditionalTokenVault.sol";
 import "../src/VerityFPMM.sol";
 import "../src/VerityMarketFactory.sol";
 import "../src/VerityOptimisticResolver.sol";
-import "../src/VerityRouter.sol";
 import "../test/helpers/MockUSDC.sol";
 import "../test/helpers/MockPyth.sol";
 
@@ -129,12 +128,7 @@ contract Deploy is Script {
             address(resolver)
         );
 
-        // 5. Deploy VerityRouter
-        console2.log("Deploying VerityRouter...");
-        VerityRouter router = new VerityRouter(usdcAddr, address(vault));
-        console2.log("VerityRouter deployed at:", address(router));
-
-        // 6. Wire up permissions
+        // 5. Wire up permissions
         console2.log("\nWiring up contract permissions...");
         vault.setFPMM(address(fpmm));
         vault.setFactory(address(factory));
@@ -149,7 +143,6 @@ contract Deploy is Script {
             address(fpmm),
             address(factory),
             address(resolver),
-            address(router),
             usdcAddr,
             pythAddr,
             deployer,
@@ -163,7 +156,6 @@ contract Deploy is Script {
         address fpmm,
         address factory,
         address resolver,
-        address router,
         address usdcAddr,
         address pythAddr,
         address deployer,
@@ -179,7 +171,6 @@ contract Deploy is Script {
         console2.log("VerityFPMM (AMM):", fpmm);
         console2.log("VerityMarketFactory (Registry):", factory);
         console2.log("VerityOptimisticResolver:", resolver);
-        console2.log("VerityRouter:", router);
         console2.log("\n--- Configuration ---");
         console2.log("Admin (Factory/FPMM/Vault Owner):", deployer);
         console2.log("Treasury:", treasury);

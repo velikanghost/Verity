@@ -1,32 +1,40 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { CheckCircle2, CircleDollarSign, ExternalLink, Network, Wallet, Copy, Check } from "lucide-react";
-import { useAuth } from "@/components/providers/AuthModals";
-import { useUsdcBalance } from "@/hooks/useUsdcBalance";
-import WalletConnectControl from "@/components/wallet/WalletConnectControl";
-import { useState } from "react";
+import Link from "next/link"
+import {
+  CheckCircle2,
+  CircleDollarSign,
+  ExternalLink,
+  Network,
+  Wallet,
+  Copy,
+  Check,
+} from "lucide-react"
+import { useAuth } from "@/components/providers/AuthModals"
+import { useUsdcBalance } from "@/hooks/useUsdcBalance"
+import WalletConnectControl from "@/components/porfolio/WalletConnectControl"
+import { useState } from "react"
 
 function shortAddress(addr?: string | null) {
-  if (!addr) return "";
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  if (!addr) return ""
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
 }
 
 export default function WalletSummary() {
-  const { user, authenticated } = useAuth();
-  const { formattedBalance, isLoading } = useUsdcBalance();
-  const [copied, setCopied] = useState(false);
+  const { user, authenticated } = useAuth()
+  const { formattedBalance, isLoading } = useUsdcBalance()
+  const [copied, setCopied] = useState(false)
 
-  const isConnected = authenticated && !!user;
-  const address = user?.walletAddress;
+  const isConnected = authenticated && !!user
+  const address = user?.walletAddress
 
   const handleCopy = () => {
     if (address) {
-      navigator.clipboard.writeText(address);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      navigator.clipboard.writeText(address)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     }
-  };
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -54,9 +62,7 @@ export default function WalletSummary() {
           <p className="mt-4 font-mono text-3xl font-semibold tracking-[-0.9px] text-midnight">
             {isLoading ? "..." : formattedBalance}
           </p>
-          <p className="font-mono text-xs text-ash">
-            testnet USDC balance
-          </p>
+          <p className="font-mono text-xs text-ash">testnet USDC balance</p>
         </div>
 
         <div className="verity-card p-5 border border-border bg-surface-solid shadow-[(--shadow-subtle)] overflow-hidden">
@@ -76,12 +82,21 @@ export default function WalletSummary() {
                 className="text-ash hover:text-charcoal-primary transition-colors p-1 cursor-pointer"
                 title="Copy Address"
               >
-                {copied ? <Check className="h-4 w-4 text-meadow-green" /> : <Copy className="h-4 w-4" />}
+                {copied ? (
+                  <Check className="h-4 w-4 text-meadow-green" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
               </button>
             )}
           </div>
-          <p className="mt-1 font-mono text-xs text-ash truncate" title={address || undefined}>
-            {isConnected ? address : "Connect to create posts and send Upvote/Downvote signals"}
+          <p
+            className="mt-1 font-mono text-xs text-ash truncate"
+            title={address || undefined}
+          >
+            {isConnected
+              ? address
+              : "Connect to create posts and send Upvote/Downvote signals"}
           </p>
         </div>
       </section>
@@ -91,7 +106,9 @@ export default function WalletSummary() {
           <div className="flex items-center gap-3">
             <CheckCircle2 className="h-5 w-5 text-meadow-green" />
             <div>
-              <h2 className="font-semibold tracking-[-0.18px] text-charcoal-primary">Arc Testnet</h2>
+              <h2 className="font-semibold tracking-[-0.18px] text-charcoal-primary">
+                Arc Testnet
+              </h2>
               <p className="font-mono text-xs text-ash">
                 Smart contract wallet (SCA) - gas paid in ARC
               </p>
@@ -105,5 +122,5 @@ export default function WalletSummary() {
         </div>
       </section>
     </div>
-  );
+  )
 }

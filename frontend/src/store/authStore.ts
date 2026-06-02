@@ -1,8 +1,8 @@
-import { create } from 'zustand'
-import { apiRequest } from '@/store/apiClient'
-import type { Profile } from '@/lib/verity'
-import { toast } from 'react-hot-toast'
-import { queryClient } from '@/lib/queryClient'
+import { create } from "zustand"
+import { apiRequest } from "@/store/apiClient"
+import type { Profile } from "@/lib/verity"
+import { toast } from "react-hot-toast"
+import { queryClient } from "@/lib/queryClient"
 
 export interface TxCall {
   contractAddress: string
@@ -20,7 +20,7 @@ export interface TxConfirmationState {
 }
 
 export interface AuthStore {
-  authModalStep: 'idle' | 'email' | 'otp' | 'onboarding' | 'success'
+  authModalStep: "idle" | "email" | "otp" | "onboarding" | "success"
   email: string
   otpCode: string
   usernameInput: string
@@ -34,7 +34,7 @@ export interface AuthStore {
   txError: string
 
   setAuthModalStep: (
-    step: 'idle' | 'email' | 'otp' | 'onboarding' | 'success',
+    step: "idle" | "email" | "otp" | "onboarding" | "success",
   ) => void
   setEmail: (email: string) => void
   setOtpCode: (otpCode: string) => void
@@ -61,29 +61,29 @@ export interface AuthStore {
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
-  authModalStep: 'idle',
-  email: '',
-  otpCode: '',
-  usernameInput: '',
+  authModalStep: "idle",
+  email: "",
+  otpCode: "",
+  usernameInput: "",
   isSubmittingOtp: false,
   isRequestingOtp: false,
-  authError: '',
+  authError: "",
   copied: false,
 
   txConfirmState: {
     isOpen: false,
     calls: [],
-    description: '',
+    description: "",
     estimatedCostUsdc: 0,
     resolve: null,
     reject: null,
   },
   isExecutingTx: false,
-  txError: '',
+  txError: "",
 
   setAuthModalStep: (authModalStep) => {
-    if (authModalStep === 'idle' || authModalStep === 'success') {
-      set({ authModalStep, email: '', otpCode: '', authError: '' })
+    if (authModalStep === "idle" || authModalStep === "success") {
+      set({ authModalStep, email: "", otpCode: "", authError: "" })
     } else {
       set({ authModalStep })
     }
@@ -99,21 +99,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   setIsExecutingTx: (isExecutingTx) => set({ isExecutingTx }),
 
   login: () => {
-    set({ authModalStep: 'email', authError: '', email: '', otpCode: '' })
+    set({ authModalStep: "email", authError: "", email: "", otpCode: "" })
   },
 
   logout: () => {
-    localStorage.removeItem('verity_auth_token')
-    queryClient.setQueryData(['profile'], null)
+    localStorage.removeItem("verity_auth_token")
+    queryClient.setQueryData(["profile"], null)
     queryClient.invalidateQueries()
   },
 
   executeTxBatch: (calls, description, estimatedCostUsdc) => {
-    const user = queryClient.getQueryData<Profile>(['profile'])
+    const user = queryClient.getQueryData<Profile>(["profile"])
     if (!user) {
       get().login()
       return Promise.reject(
-        new Error('User must be signed in to execute transactions.'),
+        new Error("User must be signed in to execute transactions."),
       )
     }
 
@@ -127,7 +127,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           resolve,
           reject,
         },
-        txError: '',
+        txError: "",
       })
     })
   },
@@ -135,20 +135,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   handleRequestOtp: async (e) => {
     e.preventDefault()
     const { email } = get()
-    if (!email || !email.includes('@')) {
-      set({ authError: 'Please enter a valid email address.' })
+    if (!email || !email.includes("@")) {
+      set({ authError: "Please enter a valid email address." })
       return
     }
 
-    set({ isRequestingOtp: true, authError: '' })
+    set({ isRequestingOtp: true, authError: "" })
     try {
-      await apiRequest('/auth/request-otp', {
-        method: 'POST',
+      await apiRequest("/auth/request-otp", {
+        method: "POST",
         body: JSON.stringify({ email }),
       })
-      set({ authModalStep: 'otp', otpCode: '' })
+      set({ authModalStep: "otp", otpCode: "" })
     } catch (err: any) {
-      set({ authError: err.message || 'Failed to send OTP code.' })
+      set({ authError: err.message || "Failed to send OTP code." })
     } finally {
       set({ isRequestingOtp: false })
     }
@@ -158,37 +158,37 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     e.preventDefault()
     const { email, otpCode } = get()
     if (otpCode.length !== 6) {
-      set({ authError: 'OTP code must be 6 digits.' })
+      set({ authError: "OTP code must be 6 digits." })
       return
     }
 
-    set({ isSubmittingOtp: true, authError: '' })
+    set({ isSubmittingOtp: true, authError: "" })
     try {
       const res = await apiRequest<{ token: string; user: Profile }>(
-        '/auth/verify-otp',
+        "/auth/verify-otp",
         {
-          method: 'POST',
+          method: "POST",
           body: JSON.stringify({ email, code: otpCode }),
         },
       )
 
-      localStorage.setItem('verity_auth_token', res.token)
-      queryClient.setQueryData(['profile'], res.user)
+      localStorage.setItem("verity_auth_token", res.token)
+      queryClient.setQueryData(["profile"], res.user)
 
       if (!res.user.isOnboarded) {
         set({
-          authModalStep: 'onboarding',
-          usernameInput: res.user.username || '',
-          email: '',
-          otpCode: '',
-          authError: '',
+          authModalStep: "onboarding",
+          usernameInput: res.user.username || "",
+          email: "",
+          otpCode: "",
+          authError: "",
         })
       } else {
-        set({ authModalStep: 'idle', email: '', otpCode: '', authError: '' })
+        set({ authModalStep: "idle", email: "", otpCode: "", authError: "" })
       }
       queryClient.invalidateQueries()
     } catch (err: any) {
-      set({ authError: err.message || 'Invalid or expired OTP code.' })
+      set({ authError: err.message || "Invalid or expired OTP code." })
     } finally {
       set({ isSubmittingOtp: false })
     }
@@ -196,28 +196,28 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   handleSaveOnboarding: async (e) => {
     e.preventDefault()
-    const user = queryClient.getQueryData<Profile>(['profile'])
+    const user = queryClient.getQueryData<Profile>(["profile"])
     if (!user) return
 
     const { usernameInput } = get()
-    const trimmed = usernameInput.trim().replace(/^@+/, '')
+    const trimmed = usernameInput.trim().replace(/^@+/, "")
     if (trimmed.length < 3) {
-      set({ authError: 'Username must be at least 3 characters.' })
+      set({ authError: "Username must be at least 3 characters." })
       return
     }
     if (trimmed.length > 24) {
-      set({ authError: 'Username must be under 24 characters.' })
+      set({ authError: "Username must be under 24 characters." })
       return
     }
     if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
-      set({ authError: 'Letters, numbers, and underscores only.' })
+      set({ authError: "Letters, numbers, and underscores only." })
       return
     }
 
-    set({ isSubmittingOtp: true, authError: '' })
+    set({ isSubmittingOtp: true, authError: "" })
     try {
       const updated = await apiRequest<Profile>(`/users/${user.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         body: JSON.stringify({
           username: trimmed,
           display_name: trimmed.charAt(0).toUpperCase() + trimmed.slice(1),
@@ -225,17 +225,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         }),
       })
 
-      queryClient.setQueryData(['profile'], updated)
+      queryClient.setQueryData(["profile"], updated)
       set({
-        authModalStep: 'success',
-        email: '',
-        otpCode: '',
-        authError: '',
-        usernameInput: '',
+        authModalStep: "success",
+        email: "",
+        otpCode: "",
+        authError: "",
+        usernameInput: "",
       })
       queryClient.invalidateQueries()
     } catch (err: any) {
-      set({ authError: err.message || 'Failed to update profile settings.' })
+      set({ authError: err.message || "Failed to update profile settings." })
     } finally {
       set({ isSubmittingOtp: false })
     }
@@ -245,19 +245,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const { txConfirmState } = get()
     if (!txConfirmState.resolve || !txConfirmState.reject) return
 
-    set({ isExecutingTx: true, txError: '' })
+    set({ isExecutingTx: true, txError: "" })
     try {
       const res = await apiRequest<{ txHash: string }>(
-        '/circle-wallet/execute-batch',
+        "/circle-wallet/execute-batch",
         {
-          method: 'POST',
+          method: "POST",
           body: JSON.stringify(
             {
               calls: txConfirmState.calls,
               estimatedCostUsdc: txConfirmState.estimatedCostUsdc,
             },
             (key, value) => {
-              if (typeof value === 'bigint') {
+              if (typeof value === "bigint") {
                 return value.toString()
               }
               return value
@@ -266,12 +266,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         },
       )
 
-      toast.success('Transaction executed successfully!')
+      toast.success("Transaction executed successfully!")
       txConfirmState.resolve(res.txHash)
       set((s) => ({ txConfirmState: { ...s.txConfirmState, isOpen: false } }))
       queryClient.invalidateQueries()
     } catch (err: any) {
-      const parsedError = err.message || 'Transaction execution failed.'
+      const parsedError = err.message || "Transaction execution failed."
       set({ txError: parsedError })
     } finally {
       set({ isExecutingTx: false })
@@ -281,7 +281,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   handleCancelTx: () => {
     const { txConfirmState } = get()
     if (txConfirmState.reject) {
-      txConfirmState.reject(new Error('Transaction rejected by user.'))
+      txConfirmState.reject(new Error("Transaction rejected by user."))
     }
     set((s) => ({ txConfirmState: { ...s.txConfirmState, isOpen: false } }))
   },

@@ -71,6 +71,8 @@ contract VerityFPMMTest is Test {
         factory.registerMarket(marketId, creator, block.timestamp + 30 days, block.timestamp + 7 days);
         vm.prank(creator);
         factory.depositPreMarketLiquidity(marketId, 40e6); // 40 USDC immediately deploys it
+        vm.prank(creator);
+        fpmm.claimPreMarketLPShares(marketId);
     }
 
     // ─── Escrow & Pool Creation Tests ────────────────────────────────────
@@ -95,6 +97,12 @@ contract VerityFPMMTest is Test {
         assertTrue(activeAfter, "Pool should be automatically deployed");
         assertEq(yBal, 40e6, "YES balance should be 40");
         assertEq(totalShares, 40e6, "Total shares should be 40");
+        
+        // Claim shares
+        vm.prank(creator);
+        fpmm.claimPreMarketLPShares(marketId);
+        vm.prank(lp1);
+        fpmm.claimPreMarketLPShares(marketId);
         
         // Check LP shares were distributed
         assertEq(fpmm.lpShares(marketId, creator), 0, "Creator deposited exactly 10, all of it is locked");
@@ -511,5 +519,29 @@ contract VerityFPMMTest is Test {
         // After resolution: everyone can
         factory.resolveMarket(marketId, true);
         assertTrue(fpmm.canRemoveLiquidity(marketId, creator), "Creator should be able to remove after resolution");
+    }
+
+    function test_sellPreservesConstantProduct() public {
+        _createActiveMarket();
+        
+        (uint256 yBefore, uint256 nBefore,,,,) = fpmm.getPoolBalances(marketId);
+        uint256 initialProduct = yBefore * nBefore;
+
+        // Buy YES
+        vm.prank(trader);
+        uint256 tokensBought = fpmm.buy(marketId, true, 20e6);
+
+        // Approve vault
+        vm.prank(trader);
+        vault.setApprovalForAll(address(fpmm), true);
+
+        // Sell YES
+        vm.prank(trader);
+        fpmm.sell(marketId, true, tokensBought);
+
+        (uint256 yAfter, uint256 nAfter,,,,) = fpmm.getPoolBalances(marketId);
+        uint256 finalProduct = yAfter * nAfter;
+
+        assertApproxEqAbs(finalProduct, initialProduct, 10, "Product must be preserved after buy and sell");
     }
 }

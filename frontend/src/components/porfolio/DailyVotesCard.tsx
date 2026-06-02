@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { Vote } from 'lucide-react'
-import { useDailyVotes } from '@/hooks/useDailyVotes'
-import { useWalletProfile } from '@/hooks/useWalletProfile'
+import { Vote } from "lucide-react"
+import { useDailyVotes } from "@/hooks/useDailyVotes"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
 
 export default function DailyVotesCard() {
   const { profile } = useWalletProfile()
@@ -27,7 +27,7 @@ export default function DailyVotesCard() {
 
       <p className="mt-4 font-mono text-3xl font-semibold tracking-[-0.9px] text-midnight">
         {isLoading ? (
-          '...'
+          "..."
         ) : (
           <>
             {remaining}
@@ -43,22 +43,22 @@ export default function DailyVotesCard() {
           style={{
             width: `${fillPercent}%`,
             backgroundColor: isEmpty
-              ? 'var(--color-ember-orange)'
+              ? "var(--color-ember-orange)"
               : isFull
-                ? 'var(--color-meadow-green)'
-                : 'var(--color-meadow-green)',
+                ? "var(--color-meadow-green)"
+                : "var(--color-meadow-green)",
           }}
         />
       </div>
 
       <p className="mt-2 font-mono text-xs text-ash">
         {isLoading
-          ? 'Loading...'
+          ? "Loading..."
           : isEmpty
-            ? 'All Upvote/Downvote signals used - resets tomorrow'
+            ? "All Upvote/Downvote signals used - resets tomorrow"
             : used > 0
-              ? `${used} signal${used !== 1 ? 's' : ''} used today`
-              : 'All Upvote/Downvote signals available today'}
+              ? `${used} signal${used !== 1 ? "s" : ""} used today`
+              : "All Upvote/Downvote signals available today"}
       </p>
     </div>
   )

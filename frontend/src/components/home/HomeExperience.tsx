@@ -1,9 +1,9 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { CircleHelp } from 'lucide-react'
-import FeedShell from '@/components/feed/FeedShell'
-import ThemeToggle from '@/components/layout/ThemeToggle'
+import Link from "next/link"
+import { CircleHelp } from "lucide-react"
+import FeedShell from "@/components/feed/FeedShell"
+import ThemeToggle from "@/components/layout/ThemeToggle"
 
 export default function HomeExperience() {
   return (

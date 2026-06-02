@@ -1,51 +1,67 @@
-"use client";
+"use client"
 
-import React, { useState, useEffect, useRef } from "react";
-import { X, Loader2 } from "lucide-react";
-import { useAddCommentMutation } from "@/store/verity/verityQueries";
-import { displayName, displayHandle, relativeTime, type FeedPost, type MarketComment } from "@/lib/verity";
-import { useWalletProfile } from "@/hooks/useWalletProfile";
-import toast from "react-hot-toast";
+import React, { useState, useEffect, useRef } from "react"
+import { X, Loader2 } from "lucide-react"
+import { useAddCommentMutation } from "@/store/verity/verityQueries"
+import {
+  displayName,
+  displayHandle,
+  relativeTime,
+  type FeedPost,
+  type MarketComment,
+} from "@/lib/verity"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
+import toast from "react-hot-toast"
 
 interface CommentModalProps {
-  post?: FeedPost | null;
-  replyToComment?: MarketComment | null;
-  isOpen: boolean;
-  onClose: () => void;
+  post?: FeedPost | null
+  replyToComment?: MarketComment | null
+  isOpen: boolean
+  onClose: () => void
 }
 
-export default function CommentModal({ post, replyToComment, isOpen, onClose }: CommentModalProps) {
-  const [commentText, setCommentText] = useState("");
-  const { profile } = useWalletProfile();
-  const { mutateAsync: addComment, isPending: isSubmitting } = useAddCommentMutation();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+export default function CommentModal({
+  post,
+  replyToComment,
+  isOpen,
+  onClose,
+}: CommentModalProps) {
+  const [commentText, setCommentText] = useState("")
+  const { profile } = useWalletProfile()
+  const { mutateAsync: addComment, isPending: isSubmitting } =
+    useAddCommentMutation()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setCommentText("");
+      setCommentText("")
       // Focus textarea when modal opens
       setTimeout(() => {
-        textareaRef.current?.focus();
-      }, 50);
+        textareaRef.current?.focus()
+      }, 50)
     }
-  }, [isOpen]);
+  }, [isOpen])
 
-  if (!isOpen || (!post && !replyToComment)) return null;
+  if (!isOpen || (!post && !replyToComment)) return null
 
-  const parentAuthor = replyToComment ? replyToComment.author : post?.author;
-  const parentTime = replyToComment ? replyToComment.created_at : post?.created_at;
-  const parentContent = replyToComment ? replyToComment.content : (post?.market?.question || post?.content);
-  const parentId = replyToComment?.id;
-  const postId = replyToComment ? replyToComment.post_id : post?.id;
+  const parentAuthor = replyToComment ? replyToComment.author : post?.author
+  const parentTime = replyToComment
+    ? replyToComment.created_at
+    : post?.created_at
+  const parentContent = replyToComment
+    ? replyToComment.content
+    : post?.market?.question || post?.content
+  const parentId = replyToComment?.id
+  const postId = replyToComment ? replyToComment.post_id : post?.id
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (!profile) {
-      toast.error("Connect a wallet to leave a comment.");
-      return;
+      toast.error("Connect a wallet to leave a comment.")
+      return
     }
-    const text = commentText.trim();
-    if (!text) return;
+    const text = commentText.trim()
+    if (!text) return
 
     try {
       await addComment({
@@ -53,16 +69,18 @@ export default function CommentModal({ post, replyToComment, isOpen, onClose }: 
         authorId: profile.id,
         content: text,
         parentId,
-      });
-      toast.success("Comment posted!");
-      onClose();
+      })
+      toast.success("Comment posted!")
+      onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to post comment.");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to post comment.",
+      )
     }
-  };
+  }
 
-  const parentAvatarUrl = parentAuthor?.avatar_url || parentAuthor?.avatarUrl;
-  const myAvatarUrl = profile?.avatar_url || profile?.avatarUrl;
+  const parentAvatarUrl = parentAuthor?.avatar_url || parentAuthor?.avatarUrl
+  const myAvatarUrl = profile?.avatar_url || profile?.avatarUrl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/35 px-4 py-6 backdrop-blur-sm">
@@ -179,5 +197,5 @@ export default function CommentModal({ post, replyToComment, isOpen, onClose }: 
         </form>
       </section>
     </div>
-  );
+  )
 }

@@ -1,36 +1,41 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
+import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose"
 
-export type PostType = "normal" | "market";
-export type PostDocument = HydratedDocument<Post>;
+export type PostType = "normal" | "market"
+export type PostDocument = HydratedDocument<Post>
 
 @Schema({ timestamps: true, versionKey: false })
 export class Post {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
-  authorId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  })
+  authorId: Types.ObjectId
 
   @Prop({ type: String, enum: ["normal", "market"], required: true })
-  type: PostType;
+  type: PostType
 
   @Prop({ type: String, required: true, trim: true })
-  content: string;
+  content: string
 
   @Prop({ type: Number, default: 0 })
-  likesCount: number;
+  likesCount: number
 
   @Prop({ type: Number, default: 0 })
-  commentsCount: number;
+  commentsCount: number
 
   @Prop({ type: Number, default: 0 })
-  resharesCount: number;
+  resharesCount: number
 
   @Prop({ type: Number, default: 0 })
-  sharesCount: number;
+  sharesCount: number
 
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: Date
+  updatedAt?: Date
 }
 
-export const PostSchema = SchemaFactory.createForClass(Post);
+export const PostSchema = SchemaFactory.createForClass(Post)
 
-PostSchema.index({ createdAt: -1 });
+PostSchema.index({ createdAt: -1 })

@@ -1,9 +1,9 @@
-"use client";
+"use client"
 
-import { useAuth } from "@/components/providers/AuthModals";
+import { useAuth } from "@/components/providers/AuthModals"
 
 export function useWalletProfile() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAuth()
 
   return {
     profile: user,
@@ -11,5 +11,5 @@ export function useWalletProfile() {
     refetch: async () => {
       // No-op as the AuthContext handles profile loading
     },
-  };
+  }
 }

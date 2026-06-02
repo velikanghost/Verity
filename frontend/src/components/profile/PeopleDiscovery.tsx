@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { Users } from 'lucide-react'
-import FollowButton from '@/components/profile/FollowButton'
-import { useFeed } from '@/hooks/useFeed'
-import { displayHandle, displayName, type Profile } from '@/lib/verity'
+import Link from "next/link"
+import { Users } from "lucide-react"
+import FollowButton from "@/components/profile/FollowButton"
+import { useFeed } from "@/hooks/useFeed"
+import { displayHandle, displayName, type Profile } from "@/lib/verity"
 
 export default function PeopleDiscovery() {
   const { items, loading } = useFeed()
@@ -24,7 +24,10 @@ export default function PeopleDiscovery() {
       {loading ? (
         <div className="grid gap-0 sm:grid-cols-2 animate-pulse">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-center justify-between gap-3 border-b border-dashed border-stone-surface p-4 sm:p-5 sm:odd:border-r">
+            <div
+              key={i}
+              className="flex items-center justify-between gap-3 border-b border-dashed border-stone-surface p-4 sm:p-5 sm:odd:border-r"
+            >
               <div className="flex items-center gap-3">
                 <div className="h-11 w-11 rounded-full bg-stone-surface shrink-0" />
                 <div className="flex flex-col gap-1.5">

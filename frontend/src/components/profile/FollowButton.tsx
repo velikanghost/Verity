@@ -1,16 +1,16 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { Check, UserPlus } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { useWalletProfile } from '@/hooks/useWalletProfile'
-import type { Profile } from '@/lib/verity'
+import Link from "next/link"
+import { Check, UserPlus } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
+import type { Profile } from "@/lib/verity"
 import {
   useIsFollowingQuery,
   useFollowUserMutation,
   useUnfollowUserMutation,
-} from '@/store/verity/verityQueries'
-import toast from 'react-hot-toast'
+} from "@/store/verity/verityQueries"
+import toast from "react-hot-toast"
 
 interface FollowButtonProps {
   profile: Profile
@@ -32,7 +32,7 @@ export default function FollowButton({
 
   const { data: followStatus, refetch: refetchStatus } = useIsFollowingQuery(
     profile.id,
-    viewerProfile?.id || '',
+    viewerProfile?.id || "",
   )
   const { mutateAsync: followUser } = useFollowUserMutation()
   const { mutateAsync: unfollowUser } = useUnfollowUserMutation()
@@ -66,12 +66,12 @@ export default function FollowButton({
         aria-pressed={following}
         className={`clickable verity-pill inline-flex h-10 items-center justify-center gap-2 px-4 text-sm font-semibold tracking-[-0.18px] ${
           following
-            ? 'bg-parchment-card text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-stone-surface'
-            : 'bg-inverse text-inverse-text hover:opacity-90'
+            ? "bg-parchment-card text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-stone-surface"
+            : "bg-inverse text-inverse-text hover:opacity-90"
         }`}
         onClick={async () => {
           if (!viewerProfile) {
-            toast.error('Connect your wallet to follow users.')
+            toast.error("Connect your wallet to follow users.")
             return
           }
           try {
@@ -85,7 +85,7 @@ export default function FollowButton({
             await refetchStatus()
           } catch (err) {
             setLocalDelta(0)
-            toast.error('Failed to update follow status.')
+            toast.error("Failed to update follow status.")
           }
         }}
         type="button"
@@ -95,7 +95,7 @@ export default function FollowButton({
         ) : (
           <UserPlus className="h-4 w-4" />
         )}
-        {following ? 'Following' : 'Follow'}
+        {following ? "Following" : "Follow"}
       </button>
       {!compact && (
         <span className="font-mono text-[11px] text-ash">

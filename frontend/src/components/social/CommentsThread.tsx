@@ -1,12 +1,17 @@
-'use client'
+"use client"
 
-import { MessageCircle, Send, Loader2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { displayHandle, displayName, relativeTime, type MarketComment } from '@/lib/verity'
-import { useWalletProfile } from '@/hooks/useWalletProfile'
-import { useAddCommentMutation } from '@/store/verity/verityQueries'
-import { toast } from 'react-hot-toast'
-import CommentModal from '@/components/social/CommentModal'
+import { MessageCircle, Send, Loader2 } from "lucide-react"
+import { useMemo, useState } from "react"
+import {
+  displayHandle,
+  displayName,
+  relativeTime,
+  type MarketComment,
+} from "@/lib/verity"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
+import { useAddCommentMutation } from "@/store/verity/verityQueries"
+import { toast } from "react-hot-toast"
+import CommentModal from "@/components/social/CommentModal"
 
 interface CommentsThreadProps {
   postId: string
@@ -15,19 +20,21 @@ interface CommentsThreadProps {
   title?: string
 }
 
-type CommentSort = 'relevant' | 'newest'
+type CommentSort = "relevant" | "newest"
 
 export default function CommentsThread({
   postId,
   comments,
   loading = false,
-  title = 'Comments',
+  title = "Comments",
 }: CommentsThreadProps) {
-  const [sort, setSort] = useState<CommentSort>('newest')
-  const [draft, setDraft] = useState('')
-  const [replyingToComment, setReplyingToComment] = useState<MarketComment | null>(null)
+  const [sort, setSort] = useState<CommentSort>("newest")
+  const [draft, setDraft] = useState("")
+  const [replyingToComment, setReplyingToComment] =
+    useState<MarketComment | null>(null)
   const { profile } = useWalletProfile()
-  const { mutateAsync: addComment, isPending: isSubmitting } = useAddCommentMutation()
+  const { mutateAsync: addComment, isPending: isSubmitting } =
+    useAddCommentMutation()
 
   // Group comments: find all root comments, and map child comments to their parentId
   const commentsTree = useMemo(() => {
@@ -43,10 +50,10 @@ export default function CommentsThread({
       } else {
         rootComments.push(c)
       }
-    });
+    })
 
     // Sort roots based on the selected sort criteria
-    if (sort === 'newest') {
+    if (sort === "newest") {
       rootComments.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -60,7 +67,7 @@ export default function CommentsThread({
 
   const handleSend = async () => {
     if (!profile) {
-      toast.error('Connect your wallet to comment.')
+      toast.error("Connect your wallet to comment.")
       return
     }
     const content = draft.trim()
@@ -72,10 +79,10 @@ export default function CommentsThread({
         authorId: profile.id,
         content,
       })
-      setDraft('')
-      toast.success('Comment added successfully!')
+      setDraft("")
+      toast.success("Comment added successfully!")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add comment.')
+      toast.error(err instanceof Error ? err.message : "Failed to add comment.")
     }
   }
 
@@ -87,12 +94,12 @@ export default function CommentsThread({
           {title}
         </h2>
         <div className="grid grid-cols-2 rounded-[32px] bg-parchment-card p-1 shadow-[(--shadow-subtle)]">
-          {(['relevant', 'newest'] as const).map((nextSort) => (
+          {(["relevant", "newest"] as const).map((nextSort) => (
             <button
               className={`verity-pill h-8 px-3 text-xs font-semibold capitalize tracking-[-0.14px] transition-colors ${
                 sort === nextSort
-                  ? 'bg-white text-charcoal-primary shadow-[(--shadow-subtle)]'
-                  : 'text-ash hover:text-charcoal-primary'
+                  ? "bg-white text-charcoal-primary shadow-[(--shadow-subtle)]"
+                  : "text-ash hover:text-charcoal-primary"
               }`}
               key={nextSort}
               onClick={() => setSort(nextSort)}
@@ -110,7 +117,7 @@ export default function CommentsThread({
             className="min-w-0 flex-1 bg-transparent text-sm tracking-[-0.18px] text-charcoal-primary outline-none placeholder:text-ash"
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && draft.trim() && !isSubmitting) {
+              if (e.key === "Enter" && draft.trim() && !isSubmitting) {
                 void handleSend()
               }
             }}
@@ -141,20 +148,28 @@ export default function CommentsThread({
           {commentsTree.rootComments.map((comment) => {
             const replies = commentsTree.childrenMap.get(comment.id) || []
             const sortedReplies = replies.sort(
-              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              (a, b) =>
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime(),
             )
 
             return (
-              <div key={comment.id} className="border-b border-dashed border-stone-surface last:border-b-0">
-                <CommentRow comment={comment} onReplyClick={() => setReplyingToComment(comment)} />
+              <div
+                key={comment.id}
+                className="border-b border-dashed border-stone-surface last:border-b-0"
+              >
+                <CommentRow
+                  comment={comment}
+                  onReplyClick={() => setReplyingToComment(comment)}
+                />
                 {sortedReplies.length > 0 && (
                   <div className="bg-parchment-card/30 pl-12 pr-4 pb-3 flex flex-col gap-2 border-t border-dashed border-stone-surface/30">
                     {sortedReplies.map((reply) => (
-                      <CommentRow 
-                        key={reply.id} 
-                        comment={reply} 
-                        isReply 
-                        onReplyClick={() => setReplyingToComment(reply)} 
+                      <CommentRow
+                        key={reply.id}
+                        comment={reply}
+                        isReply
+                        onReplyClick={() => setReplyingToComment(reply)}
                       />
                     ))}
                   </div>
@@ -197,14 +212,16 @@ function CommentRow({
 }) {
   const avatarUrl = comment.author?.avatar_url || comment.author?.avatarUrl
   return (
-    <article className={`flex gap-3 p-4 ${isReply ? 'pt-2 pb-2' : ''}`}>
+    <article className={`flex gap-3 p-4 ${isReply ? "pt-2 pb-2" : ""}`}>
       {avatarUrl ? (
         <span
-          className={`rounded-[10px] bg-cover bg-center shadow-[(--shadow-subtle)] shrink-0 ${isReply ? 'h-7 w-7' : 'h-10 w-10'}`}
+          className={`rounded-[10px] bg-cover bg-center shadow-[(--shadow-subtle)] shrink-0 ${isReply ? "h-7 w-7" : "h-10 w-10"}`}
           style={{ backgroundImage: `url(${avatarUrl})` }}
         />
       ) : (
-        <div className={`verity-blob shrink-0 bg-sky-blue ${isReply ? 'h-7 w-7' : 'h-10 w-10'}`}>
+        <div
+          className={`verity-blob shrink-0 bg-sky-blue ${isReply ? "h-7 w-7" : "h-10 w-10"}`}
+        >
           <span className="verity-blob-smile" />
         </div>
       )}
@@ -216,17 +233,19 @@ function CommentRow({
           <span className="font-mono text-xs text-ash">
             {displayHandle(comment.author)}
           </span>
-          <span className="text-ash">{'\u00B7'}</span>
+          <span className="text-ash">{"\u00B7"}</span>
           <span className="font-mono text-xs text-ash">
             {relativeTime(comment.created_at)}
           </span>
         </div>
-        <p className={`mt-1 whitespace-pre-wrap leading-[1.47] tracking-[-0.2px] text-graphite ${isReply ? 'text-sm' : 'text-[15px]'}`}>
+        <p
+          className={`mt-1 whitespace-pre-wrap leading-[1.47] tracking-[-0.2px] text-graphite ${isReply ? "text-sm" : "text-[15px]"}`}
+        >
           {comment.content}
         </p>
         <div className="mt-2 flex gap-4 font-mono text-[11px] text-ash">
-          <button 
-            className="hover:text-charcoal-primary font-semibold" 
+          <button
+            className="hover:text-charcoal-primary font-semibold"
             onClick={onReplyClick}
             type="button"
           >
@@ -242,7 +261,10 @@ export function CommentsSkeleton() {
   return (
     <div className="flex flex-col animate-pulse">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="flex gap-3 p-4 border-b border-dashed border-stone-surface">
+        <div
+          key={i}
+          className="flex gap-3 p-4 border-b border-dashed border-stone-surface"
+        >
           <div className="h-8 w-8 shrink-0 rounded-full bg-stone-surface" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1.5">

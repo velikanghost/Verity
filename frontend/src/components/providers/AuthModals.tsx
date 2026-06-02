@@ -1,9 +1,9 @@
-'use client'
+"use client"
 
-import React from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { apiRequest } from '@/store/apiClient'
-import type { Profile } from '@/lib/verity'
+import React from "react"
+import { useQuery } from "@tanstack/react-query"
+import { apiRequest } from "@/store/apiClient"
+import type { Profile } from "@/lib/verity"
 import {
   X,
   Mail,
@@ -16,22 +16,22 @@ import {
   ChevronRight,
   Copy,
   Check,
-} from 'lucide-react'
-import { useAuthStore } from '@/store/authStore'
+} from "lucide-react"
+import { useAuthStore } from "@/store/authStore"
 
 export function useProfileQuery() {
   return useQuery<Profile | null>({
-    queryKey: ['profile'],
+    queryKey: ["profile"],
     queryFn: async () => {
       const token =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('verity_auth_token')
+        typeof window !== "undefined"
+          ? localStorage.getItem("verity_auth_token")
           : null
       if (!token) return null
       try {
-        return await apiRequest<Profile>('/auth/me')
+        return await apiRequest<Profile>("/auth/me")
       } catch (err) {
-        localStorage.removeItem('verity_auth_token')
+        localStorage.removeItem("verity_auth_token")
         return null
       }
     },
@@ -84,7 +84,7 @@ export default function AuthModals() {
   const handleCancelTx = useAuthStore((s) => s.handleCancelTx)
 
   const { user } = useAuth()
-  const walletAddr = user?.walletAddress || ''
+  const walletAddr = user?.walletAddress || ""
 
   const handleCopyAddress = () => {
     if (!walletAddr) return
@@ -96,8 +96,8 @@ export default function AuthModals() {
   return (
     <>
       {/* 1. PASSWORDLESS EMAIL OTP AUTHENTICATION MODAL */}
-      {authModalStep !== 'idle' && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-midnight/40 backdrop-blur-md px-4 py-6 animate-fade-in">
+      {authModalStep !== "idle" && (
+        <div className="fixed inset-0 z-1000 flex items-center justify-center bg-midnight/40 backdrop-blur-md px-4 py-6 animate-fade-in">
           <div className="w-full max-w-[440px] overflow-hidden rounded-[12px] border border-border bg-surface-solid p-6 shadow-2xl transition-all duration-300">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-stone-surface pb-4 mb-5">
@@ -110,17 +110,17 @@ export default function AuthModals() {
                     Verity Identity
                   </p>
                   <h3 className="text-lg font-bold text-charcoal-primary">
-                    {authModalStep === 'email' && 'Sign In / Sign Up'}
-                    {authModalStep === 'otp' && 'Enter Verification Code'}
-                    {authModalStep === 'onboarding' && 'Setup Profile'}
-                    {authModalStep === 'success' && 'Welcome to Verity!'}
+                    {authModalStep === "email" && "Sign In / Sign Up"}
+                    {authModalStep === "otp" && "Enter Verification Code"}
+                    {authModalStep === "onboarding" && "Setup Profile"}
+                    {authModalStep === "success" && "Welcome to Verity!"}
                   </h3>
                 </div>
               </div>
-              {authModalStep !== 'success' &&
-                authModalStep !== 'onboarding' && (
+              {authModalStep !== "success" &&
+                authModalStep !== "onboarding" && (
                   <button
-                    onClick={() => setAuthModalStep('idle')}
+                    onClick={() => setAuthModalStep("idle")}
                     className="rounded-lg p-1.5 text-ash hover:bg-stone-surface hover:text-midnight transition-colors"
                   >
                     <X className="h-4 w-4" />
@@ -129,7 +129,7 @@ export default function AuthModals() {
             </div>
 
             {/* Email Step */}
-            {authModalStep === 'email' && (
+            {authModalStep === "email" && (
               <form onSubmit={handleRequestOtp} className="space-y-4">
                 <p className="text-sm text-ash leading-relaxed">
                   Enter your email address to receive a passwordless
@@ -181,10 +181,11 @@ export default function AuthModals() {
             )}
 
             {/* OTP Step */}
-            {authModalStep === 'otp' && (
+            {authModalStep === "otp" && (
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <p className="text-sm text-ash leading-relaxed">
-                  We've sent a 6-digit verification code to your email. Enter it below to authorize.
+                  We've sent a 6-digit verification code to your email. Enter it
+                  below to authorize.
                 </p>
                 <div className="space-y-2">
                   <label className="block text-xs font-mono font-bold uppercase tracking-wider text-ash">
@@ -215,7 +216,7 @@ export default function AuthModals() {
                 <div className="flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setAuthModalStep('email')}
+                    onClick={() => setAuthModalStep("email")}
                     className="flex-1 h-11 rounded-[10px] border border-border bg-transparent text-graphite text-sm font-semibold hover:bg-stone-surface transition-colors"
                   >
                     Back
@@ -231,7 +232,7 @@ export default function AuthModals() {
                         Verifying...
                       </>
                     ) : (
-                      'Verify'
+                      "Verify"
                     )}
                   </button>
                 </div>
@@ -239,7 +240,7 @@ export default function AuthModals() {
             )}
 
             {/* Onboarding Step */}
-            {authModalStep === 'onboarding' && (
+            {authModalStep === "onboarding" && (
               <form onSubmit={handleSaveOnboarding} className="space-y-4">
                 <p className="text-sm text-ash leading-relaxed">
                   Choose a unique username to represent your predictions and
@@ -250,9 +251,7 @@ export default function AuthModals() {
                     Choose Username
                   </label>
                   <div className="flex h-11 items-center rounded-[10px] border border-border bg-white-surface px-4 focus-within:border-sky-blue/50 transition-colors">
-                    <span className="text-sm font-mono text-ash mr-1">
-                      @
-                    </span>
+                    <span className="text-sm font-mono text-ash mr-1">@</span>
                     <input
                       type="text"
                       required
@@ -279,14 +278,14 @@ export default function AuthModals() {
                       Saving...
                     </>
                   ) : (
-                    'Save & Continue'
+                    "Save & Continue"
                   )}
                 </button>
               </form>
             )}
 
             {/* Success Step (Wallet Address & Funding Details) */}
-            {authModalStep === 'success' && (
+            {authModalStep === "success" && (
               <div className="space-y-5 py-2">
                 <div className="rounded-[10px] border border-stone-surface bg-parchment-card p-4 space-y-3">
                   <div className="flex items-center justify-between">
@@ -311,7 +310,7 @@ export default function AuthModals() {
                     </button>
                   </div>
                   <div className="font-mono text-sm font-bold text-charcoal-primary break-all bg-surface-solid p-2.5 rounded-lg border border-stone-surface">
-                    {walletAddr || 'Generating secure SCA wallet...'}
+                    {walletAddr || "Generating secure SCA wallet..."}
                   </div>
                 </div>
 
@@ -337,7 +336,7 @@ export default function AuthModals() {
                 </div>
 
                 <button
-                  onClick={() => setAuthModalStep('idle')}
+                  onClick={() => setAuthModalStep("idle")}
                   className="w-full flex h-11 items-center justify-center gap-2 verity-pill rounded-[10px] bg-inverse text-sm font-semibold text-inverse-text transition-opacity hover:opacity-90"
                 >
                   Start Exploring
@@ -351,23 +350,13 @@ export default function AuthModals() {
 
       {/* 2. TRANSACTION CONFIRMATION MODAL (Zero-Signing UX) */}
       {txConfirmState.isOpen && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-midnight/40 backdrop-blur-md px-4 py-6 animate-fade-in">
+        <div className="fixed inset-0 z-1000 flex items-center justify-center bg-midnight/40 backdrop-blur-md px-4 py-6 animate-fade-in">
           <div className="w-full max-w-[460px] overflow-hidden rounded-[12px] border border-border bg-surface-solid p-6 shadow-2xl transition-all duration-300">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-stone-surface pb-4 mb-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-meadow-green/10 border border-meadow-green/20">
-                  <ShieldCheck className="h-5 w-5 text-meadow-green" />
-                </div>
-                <div>
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ash">
-                    Zero-Signing Transaction
-                  </p>
-                  <h3 className="text-lg font-bold text-charcoal-primary">
-                    Confirm Action
-                  </h3>
-                </div>
-              </div>
+              <h3 className="text-lg font-bold text-charcoal-primary">
+                Confirm Action
+              </h3>
               {!isExecutingTx && (
                 <button
                   onClick={handleCancelTx}
@@ -414,22 +403,6 @@ export default function AuthModals() {
                 </div>
               </div>
 
-              {/* Warning on-chain message */}
-              <div className="flex items-start gap-2.5 rounded-[10px] bg-sunburst-yellow/10 border border-sunburst-yellow/20 p-3.5 text-xs text-sunburst-yellow">
-                <AlertTriangle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
-                <p className="leading-relaxed">
-                  This transaction is processed programmatically on Arc Testnet
-                  via your secure developer-controlled smart wallet. No manual
-                  signing or browser extension required.
-                </p>
-              </div>
-
-              {txError && (
-                <div className="rounded-[10px] bg-ember-orange/10 border border-ember-orange/20 p-3.5 text-xs text-ember-orange font-medium leading-relaxed max-h-[120px] overflow-y-auto">
-                  {txError}
-                </div>
-              )}
-
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <button
@@ -452,7 +425,7 @@ export default function AuthModals() {
                       Executing...
                     </>
                   ) : (
-                    'Confirm & Execute'
+                    "Confirm & Execute"
                   )}
                 </button>
               </div>

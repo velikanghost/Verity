@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   BarChart2,
   ShieldCheck,
@@ -9,56 +9,56 @@ import {
   Calendar,
   Sparkles,
   HelpCircle,
-} from 'lucide-react'
-import { type MarketInput, type Profile } from '@/lib/verity'
-import { reviewPredictionPost, type VerityAgentReview } from '@/lib/verityAgent'
-import { useUsdcTransfer } from '@/hooks/useUsdcTransfer'
-import { useAuth } from '@/components/providers/AuthModals'
+} from "lucide-react"
+import { type MarketInput, type Profile } from "@/lib/verity"
+import { reviewPredictionPost, type VerityAgentReview } from "@/lib/verityAgent"
+import { useUsdcTransfer } from "@/hooks/useUsdcTransfer"
+import { useAuth } from "@/components/providers/AuthModals"
 import {
   useCreateMarketPostMutation,
   useCreateNormalPostMutation,
   useValidateMarketPostMutation,
-} from '@/store/verity/verityQueries'
-import { toast } from 'react-hot-toast'
+} from "@/store/verity/verityQueries"
+import { toast } from "react-hot-toast"
 import {
   FACTORY_ADDRESS,
   arcUsdcAddress,
   publicClient,
   erc20Abi,
-} from '@/lib/arc'
-import type { Address } from 'viem'
+} from "@/lib/arc"
+import type { Address } from "viem"
 
 interface ComposeBoxProps {
   profile: Profile | null
   onCreated: () => void
 }
 
-type ComposeIntent = 'take' | 'market'
-type PythAssetSymbol = 'BTC' | 'ETH' | 'SOL' | 'PYTH'
+type ComposeIntent = "take" | "market"
+type PythAssetSymbol = "BTC" | "ETH" | "SOL" | "PYTH"
 
 function generateObjectId(): string {
   const timestamp = Math.floor(new Date().getTime() / 1000)
     .toString(16)
-    .padStart(8, '0')
+    .padStart(8, "0")
   const machine = Math.floor(Math.random() * 16777215)
     .toString(16)
-    .padStart(6, '0')
+    .padStart(6, "0")
   const pid = Math.floor(Math.random() * 65535)
     .toString(16)
-    .padStart(4, '0')
+    .padStart(4, "0")
   const increment = Math.floor(Math.random() * 16777215)
     .toString(16)
-    .padStart(6, '0')
+    .padStart(6, "0")
   return (timestamp + machine + pid + increment).substring(0, 24)
 }
 
 const MARKET_CATEGORIES = [
-  'Sports',
-  'Culture',
-  'Crypto',
-  'Economics',
-  'Miscellaneous',
-  'Politics',
+  "Sports",
+  "Culture",
+  "Crypto",
+  "Economics",
+  "Miscellaneous",
+  "Politics",
 ] as const
 
 interface DetectedPyth {
@@ -79,33 +79,33 @@ interface PythAssetDefinition {
 
 const PYTH_ASSETS: PythAssetDefinition[] = [
   {
-    keys: ['btc', 'bitcoin'],
-    symbol: 'BTC',
-    name: 'Bitcoin',
-    feedId: 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
+    keys: ["btc", "bitcoin"],
+    symbol: "BTC",
+    name: "Bitcoin",
+    feedId: "e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
   },
   {
-    keys: ['eth', 'ethereum'],
-    symbol: 'ETH',
-    name: 'Ethereum',
-    feedId: 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
+    keys: ["eth", "ethereum"],
+    symbol: "ETH",
+    name: "Ethereum",
+    feedId: "ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
   },
   {
-    keys: ['sol', 'solana'],
-    symbol: 'SOL',
-    name: 'Solana',
-    feedId: 'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
+    keys: ["sol", "solana"],
+    symbol: "SOL",
+    name: "Solana",
+    feedId: "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
   },
   {
-    keys: ['pyth'],
-    symbol: 'PYTH',
-    name: 'Pyth Network',
-    feedId: 'ff95c1c7087f17b7e28d94fbc2be6e3d063074fc4c5207c74495c1840b71e19d',
+    keys: ["pyth"],
+    symbol: "PYTH",
+    name: "Pyth Network",
+    feedId: "ff95c1c7087f17b7e28d94fbc2be6e3d063074fc4c5207c74495c1840b71e19d",
   },
 ]
 
 function detectPythMarket(category: string, question: string): DetectedPyth {
-  if (category !== 'Crypto') {
+  if (category !== "Crypto") {
     return { isPyth: false }
   }
 
@@ -113,7 +113,7 @@ function detectPythMarket(category: string, question: string): DetectedPyth {
 
   const matchedAsset = PYTH_ASSETS.find((asset) =>
     asset.keys.some((key) => {
-      const regex = new RegExp(`\\b${key}\\b`, 'i')
+      const regex = new RegExp(`\\b${key}\\b`, "i")
       return regex.test(q)
     }),
   )
@@ -128,7 +128,7 @@ function detectPythMarket(category: string, question: string): DetectedPyth {
     return { isPyth: false }
   }
 
-  let priceValue = parseFloat(match[1].replace(/,/g, ''))
+  let priceValue = parseFloat(match[1].replace(/,/g, ""))
   const isK = !!match[2]
   if (isK) {
     priceValue *= 1000
@@ -160,36 +160,36 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
   const { mutateAsync: createMarketPost } = useCreateMarketPostMutation()
   const { mutateAsync: createNormalPost } = useCreateNormalPostMutation()
 
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState("")
   const [isMarket, setIsMarket] = useState(false)
   const [isMultiOption, setIsMultiOption] = useState(false)
-  const [options, setOptions] = useState<string[]>(['', '', ''])
+  const [options, setOptions] = useState<string[]>(["", "", ""])
 
   const [market, setMarket] = useState<MarketInput>({
-    content: '',
-    question: '',
-    category: 'Sports',
-    deadline: '',
-    resolutionSource: '',
-    yesCondition: '',
-    noCondition: '',
+    content: "",
+    question: "",
+    category: "Sports",
+    deadline: "",
+    resolutionSource: "",
+    yesCondition: "",
+    noCondition: "",
   })
 
   const [agentReview, setAgentReview] = useState<VerityAgentReview | null>(null)
-  const [reviewedSignature, setReviewedSignature] = useState('')
+  const [reviewedSignature, setReviewedSignature] = useState("")
   const [saving, setSaving] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     function applyIntent(intent: ComposeIntent) {
-      setIsMarket(intent === 'market')
+      setIsMarket(intent === "market")
       window.requestAnimationFrame(() => {
         composerRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
+          behavior: "smooth",
+          block: "center",
         })
-        if (intent === 'market') {
+        if (intent === "market") {
           marketQuestionRef.current?.focus()
         } else {
           textareaRef.current?.focus()
@@ -198,21 +198,21 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
     }
 
     const storedIntent = window.sessionStorage.getItem(
-      'verity-compose-intent',
+      "verity-compose-intent",
     ) as ComposeIntent | null
-    if (storedIntent === 'take' || storedIntent === 'market') {
-      window.sessionStorage.removeItem('verity-compose-intent')
+    if (storedIntent === "take" || storedIntent === "market") {
+      window.sessionStorage.removeItem("verity-compose-intent")
       applyIntent(storedIntent)
     }
 
     function handleComposeIntent(event: Event) {
       const intent = (event as CustomEvent<ComposeIntent>).detail
-      if (intent === 'take' || intent === 'market') applyIntent(intent)
+      if (intent === "take" || intent === "market") applyIntent(intent)
     }
 
-    window.addEventListener('verity-compose-intent', handleComposeIntent)
+    window.addEventListener("verity-compose-intent", handleComposeIntent)
     return () =>
-      window.removeEventListener('verity-compose-intent', handleComposeIntent)
+      window.removeEventListener("verity-compose-intent", handleComposeIntent)
   }, [])
 
   const detectedPyth = useMemo(() => {
@@ -257,17 +257,17 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
         category: market.category.trim(),
         deadline: market.deadline,
         resolutionSource: detectedPyth.isPyth
-          ? 'Pyth Network Price Oracle'
+          ? "Pyth Network Price Oracle"
           : market.resolutionSource.trim(),
         yesCondition: isMultiOption
-          ? 'Any of the options wins'
+          ? "Any of the options wins"
           : detectedPyth.isPyth
-            ? `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '>=' : '<'} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+            ? `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? ">=" : "<"} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
             : market.yesCondition.trim(),
         noCondition: isMultiOption
-          ? 'None of the options wins'
+          ? "None of the options wins"
           : detectedPyth.isPyth
-            ? `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '<' : '>='} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+            ? `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? "<" : ">="} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
             : market.noCondition.trim(),
         isPyth: detectedPyth.isPyth,
         priceFeedId: detectedPyth.priceFeedId,
@@ -283,12 +283,12 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
   const liveAgentReview = useMemo(() => {
     const finalMarket = { ...market }
     if (isMultiOption) {
-      finalMarket.yesCondition = 'Any of the options wins'
-      finalMarket.noCondition = 'None of the options wins'
+      finalMarket.yesCondition = "Any of the options wins"
+      finalMarket.noCondition = "None of the options wins"
     } else if (detectedPyth.isPyth) {
-      finalMarket.resolutionSource = 'Pyth Network Price Oracle'
-      finalMarket.yesCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '>=' : '<'} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
-      finalMarket.noCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '<' : '>='} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+      finalMarket.resolutionSource = "Pyth Network Price Oracle"
+      finalMarket.yesCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? ">=" : "<"} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+      finalMarket.noCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? "<" : ">="} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
     }
     return reviewPredictionPost({
       ...finalMarket,
@@ -325,12 +325,12 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
       // Build the final market payload for server-side validation
       const finalMarket = { ...market }
       if (isMultiOption) {
-        finalMarket.yesCondition = 'Any of the options wins'
-        finalMarket.noCondition = 'None of the options wins'
+        finalMarket.yesCondition = "Any of the options wins"
+        finalMarket.noCondition = "None of the options wins"
       } else if (detectedPyth.isPyth) {
-        finalMarket.resolutionSource = 'Pyth Network Price Oracle'
-        finalMarket.yesCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '>=' : '<'} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
-        finalMarket.noCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '<' : '>='} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+        finalMarket.resolutionSource = "Pyth Network Price Oracle"
+        finalMarket.yesCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? ">=" : "<"} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+        finalMarket.noCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? "<" : ">="} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
       }
 
       // 2. Run backend validation
@@ -340,22 +340,22 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
       setAgentReview(liveAgentReview)
       setReviewedSignature(marketSignature)
     } catch (validationErr: any) {
-      const msg = validationErr?.message || 'Market validation failed'
+      const msg = validationErr?.message || "Market validation failed"
       setError(msg)
       setAgentReview(null)
-      setReviewedSignature('')
+      setReviewedSignature("")
     } finally {
       setIsValidating(false)
     }
   }
 
   const handleAddOption = () => {
-    setOptions((current) => [...current, ''])
+    setOptions((current) => [...current, ""])
   }
 
   const handleRemoveOption = (index: number) => {
     if (options.length <= 3) {
-      toast.error('Multi-option markets require at least 3 options.')
+      toast.error("Multi-option markets require at least 3 options.")
       return
     }
     setOptions((current) => current.filter((_, i) => i !== index))
@@ -377,10 +377,10 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
   }, [isMultiOption, options])
 
   const primaryLabel = useMemo(() => {
-    if (saving) return 'Posting...'
-    if (isValidating) return 'Reviewing...'
-    if (!isMarket) return 'Take'
-    if (!predictionApproved) return 'Review'
+    if (saving) return "Posting..."
+    if (isValidating) return "Reviewing..."
+    if (!isMarket) return "Take"
+    if (!predictionApproved) return "Review"
     return `Pay ${dynamicCost} USDC & Create Market`
   }, [isMarket, predictionApproved, saving, isValidating, dynamicCost])
 
@@ -396,7 +396,7 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
     setError(null)
 
     const tid = toast.loading(
-      isMarket ? 'Processing market payment...' : 'Publishing post...',
+      isMarket ? "Processing market payment..." : "Publishing post...",
     )
 
     try {
@@ -412,13 +412,13 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
           targetPrice = Math.round((detectedPyth.targetPrice || 0) * 1e8)
           resolveAbove = detectedPyth.resolveAbove
 
-          finalMarket.resolutionSource = 'Pyth Network Price Oracle'
-          finalMarket.yesCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '>=' : '<'} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
-          finalMarket.noCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? '<' : '>='} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+          finalMarket.resolutionSource = "Pyth Network Price Oracle"
+          finalMarket.yesCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? ">=" : "<"} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
+          finalMarket.noCondition = `${detectedPyth.assetName}/USD price is ${detectedPyth.resolveAbove ? "<" : ">="} $${detectedPyth.targetPrice} at the deadline according to Pyth.`
         }
 
         const marketId = generateObjectId()
-        let txHash = ''
+        let txHash = ""
 
         if (isMultiOption) {
           const validOptions = options.filter((o) => o.trim().length > 0)
@@ -434,25 +434,25 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
           const allowance = await publicClient.readContract({
             address: arcUsdcAddress,
             abi: erc20Abi,
-            functionName: 'allowance',
+            functionName: "allowance",
             args: [user.walletAddress as `0x${string}`, FACTORY_ADDRESS],
           })
 
           if (allowance < totalCostRaw) {
             calls.push({
               contractAddress: arcUsdcAddress,
-              abiFunctionSignature: 'approve(address,uint256)',
+              abiFunctionSignature: "approve(address,uint256)",
               abiParameters: [FACTORY_ADDRESS, totalCostRaw],
             })
           }
 
           // Batch createMarketPreDeposit calls
           optionMarketIds.forEach((childId) => {
-            const formattedChildId = ('0x' + childId.padEnd(64, '0')) as Address
+            const formattedChildId = ("0x" + childId.padEnd(64, "0")) as Address
             calls.push({
               contractAddress: FACTORY_ADDRESS,
-              abiFunctionSignature: 'createMarketPreDeposit(bytes32,uint256)',
-              abiParameters: [formattedChildId, BigInt('10000000')],
+              abiFunctionSignature: "createMarketPreDeposit(bytes32,uint256)",
+              abiParameters: [formattedChildId, BigInt("10000000")],
             })
           })
 
@@ -466,8 +466,8 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
             authorId: user.id,
             marketId,
             ...finalMarket,
-            yesCondition: 'Any of the options wins',
-            noCondition: 'None of the options wins',
+            yesCondition: "Any of the options wins",
+            noCondition: "None of the options wins",
             content: finalMarket.question.trim(),
             creationFeeTxHash: txHash,
             feeCollectorAddress: FACTORY_ADDRESS,
@@ -493,31 +493,31 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
         }
 
         setMarket({
-          content: '',
-          question: '',
-          category: 'Sports',
-          deadline: '',
-          resolutionSource: '',
-          yesCondition: '',
-          noCondition: '',
+          content: "",
+          question: "",
+          category: "Sports",
+          deadline: "",
+          resolutionSource: "",
+          yesCondition: "",
+          noCondition: "",
         })
-        setOptions(['', '', ''])
+        setOptions(["", "", ""])
         setIsMultiOption(false)
         setAgentReview(null)
-        setReviewedSignature('')
+        setReviewedSignature("")
         setIsMarket(false)
-        toast.success('Market successfully created!', { id: tid })
+        toast.success("Market successfully created!", { id: tid })
       } else {
         await createNormalPost({ authorId: user.id, content })
-        toast.success('Post successfully published!', { id: tid })
+        toast.success("Post successfully published!", { id: tid })
       }
 
-      setContent('')
+      setContent("")
       onCreated()
     } catch (caught: any) {
-      if (!caught.message?.includes('rejected')) {
-        setError(caught.message || 'Failed to submit post.')
-        toast.error(caught.message || 'Execution failed.', { id: tid })
+      if (!caught.message?.includes("rejected")) {
+        setError(caught.message || "Failed to submit post.")
+        toast.error(caught.message || "Execution failed.", { id: tid })
       } else {
         toast.dismiss(tid)
       }
@@ -549,7 +549,7 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
               placeholder={
                 user
                   ? "What's your conviction? Post a Take..."
-                  : 'Connect wallet to post a Take'
+                  : "Connect wallet to post a Take"
               }
               value={content}
               className="min-h-[60px] w-full resize-none border-none bg-transparent text-[19px] font-semibold leading-[1.3] tracking-[-0.25px] text-charcoal-primary outline-none placeholder:text-ash"
@@ -569,12 +569,12 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                     onClick={() => {
                       setIsMultiOption(false)
                       setAgentReview(null)
-                      setReviewedSignature('')
+                      setReviewedSignature("")
                     }}
                     className={`px-3 py-1.5 rounded-md transition-all ${
                       !isMultiOption
-                        ? 'bg-surface-solid text-charcoal-primary border border-border shadow-sm'
-                        : 'text-ash hover:text-charcoal-primary'
+                        ? "bg-surface-solid text-charcoal-primary border border-border shadow-sm"
+                        : "text-ash hover:text-charcoal-primary"
                     }`}
                   >
                     Binary YES/NO
@@ -584,12 +584,12 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                     onClick={() => {
                       setIsMultiOption(true)
                       setAgentReview(null)
-                      setReviewedSignature('')
+                      setReviewedSignature("")
                     }}
                     className={`px-3 py-1.5 rounded-md transition-all ${
                       isMultiOption
-                        ? 'bg-surface-solid text-charcoal-primary border border-border shadow-sm'
-                        : 'text-ash hover:text-charcoal-primary'
+                        ? "bg-surface-solid text-charcoal-primary border border-border shadow-sm"
+                        : "text-ash hover:text-charcoal-primary"
                     }`}
                   >
                     Multi-Option List
@@ -676,8 +676,8 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                       Options Editor (Minimum 3 options)
                     </label>
                     <span className="text-[10px] font-mono text-ash">
-                      Cost:{' '}
-                      {options.filter((o) => o.trim().length > 0).length * 11}{' '}
+                      Cost:{" "}
+                      {options.filter((o) => o.trim().length > 0).length * 11}{" "}
                       USDC
                     </span>
                   </div>
@@ -760,7 +760,7 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                     <div className="flex flex-col gap-0.5">
                       <span>CONDITION</span>
                       <span className="font-bold text-meadow-green">
-                        {detectedPyth.resolveAbove ? '>= Target' : '< Target'}
+                        {detectedPyth.resolveAbove ? ">= Target" : "< Target"}
                       </span>
                     </div>
                   </div>
@@ -821,8 +821,8 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                   <span
                     className={`font-mono text-xs font-bold ${
                       visibleAgentReview.approved
-                        ? 'text-meadow-green'
-                        : 'text-ember-orange'
+                        ? "text-meadow-green"
+                        : "text-ember-orange"
                     }`}
                   >
                     {visibleAgentReview.score}/100
@@ -837,15 +837,15 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                   {visibleAgentReview.findings.slice(0, 3).map((finding) => (
                     <p
                       className={`text-[11px] font-semibold flex items-center gap-1.5 ${
-                        finding.severity === 'blocker'
-                          ? 'text-coral-red'
-                          : finding.severity === 'warning'
-                            ? 'text-ember-orange'
-                            : 'text-meadow-green'
+                        finding.severity === "blocker"
+                          ? "text-coral-red"
+                          : finding.severity === "warning"
+                            ? "text-ember-orange"
+                            : "text-meadow-green"
                       }`}
                       key={finding.message}
                     >
-                      {finding.severity === 'blocker' ? '✕' : '✓'}{' '}
+                      {finding.severity === "blocker" ? "✕" : "✓"}{" "}
                       {finding.message}
                     </p>
                   ))}
@@ -867,8 +867,8 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                 disabled={saving || isValidating}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ash hover:text-charcoal-primary hover:bg-surface-hover transition-all cursor-pointer disabled:opacity-50 ${
                   isMarket
-                    ? 'bg-meadow-green/10 text-meadow-green border-meadow-green/30'
-                    : ''
+                    ? "bg-meadow-green/10 text-meadow-green border-meadow-green/30"
+                    : ""
                 }`}
                 title="Toggle prediction market fields"
               >
@@ -880,9 +880,9 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
               className={`verity-pill px-5 py-2 text-sm font-semibold tracking-[-0.18px] transition-all border ${
                 canUsePrimaryAction
                   ? predictionApproved
-                    ? 'clickable bg-meadow-green text-white hover:bg-meadow-green/90 border-meadow-green/10 cursor-pointer shadow-md'
-                    : 'clickable bg-inverse text-inverse-text hover:opacity-90 border-transparent cursor-pointer'
-                  : 'cursor-not-allowed bg-stone-surface text-ash border-border'
+                    ? "clickable bg-meadow-green text-white hover:bg-meadow-green/90 border-meadow-green/10 cursor-pointer shadow-md"
+                    : "clickable bg-inverse text-inverse-text hover:opacity-90 border-transparent cursor-pointer"
+                  : "cursor-not-allowed bg-stone-surface text-ash border-border"
               }`}
               disabled={!canUsePrimaryAction}
               onClick={submit}

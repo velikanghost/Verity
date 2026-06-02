@@ -1,29 +1,29 @@
-'use client'
+"use client"
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Edit3, Share } from 'lucide-react'
+import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Edit3, Share } from "lucide-react"
 import ProfileActivityTabs, {
   type ProfileActivityTab,
-} from '@/components/social/ProfileActivityTabs'
-import SocialUserListModal from '@/components/social/SocialUserListModal'
-import { useFeed } from '@/hooks/useFeed'
-import { useWalletProfile } from '@/hooks/useWalletProfile'
-import { displayHandle, displayName, type Profile } from '@/lib/verity'
-import { useProfileActivityQuery } from '@/store/verity/verityQueries'
+} from "@/components/social/ProfileActivityTabs"
+import SocialUserListModal from "@/components/social/SocialUserListModal"
+import { useFeed } from "@/hooks/useFeed"
+import { useWalletProfile } from "@/hooks/useWalletProfile"
+import { displayHandle, displayName, type Profile } from "@/lib/verity"
+import { useProfileActivityQuery } from "@/store/verity/verityQueries"
 
 export default function ProfileEditor() {
   const router = useRouter()
   const { profile } = useWalletProfile()
   const { items } = useFeed()
-  const [activeTab, setActiveTab] = useState<ProfileActivityTab>('posts')
+  const [activeTab, setActiveTab] = useState<ProfileActivityTab>("posts")
   const [peopleModal, setPeopleModal] = useState<
-    'followers' | 'following' | null
+    "followers" | "following" | null
   >(null)
   const isConnected = Boolean(profile)
 
   const { data: tabItems = [], isLoading: isActivityLoading } =
-    useProfileActivityQuery(profile?.id || '', activeTab, profile?.id)
+    useProfileActivityQuery(profile?.id || "", activeTab, profile?.id)
 
   const localProfileItems = useMemo(
     () =>
@@ -50,7 +50,7 @@ export default function ProfileEditor() {
               <button
                 className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-[(--shadow-subtle)] hover:bg-stone-surface sm:inline-flex"
                 onClick={() => {
-                  if (typeof window !== 'undefined') {
+                  if (typeof window !== "undefined") {
                     void navigator.clipboard?.writeText(window.location.href)
                   }
                 }}
@@ -60,7 +60,7 @@ export default function ProfileEditor() {
               </button>
               <button
                 className="clickable verity-pill flex h-10 items-center justify-center gap-2 bg-inverse px-4 text-sm font-semibold tracking-[-0.18px] text-inverse-text hover:opacity-90"
-                onClick={() => router.push('/profile/edit')}
+                onClick={() => router.push("/profile/edit")}
                 type="button"
               >
                 Edit profile <Edit3 className="h-4 w-4" />
@@ -71,11 +71,11 @@ export default function ProfileEditor() {
           <div className="mt-3">
             <div className="flex items-center gap-2">
               <h1 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.7px] text-midnight">
-                {isConnected ? displayName(profile) : 'Connect wallet'}
+                {isConnected ? displayName(profile) : "Connect wallet"}
               </h1>
             </div>
             <p className="mt-1 font-mono text-sm text-ash">
-              {isConnected ? displayHandle(profile) : '@wallet'}
+              {isConnected ? displayHandle(profile) : "@wallet"}
             </p>
             {profile?.bio ? (
               <p className="mt-3 max-w-[560px] text-[15px] leading-[1.47] tracking-[-0.2px] text-graphite">
@@ -90,22 +90,22 @@ export default function ProfileEditor() {
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm tracking-[-0.18px] text-graphite">
               <button
                 className="hover:text-ember-orange"
-                onClick={() => setPeopleModal('following')}
+                onClick={() => setPeopleModal("following")}
                 type="button"
               >
                 <strong className="font-semibold text-midnight">
                   {(profile?.followingCount || 0).toLocaleString()}
-                </strong>{' '}
+                </strong>{" "}
                 Following
               </button>
               <button
                 className="hover:text-ember-orange"
-                onClick={() => setPeopleModal('followers')}
+                onClick={() => setPeopleModal("followers")}
                 type="button"
               >
                 <strong className="font-semibold text-midnight">
                   {(profile?.followersCount || 0).toLocaleString()}
-                </strong>{' '}
+                </strong>{" "}
                 Followers
               </button>
               <span className="font-mono text-xs text-ash">
@@ -136,7 +136,7 @@ export default function ProfileEditor() {
         open={peopleModal !== null}
         onClose={() => setPeopleModal(null)}
         subtitle="People already active on Verity."
-        title={peopleModal === 'followers' ? 'Followers' : 'Following'}
+        title={peopleModal === "followers" ? "Followers" : "Following"}
         users={knownUsers}
       />
     </div>
@@ -170,11 +170,11 @@ function ProfileTabs({
   onChange: (tab: ProfileActivityTab) => void
 }) {
   const tabs: Array<{ id: ProfileActivityTab; label: string }> = [
-    { id: 'posts', label: 'Posts' },
-    { id: 'markets', label: 'Markets' },
-    { id: 'comments', label: 'Comments' },
-    { id: 'likes', label: 'Likes' },
-    { id: 'reshares', label: 'Reshares' },
+    { id: "posts", label: "Posts" },
+    { id: "markets", label: "Markets" },
+    { id: "comments", label: "Comments" },
+    { id: "likes", label: "Likes" },
+    { id: "reshares", label: "Reshares" },
   ]
 
   return (
@@ -183,8 +183,8 @@ function ProfileTabs({
         <button
           className={`relative h-12 rounded-[10px] text-[13px] sm:text-sm font-semibold tracking-[-0.18px] ${
             activeTab === tab.id
-              ? 'text-charcoal-primary'
-              : 'clickable-tab text-ash'
+              ? "text-charcoal-primary"
+              : "clickable-tab text-ash"
           }`}
           key={tab.id}
           onClick={() => onChange(tab.id)}

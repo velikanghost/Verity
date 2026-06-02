@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { Search, TrendingUp, Trophy } from 'lucide-react'
-import { useFeed } from '@/hooks/useFeed'
-import { useRightPanelSlot } from '@/hooks/useRightPanelSlot'
-import { displayHandle, displayName } from '@/lib/verity'
+import Link from "next/link"
+import { Search, TrendingUp, Trophy } from "lucide-react"
+import { useFeed } from "@/hooks/useFeed"
+import { useRightPanelSlot } from "@/hooks/useRightPanelSlot"
+import { displayHandle, displayName } from "@/lib/verity"
 
 export default function RightPanel() {
   const { items, loading } = useFeed(undefined, true)
@@ -75,7 +75,7 @@ export default function RightPanel() {
                   key={item.id}
                 >
                   <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ash">
-                    Trending in {market?.category || 'Markets'}
+                    Trending in {market?.category || "Markets"}
                   </span>
                   <p className="line-clamp-2 text-sm font-semibold leading-snug tracking-[-0.18px] text-charcoal-primary">
                     {market?.question}
@@ -185,7 +185,7 @@ export default function RightPanel() {
         <Link href="/how-it-works" className="hover:underline">
           How it works
         </Link>
-        <span>{'\u00A9'} 2026 Verity</span>
+        <span>{"\u00A9"} 2026 Verity</span>
       </div>
     </div>
   )
