@@ -60,4 +60,12 @@ export class PvpController {
   async getMatchHistory(@Request() req: any) {
     return this.pvpService.getMatchHistory(req.user.id)
   }
+
+  @Get("admin-status")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin-only: Get admin wallet balances and market fee details" })
+  async getAdminStatus(@Request() req: any) {
+    return this.pvpService.getAdminStatus(req.user.id)
+  }
 }

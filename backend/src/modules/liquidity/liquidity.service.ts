@@ -599,4 +599,15 @@ export class LiquidityService {
       }
     }
   }
+
+  async deletePoolAndPositions(marketId: string): Promise<void> {
+    const pool = await this.liquidityPoolModel.findOne({
+      marketId: new Types.ObjectId(marketId),
+    })
+    if (pool) {
+      await this.lpPositionModel.deleteMany({ poolId: pool._id })
+      await this.liquidityEventModel.deleteMany({ poolId: pool._id })
+      await this.liquidityPoolModel.deleteOne({ _id: pool._id })
+    }
+  }
 }

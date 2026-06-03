@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import {
   useCallback,
   useEffect,
@@ -77,14 +78,18 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
 
   const profileId = profile?.id
   const isConnected = Boolean(profileId)
+  
+  const searchParams = useSearchParams()
+  const querySide = searchParams.get("side") as VoteSide | null
+  const queryAction = searchParams.get("action") as MarketTradeAction | null
 
   // 1. All hooks and state declarations at the very top of the component
   const [actionPending, setActionPending] = useState<string | null>(null)
   const [commentDraft, setCommentDraft] = useState("")
   const [commentLoading, setCommentLoading] = useState(false)
   const [tradeAmount, setTradeAmount] = useState("1")
-  const [tradeAction, setTradeAction] = useState<MarketTradeAction>("BUY")
-  const [selectedSide, setSelectedSide] = useState<VoteSide>("YES")
+  const [tradeAction, setTradeAction] = useState<MarketTradeAction>(queryAction || "BUY")
+  const [selectedSide, setSelectedSide] = useState<VoteSide>(querySide || "YES")
   const [replyingToComment, setReplyingToComment] =
     useState<MarketComment | null>(null)
 
@@ -577,7 +582,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
                                 : "bg-stone-surface text-ash"
                             }`}
                           >
-                            {isWinner ? "WINNING" : "LOST"} {pos.side} POSITION
+                            {isWinner ? "WINNING" : "LOST"} {pos.side === "YES" ? (activeMarket.yes_condition || "YES") : (activeMarket.no_condition || "NO")} POSITION
                           </span>
                         ) : (
                           <span
@@ -587,7 +592,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
                                 : "bg-ember-orange/10 text-ember-orange"
                             }`}
                           >
-                            {pos.side} POSITION
+                            {pos.side === "YES" ? (activeMarket.yes_condition || "YES") : (activeMarket.no_condition || "NO")} POSITION
                           </span>
                         )}
 
@@ -699,6 +704,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
             noPrice={noPercent}
             actionPending={actionPending === "trade"}
             maxSellShares={selectedSideShares}
+            yesCondition={activeMarket?.yes_condition || activeMarket?.yesCondition || "Yes"}
+            noCondition={activeMarket?.no_condition || activeMarket?.noCondition || "No"}
           />
         )}
 
@@ -1142,6 +1149,8 @@ function TradeTicket({
   yesPrice,
   actionPending = false,
   maxSellShares,
+  yesCondition = "Yes",
+  noCondition = "No",
 }: {
   action: MarketTradeAction
   amount: string
@@ -1163,6 +1172,8 @@ function TradeTicket({
   yesPrice: number
   actionPending?: boolean
   maxSellShares: number
+  yesCondition?: string
+  noCondition?: string
 }) {
   const quickBuyAmounts = [1, 5, 10, 100]
   const sellPercentages = [25, 50, 75, 100]
@@ -1181,6 +1192,8 @@ function TradeTicket({
     const shares = (maxSellShares * percent) / 100
     onAmountChange(shares > 0 ? shares.toFixed(4) : "0")
   }
+
+  const sideLabel = selectedSide === "YES" ? yesCondition : noCondition
 
   return (
     <section className="verity-card overflow-hidden">
@@ -1214,14 +1227,14 @@ function TradeTicket({
         <div className="mb-6 grid grid-cols-2 gap-3">
           <OutcomeButton
             active={selectedSide === "YES"}
-            label="Yes"
+            label={yesCondition}
             price={yesPrice}
             side="YES"
             onClick={onSideChange}
           />
           <OutcomeButton
             active={selectedSide === "NO"}
-            label="No"
+            label={noCondition}
             price={noPrice}
             side="NO"
             onClick={onSideChange}
@@ -1239,7 +1252,7 @@ function TradeTicket({
             <p className="mt-0.5 font-mono text-[11px] text-ash">
               {action === "BUY"
                 ? `${balanceLabel} USDC balance`
-                : `${maxSellShares.toFixed(4)} ${selectedSide} available`}
+                : `${maxSellShares.toFixed(4)} ${sideLabel} available`}
             </p>
           </div>
           <input
@@ -1325,7 +1338,7 @@ function TradeTicket({
           {actionPending
             ? "Processing..."
             : isConnected
-              ? `${action === "BUY" ? "Buy" : "Sell"} ${selectedSide}`
+              ? `${action === "BUY" ? "Buy" : "Sell"} ${sideLabel}`
               : "Connect Wallet"}
         </button>
       </div>
@@ -1540,7 +1553,9 @@ function PositionPanel({
                 key={position.id}
               >
                 <span className="text-ash">
-                  {position.side === "YES" ? "Yes" : "No"}
+                  {position.side === "YES"
+                    ? (market.yes_condition || market.yesCondition || "Yes")
+                    : (market.no_condition || market.noCondition || "No")}
                 </span>
                 <span
                   className={

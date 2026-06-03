@@ -45,6 +45,7 @@ export class MarketsController {
       newest: query.newest,
       qualified: query.qualified,
       open_for_votes: query.open_for_votes,
+      admin: query.admin,
     })
   }
 

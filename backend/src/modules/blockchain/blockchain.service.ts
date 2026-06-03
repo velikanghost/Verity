@@ -601,19 +601,28 @@ export class BlockchainService implements OnModuleInit {
   }
 
   async getTransactionReceipt(txHash: `0x${string}`) {
-    try {
-      return await this.publicClient.waitForTransactionReceipt({
-        hash: txHash,
-      })
-    } catch (error) {
-      this.logger.error(
-        `Transaction verification failed for hash ${txHash}: ${error.message}`,
-        error.stack,
-      )
-      throw new Error(
-        `Transaction verification failed for hash ${txHash}: ${error.message}`,
-      )
+    let receipt: any = null
+    for (let attempt = 1; attempt <= 25; attempt++) {
+      try {
+        receipt = await this.publicClient.getTransactionReceipt({ hash: txHash })
+        break
+      } catch (error) {
+        if (attempt === 25) {
+          this.logger.error(
+            `Transaction verification failed for hash ${txHash}: ${error.message}`,
+            error.stack,
+          )
+          throw new Error(
+            `Transaction verification failed for hash ${txHash}: ${error.message}`,
+          )
+        }
+        this.logger.warn(
+          `RPC node replication lag for getTransactionReceipt tx ${txHash}. Retrying in 1s... (Attempt ${attempt}/25)`,
+        )
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
     }
+    return receipt
   }
 
   async readEscrowBalance(marketId: string) {
@@ -742,6 +751,74 @@ export class BlockchainService implements OnModuleInit {
       return txHash
     } catch (error) {
       throw new Error(`Failed to register market ${marketId}: ${error.message}`)
+    }
+  }
+
+  async adminCreateMarketPreDeposit(
+    marketId: string,
+    amountUsdc: number,
+  ): Promise<string> {
+    if (!this.walletClient) {
+      throw new Error("Wallet client not initialized")
+    }
+
+    const rawAmount = BigInt(Math.round(amountUsdc * 1e6))
+    const totalRequired = rawAmount + BigInt(1e6)
+    await this.approveUsdcIfNecessary(this.factoryAddress, totalRequired)
+
+    const formattedMarketId = this.formatMarketId(marketId)
+    try {
+      const txHash = await this.walletClient.writeContract({
+        address: this.factoryAddress,
+        abi: this.factoryAbi,
+        functionName: "createMarketPreDeposit",
+        args: [formattedMarketId, rawAmount],
+        chain: arcTestnet,
+      })
+      // Wait for block confirmation
+      await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      return txHash
+    } catch (error) {
+      throw new Error(
+        `Failed to create market pre-deposit for ${marketId}: ${error.message}`,
+      )
+    }
+  }
+
+  getAdminAddress(): string {
+    return this.account?.address || ""
+  }
+
+  async getAdminBalances() {
+    if (!this.account) {
+      return {
+        address: "",
+        arcBalance: 0,
+        usdcBalance: 0,
+      }
+    }
+    const address = this.account.address
+    try {
+      const arcBalBig = await this.publicClient.getBalance({ address })
+      const usdcBalBig = (await this.publicClient.readContract({
+        address: this.usdcAddress,
+        abi: this.usdcAbi,
+        functionName: "balanceOf",
+        args: [address],
+      })) as bigint
+
+      return {
+        address,
+        arcBalance: Number(arcBalBig) / 1e18,
+        usdcBalance: Number(usdcBalBig) / 1e6,
+      }
+    } catch (error) {
+      this.logger.error(`Failed to fetch admin balances: ${error.message}`)
+      return {
+        address,
+        arcBalance: 0,
+        usdcBalance: 0,
+      }
     }
   }
 

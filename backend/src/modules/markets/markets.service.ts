@@ -402,6 +402,7 @@ export class MarketsService {
     open_for_votes?: boolean
     trending?: boolean
     newest?: boolean
+    admin?: boolean
   }): Promise<MarketResponse[]> {
     const query: Record<string, unknown> = {}
     if (filters.status) query.status = filters.status
@@ -409,12 +410,25 @@ export class MarketsService {
     if (filters.qualified) query.status = "qualified"
     if (filters.open_for_votes) query.status = "open_for_votes"
 
-    // We only want to show binary/parent markets, NOT child markets!
-    query.marketType = { $ne: "child" }
-    
-    // Exclude PvP Arena markets from standard market queries
-    if (filters.category !== "pvp") {
-      query.category = { $ne: "pvp" }
+    if (filters.admin) {
+      query.$or = [
+        {
+          marketType: { $in: ["binary", "parent"] },
+          category: { $ne: "pvp" },
+        },
+        {
+          marketType: "child",
+          category: "pvp",
+        },
+      ]
+    } else {
+      // We only want to show binary/parent markets, NOT child markets!
+      query.marketType = { $ne: "child" }
+      
+      // Exclude PvP Arena markets from standard market queries
+      if (filters.category !== "pvp") {
+        query.category = { $ne: "pvp" }
+      }
     }
 
     const sort: Record<string, any> = filters.trending

@@ -1,13 +1,14 @@
 import { Module } from "@nestjs/common"
 import { MongooseModule } from "@nestjs/mongoose"
 import { PvpTicket, PvpTicketSchema, PvpMatch, PvpMatchSchema } from "./pvp.model"
-import { Market, MarketSchema } from "../markets/markets.model"
+import { Market, MarketSchema, MarketPosition, MarketPositionSchema } from "../markets/markets.model"
 import { Post, PostSchema } from "../posts/posts.model"
 import { User, UserSchema } from "../users/users.model"
 import { PvpService } from "./pvp.service"
 import { PvpController } from "./pvp.controller"
 import { SocketModule } from "../socket/socket.module"
 import { NotificationsModule } from "../notifications/notifications.module"
+import { LiquidityModule } from "../liquidity/liquidity.module"
 
 @Module({
   imports: [
@@ -17,9 +18,11 @@ import { NotificationsModule } from "../notifications/notifications.module"
       { name: Market.name, schema: MarketSchema },
       { name: Post.name, schema: PostSchema },
       { name: User.name, schema: UserSchema },
+      { name: MarketPosition.name, schema: MarketPositionSchema },
     ]),
     SocketModule,
     NotificationsModule,
+    LiquidityModule,
   ],
   controllers: [PvpController],
   providers: [PvpService],

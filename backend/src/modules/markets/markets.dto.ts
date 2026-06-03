@@ -62,6 +62,15 @@ export class FetchMarketsQueryDto {
   @Transform(({ value }) => value === "true" || value === true)
   @IsBoolean()
   open_for_votes?: boolean
+
+  @ApiPropertyOptional({
+    description: "Filter to include child/pvp markets for administration",
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === "true" || value === true)
+  @IsBoolean()
+  admin?: boolean
 }
 
 export class CastFreeVoteDto {

@@ -1,18 +1,19 @@
 "use client"
 
 import Link from "next/link"
-import { Bell, Home, Search, User, Wallet } from "lucide-react"
+import { Bell, Home, User, Wallet, TrendingUp } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useWalletProfile } from "@/hooks/useWalletProfile"
 import { useNotificationsQuery } from "@/store/verity/verityQueries"
 
 const MOBILE_NAV_ITEMS = [
   { icon: Home, label: "Home", href: "/" },
-  { icon: Search, label: "Explore", href: "/explore" },
+  { icon: TrendingUp, label: "Markets", href: "/markets" },
   { icon: Bell, label: "Alerts", href: "/notifications" },
   { icon: Wallet, label: "Portfolio", href: "/portfolio" },
   { icon: User, label: "Profile", href: "/profile" },
 ]
+
 
 export default function MobileNav() {
   const pathname = usePathname()

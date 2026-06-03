@@ -24,7 +24,16 @@ export interface Profile {
   createdAt?: string
   updatedAt?: string
   isOnboarded?: boolean
+  referredById?: string | null
+  eloRating?: number
+  arenaXp?: number
+  doubleBoostRemaining?: number
+  hasWonFirstPvpDuel?: boolean
+  pvpMatchesWonCount?: number
+  pvpMatchesLostCount?: number
+  pvpMatchesDrawnCount?: number
 }
+
 
 export interface MarketPost {
   id: string

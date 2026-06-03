@@ -14,6 +14,7 @@ import {
   TrendingUp,
   MessageSquareText,
   X,
+  Trophy,
 } from "lucide-react"
 import { useState } from "react"
 import ThemeToggle from "@/components/layout/ThemeToggle"
@@ -23,12 +24,15 @@ import { useNotificationsQuery } from "@/store/verity/verityQueries"
 
 const NAV_ITEMS = [
   { icon: Home, label: "Home", href: "/" },
+  { icon: TrendingUp, label: "Markets", href: "/markets" },
   { icon: Search, label: "Explore", href: "/explore" },
+  { icon: Trophy, label: "Leaderboard", href: "/leaderboard" },
   { icon: CircleHelp, label: "How it works", href: "/how-it-works" },
   { icon: Bell, label: "Notifications", href: "/notifications" },
   { icon: Wallet, label: "Portfolio", href: "/portfolio" },
   { icon: User, label: "Profile", href: "/profile" },
 ]
+
 
 export default function Sidebar() {
   const router = useRouter()

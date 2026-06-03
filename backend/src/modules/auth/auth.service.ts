@@ -48,6 +48,7 @@ export interface UserResponse {
   pvpMatchesWonCount: number
   pvpMatchesLostCount: number
   pvpMatchesDrawnCount: number
+  role?: string
 }
 
 export function serializeUser(user: UserDocument): UserResponse {
@@ -88,6 +89,7 @@ export function serializeUser(user: UserDocument): UserResponse {
     pvpMatchesWonCount: user.pvpMatchesWonCount ?? 0,
     pvpMatchesLostCount: user.pvpMatchesLostCount ?? 0,
     pvpMatchesDrawnCount: user.pvpMatchesDrawnCount ?? 0,
+    role: user.role,
   }
 }
 

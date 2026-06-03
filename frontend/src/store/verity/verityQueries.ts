@@ -593,3 +593,87 @@ export function useUnfollowUserMutation() {
     },
   })
 }
+
+export function useActivePvpEventsQuery() {
+  return useQuery({
+    queryKey: ["pvp-active-events"] as const,
+    queryFn: () => apiRequest<any[]>("/pvp/active-events"),
+  })
+}
+
+export function usePvpStatusQuery() {
+  return useQuery({
+    queryKey: ["pvp-status"] as const,
+    queryFn: () => apiRequest<any>("/pvp/status"),
+  })
+}
+
+export function useSubmitPvpTicketMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: {
+      parentMarketId: string
+      picks: { marketId: string; selection: "YES" | "NO" }[]
+    }) =>
+      apiRequest<any>("/pvp/ticket", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["pvp-status"] })
+      void qc.invalidateQueries({ queryKey: ["wallet-profile"] })
+    },
+  })
+}
+
+export function usePvpLeaderboardQuery() {
+  return useQuery({
+    queryKey: ["pvp-leaderboards"] as const,
+    queryFn: () =>
+      apiRequest<{
+        elo: any[]
+        xp: any[]
+        referrers: any[]
+      }>("/pvp/leaderboards"),
+  })
+}
+
+export function useReferralsQuery() {
+  return useQuery({
+    queryKey: ["pvp-referrals"] as const,
+    queryFn: () =>
+      apiRequest<{
+        referralLink: string
+        doubleBoostRemaining: number
+        hasWonFirstPvpDuel: boolean
+        referees: any[]
+      }>("/pvp/referrals"),
+  })
+}
+
+export function usePvpMatchHistoryQuery() {
+  return useQuery({
+    queryKey: ["pvp-history"] as const,
+    queryFn: () => apiRequest<any[]>("/pvp/history"),
+  })
+}
+
+export function useCreatePvpEventMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: {
+      question: string
+      deadline: string
+      resolutionSource: string
+      options: string[]
+    }) =>
+      apiRequest<any>("/pvp/events", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["pvp-active-events"] })
+    },
+  })
+}
+
