@@ -3,5 +3,3 @@ dist
 node_modules
 recovery
 scripts
-!src/scripts/
-!src/scripts/recalculate-pvp-xp.ts
