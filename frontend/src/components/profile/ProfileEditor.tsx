@@ -10,20 +10,41 @@ import SocialUserListModal from "@/components/social/SocialUserListModal"
 import { useFeed } from "@/hooks/useFeed"
 import { useWalletProfile } from "@/hooks/useWalletProfile"
 import { displayHandle, displayName, type Profile } from "@/lib/verity"
-import { useProfileActivityQuery } from "@/store/verity/verityQueries"
+import {
+  useProfileActivityQuery,
+  useUserPortfolioQuery,
+} from "@/store/verity/verityQueries"
 
 export default function ProfileEditor() {
   const router = useRouter()
   const { profile } = useWalletProfile()
   const { items } = useFeed()
-  const [activeTab, setActiveTab] = useState<ProfileActivityTab>("posts")
+  const [activeTab, setActiveTab] = useState<ProfileActivityTab>("predictions")
   const [peopleModal, setPeopleModal] = useState<
     "followers" | "following" | null
   >(null)
   const isConnected = Boolean(profile)
 
   const { data: tabItems = [], isLoading: isActivityLoading } =
-    useProfileActivityQuery(profile?.id || "", activeTab, profile?.id)
+    useProfileActivityQuery(
+      profile?.id || "",
+      activeTab === "markets" ? "markets" : activeTab === "activity" ? "comments" : "posts",
+      profile?.id,
+    )
+
+  const { data: positions = [], isLoading: isPositionsLoading } =
+    useUserPortfolioQuery(
+      activeTab === "predictions" ? (profile?.id || "") : "",
+    )
+
+  const isTabLoading =
+    activeTab === "markets"
+      ? isActivityLoading
+      : activeTab === "predictions"
+        ? isPositionsLoading
+        : activeTab === "activity"
+          ? isActivityLoading
+          : false
 
   const localProfileItems = useMemo(
     () =>
@@ -125,7 +146,8 @@ export default function ProfileEditor() {
         <ProfileActivityTabs
           activeTab={activeTab}
           items={tabItems}
-          loading={isActivityLoading}
+          positions={positions}
+          loading={isTabLoading}
           onOpenMarket={(market) => router.push(`/markets/${market.id}`)}
           onOpenPost={(post) => router.push(`/posts/${post.id}`)}
           profile={profile}
@@ -170,15 +192,13 @@ function ProfileTabs({
   onChange: (tab: ProfileActivityTab) => void
 }) {
   const tabs: Array<{ id: ProfileActivityTab; label: string }> = [
-    { id: "posts", label: "Posts" },
+    { id: "predictions", label: "Predictions" },
     { id: "markets", label: "Markets" },
-    { id: "comments", label: "Comments" },
-    { id: "likes", label: "Likes" },
-    { id: "reshares", label: "Reshares" },
+    { id: "activity", label: "Activity" },
   ]
 
   return (
-    <div className="grid grid-cols-5 border-t border-dashed border-stone-surface px-2">
+    <div className="grid grid-cols-3 border-t border-dashed border-stone-surface px-2">
       {tabs.map((tab) => (
         <button
           className={`relative h-12 rounded-[10px] text-[13px] sm:text-sm font-semibold tracking-[-0.18px] ${

@@ -3,8 +3,7 @@
 import { useMemo, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import ComposeBox from "@/components/feed/ComposeBox"
-import FeedTabs, { type FeedTabId } from "@/components/feed/FeedTabs"
-import MarketCard from "@/components/post/MarketCard"
+import { type FeedTabId } from "@/components/feed/FeedTabs"
 import PostCard from "@/components/post/PostCard"
 import CommentModal from "@/components/social/CommentModal"
 import { useDailyVotes } from "@/hooks/useDailyVotes"
@@ -220,7 +219,6 @@ export default function FeedShell() {
         </div>
       </section>
 
-      <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
       <ComposeBox onCreated={reload} profile={profile} />
 
       {error && (
@@ -391,58 +389,23 @@ function FeedCard({
       }
 
       return (
-        <MarketCard
-          category={item.market.category}
+        <PostCard
           comments={item.commentsCount}
-          deadline={new Date(item.market.deadline).toLocaleString()}
-          freeNoVotes={item.market.free_no_votes}
-          freeYesVotes={item.market.free_yes_votes}
+          content={item.content || item.market.question}
           handle={displayHandle(item.author)}
-          marketCreationFeeUsdc={item.market.market_creation_fee_usdc}
+          liked={item.viewerLiked}
+          likes={item.likesCount}
           name={displayName(item.author)}
-          noCondition={item.market.no_condition}
           onComment={onComment}
           onOpenDetails={() => onOpenMarket(item.market!)}
+          onLike={onLike}
           onReshare={onReshare}
           onShare={onShare}
-          onUsdcVote={(side, amount) => onUsdcVote(item.market!, side, amount)}
-          onVote={(side) => onVote(item.market!, side)}
-          postContent={item.content}
           profile={item.author}
           profileHref={`/profile/${encodeURIComponent(item.author.id)}`}
-          question={item.market.question}
-          resolutionSource={item.market.resolution_source}
           reshares={item.resharesCount}
           reshared={item.viewerReshared}
-          status={item.market.status}
           time={relativeTime(item.created_at)}
-          dailyVotesRemaining={dailyVotesRemaining}
-          qualificationThreshold={item.market.qualificationThreshold}
-          totalFreeVotes={item.market.totalFreeVotes}
-          tradingFeeBps={item.market.trading_fee_bps}
-          uniqueVoterThreshold={item.market.uniqueVoterThreshold}
-          uniqueVotersCount={item.market.uniqueVotersCount}
-          usdcNo={Number(item.market.usdc_no_amount)}
-          usdcYes={Number(item.market.usdc_yes_amount)}
-          viewerVote={item.viewerVote}
-          votingDisabledMessage={
-            dailyVotesRemaining <= 0
-              ? "You have used all 10 Upvote/Downvote signals today. They reset tomorrow."
-              : null
-          }
-          yesCondition={item.market.yes_condition}
-          yesPercent={calculateYesPercent(item.market)}
-          liquidity={item.market.liquidity}
-          actionLoading={Boolean(
-            actionLoading && actionLoading.startsWith(item.market.id),
-          )}
-          actionLoadingStatus={
-            actionLoading && actionLoading.startsWith(item.market.id)
-              ? actionLoading.replace(`${item.market.id}_`, "")
-              : null
-          }
-          isConnected={isConnected}
-          onAddLP={(amount) => onAddLP(item.market!, amount)}
         />
       )
     }
@@ -470,15 +433,6 @@ function FeedCard({
   }
 
   return <div className="flex flex-col gap-2">{renderContent()}</div>
-}
-
-function calculateYesPercent(market: MarketPost) {
-  const yes = Number(market.usdc_yes_amount)
-  const no = Number(market.usdc_no_amount)
-  const totalUsdc = yes + no
-  if (totalUsdc > 0) return (yes / totalUsdc) * 100
-
-  return 50
 }
 
 export function FeedSkeleton() {

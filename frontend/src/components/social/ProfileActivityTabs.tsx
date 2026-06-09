@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import React from "react"
 import Link from "next/link"
 import UserHoverCard from "@/components/social/UserHoverCard"
 import MarketCard from "@/components/post/MarketCard"
@@ -10,21 +10,25 @@ import {
   displayHandle,
   displayName,
   relativeTime,
+  getMarketPrice,
   type FeedPost,
   type MarketPost,
   type Profile,
+  type MarketPosition,
 } from "@/lib/verity"
+import {
+  ArrowUpRight,
+} from "lucide-react"
 
 export type ProfileActivityTab =
-  | "posts"
+  | "predictions"
   | "markets"
-  | "comments"
-  | "likes"
-  | "reshares"
+  | "activity"
 
 interface ProfileActivityTabsProps {
   activeTab: ProfileActivityTab
-  items: FeedPost[]
+  items?: FeedPost[]
+  positions?: MarketPosition[]
   profile: Profile
   onOpenMarket: (market: MarketPost) => void
   onOpenPost?: (post: FeedPost) => void
@@ -33,7 +37,8 @@ interface ProfileActivityTabsProps {
 
 export default function ProfileActivityTabs({
   activeTab,
-  items,
+  items = [],
+  positions = [],
   profile,
   onOpenMarket,
   onOpenPost,
@@ -43,10 +48,101 @@ export default function ProfileActivityTabs({
     return <FeedSkeleton />
   }
 
-  // Items are pre-filtered by the backend when using the profile activity query.
-  const rows = items
+  if (activeTab === "predictions") {
+    return (
+      <section className="flex flex-col gap-3">
+        {positions.length > 0 ? (
+          positions.map((pos) => {
+            const isYes = pos.side === "YES"
+            const currentPrice =
+              pos.status === "resolved"
+                ? pos.resolved_outcome === pos.side
+                  ? 1.0
+                  : 0.0
+                : getMarketPrice(
+                    {
+                      usdc_yes_amount: pos.usdc_yes_amount ?? 0,
+                      usdc_no_amount: pos.usdc_no_amount ?? 0,
+                    },
+                    pos.side,
+                  )
+            const currentValue = pos.shares * currentPrice
+            const unrealizedPnL = currentValue - (pos.invested_usdc || 0)
 
-  if (activeTab === "comments") {
+            const isPvp = pos.category?.toLowerCase() === "pvp"
+            const href = isPvp ? "/markets?tab=pvp-arena" : `/markets/${pos.market_id}`
+
+            return (
+              <div
+                key={pos.id}
+                className="flex flex-col gap-3 p-4 bg-stone-surface rounded-[12px] border border-border sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0 flex-1">
+                  <span
+                    className={`verity-pill inline-flex items-center px-2 py-0.5 font-mono text-[9px] font-semibold ${
+                      isYes
+                        ? "bg-meadow-green/10 text-meadow-green"
+                        : "bg-ember-orange/10 text-ember-orange"
+                    }`}
+                  >
+                    {pos.side}
+                  </span>
+                  <h4
+                    className="mt-1.5 text-xs font-semibold leading-normal text-charcoal-primary truncate"
+                    title={pos.market_question || ""}
+                  >
+                    {pos.market_question || `Market ID: ${pos.market_id.slice(0, 10)}`}
+                  </h4>
+                </div>
+                <div className="flex items-center gap-4 font-mono text-xs text-right shrink-0">
+                  <div>
+                    <span className="block text-[8px] text-ash uppercase">
+                      Shares
+                    </span>
+                    <span className="font-semibold text-charcoal-primary">
+                      {pos.shares.toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] text-ash uppercase">
+                      Cost
+                    </span>
+                    <span className="font-semibold text-charcoal-primary">
+                      ${pos.invested_usdc.toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] text-ash uppercase">
+                      P&L
+                    </span>
+                    <span
+                      className={`font-semibold ${unrealizedPnL >= 0 ? "text-meadow-green" : "text-ember-orange"}`}
+                    >
+                      {unrealizedPnL >= 0 ? "+" : ""}
+                      {unrealizedPnL.toFixed(2)}
+                    </span>
+                  </div>
+                  <Link
+                    href={href}
+                    className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white border border-border hover:bg-stone-surface transition-colors cursor-pointer text-ash hover:text-charcoal-primary"
+                  >
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </div>
+            )
+          })
+        ) : (
+          <div className="verity-card p-8 text-center text-sm tracking-[-0.18px] text-ash">
+            No active or resolved outcome predictions yet.
+          </div>
+        )}
+      </section>
+    )
+  }
+
+  if (activeTab === "activity") {
+    const rows = items
     return (
       <section className="flex flex-col gap-3">
         {rows.length > 0 ? (
@@ -60,12 +156,16 @@ export default function ProfileActivityTabs({
             />
           ))
         ) : (
-          <EmptyActivity tab={activeTab} />
+          <div className="verity-card p-8 text-center text-sm tracking-[-0.18px] text-ash">
+            No activity comments or replies recorded yet.
+          </div>
         )}
       </section>
     )
   }
 
+  // Default is "markets" tab (custom created markets by user)
+  const rows = items
   return (
     <section className="flex flex-col gap-3">
       {rows.length > 0 ? (
@@ -78,75 +178,11 @@ export default function ProfileActivityTabs({
           />
         ))
       ) : (
-        <EmptyActivity tab={activeTab} />
+        <div className="verity-card p-8 text-center text-sm tracking-[-0.18px] text-ash">
+          No created markets yet.
+        </div>
       )}
     </section>
-  )
-}
-
-function ActivityItem({
-  item,
-  onOpenMarket,
-  onOpenPost,
-}: {
-  item: FeedPost
-  onOpenMarket: (market: MarketPost) => void
-  onOpenPost?: (post: FeedPost) => void
-}) {
-  if (item.market) {
-    const market = item.market
-    const totalUsdc =
-      Number(market.usdc_yes_amount) + Number(market.usdc_no_amount)
-    const yesPercent =
-      totalUsdc > 0 ? (Number(market.usdc_yes_amount) / totalUsdc) * 100 : 50
-
-    return (
-      <MarketCard
-        category={market.category}
-        comments={item.commentsCount}
-        dailyVotesRemaining={10}
-        deadline={new Date(market.deadline).toLocaleString()}
-        freeNoVotes={market.free_no_votes}
-        freeYesVotes={market.free_yes_votes}
-        handle={displayHandle(item.author)}
-        liquidity={market.liquidity}
-        marketCreationFeeUsdc={market.market_creation_fee_usdc}
-        name={displayName(item.author)}
-        noCondition={market.no_condition}
-        onOpenDetails={() => onOpenMarket(market)}
-        postContent={item.content}
-        profile={item.author}
-        profileHref={`/profile/${encodeURIComponent(item.author.id)}`}
-        question={market.question}
-        resolutionSource={market.resolution_source}
-        reshares={item.resharesCount}
-        status={market.status}
-        time={relativeTime(item.created_at)}
-        totalFreeVotes={market.totalFreeVotes}
-        usdcNo={Number(market.usdc_no_amount)}
-        usdcYes={Number(market.usdc_yes_amount)}
-        viewerVote={item.viewerVote}
-        yesCondition={market.yes_condition}
-        yesPercent={yesPercent}
-      />
-    )
-  }
-
-  return (
-    <PostCard
-      comments={item.commentsCount}
-      content={item.content}
-      handle={displayHandle(item.author)}
-      liked={item.viewerLiked}
-      likes={item.likesCount}
-      name={displayName(item.author)}
-      onOpenDetails={() => onOpenPost?.(item)}
-      profile={item.author}
-      profileHref={`/profile/${encodeURIComponent(item.author.id)}`}
-      reshares={item.resharesCount}
-      reshared={item.viewerReshared}
-      time={relativeTime(item.created_at)}
-    />
   )
 }
 
@@ -279,21 +315,69 @@ function CommentActivityRow({
   )
 }
 
-function EmptyActivity({ tab }: { tab: ProfileActivityTab }) {
-  const label =
-    tab === "posts"
-      ? "posts"
-      : tab === "markets"
-        ? "markets"
-        : tab === "comments"
-          ? "comments"
-          : tab === "reshares"
-            ? "reshares"
-            : "liked posts or markets"
+function ActivityItem({
+  item,
+  onOpenMarket,
+  onOpenPost,
+}: {
+  item: FeedPost
+  onOpenMarket: (market: MarketPost) => void
+  onOpenPost?: (post: FeedPost) => void
+}) {
+  if (item.market) {
+    const market = item.market
+    const totalUsdc =
+      Number(market.usdc_yes_amount) + Number(market.usdc_no_amount)
+    const yesPercent =
+      totalUsdc > 0 ? (Number(market.usdc_yes_amount) / totalUsdc) * 100 : 50
+
+    return (
+      <MarketCard
+        category={market.category}
+        comments={item.commentsCount}
+        dailyVotesRemaining={10}
+        deadline={new Date(market.deadline).toLocaleString()}
+        freeNoVotes={market.free_no_votes}
+        freeYesVotes={market.free_yes_votes}
+        handle={displayHandle(item.author)}
+        liquidity={market.liquidity}
+        marketCreationFeeUsdc={market.market_creation_fee_usdc}
+        name={displayName(item.author)}
+        noCondition={market.no_condition}
+        onOpenDetails={() => onOpenMarket(market)}
+        postContent={item.content}
+        profile={item.author}
+        profileHref={`/profile/${encodeURIComponent(item.author.id)}`}
+        question={market.question}
+        resolutionSource={market.resolution_source}
+        reshares={item.resharesCount}
+        status={market.status}
+        time={relativeTime(item.created_at)}
+        totalFreeVotes={market.totalFreeVotes}
+        usdcNo={Number(market.usdc_no_amount)}
+        usdcYes={Number(market.usdc_yes_amount)}
+        viewerVote={item.viewerVote}
+        yesCondition={market.yes_condition}
+        yesPercent={yesPercent}
+      />
+    )
+  }
 
   return (
-    <div className="verity-card p-8 text-center text-sm tracking-[-0.18px] text-ash">
-      No {label} yet.
-    </div>
+    <PostCard
+      comments={item.commentsCount}
+      content={item.content}
+      handle={displayHandle(item.author)}
+      liked={item.viewerLiked}
+      likes={item.likesCount}
+      name={displayName(item.author)}
+      onOpenDetails={() => onOpenPost?.(item)}
+      profile={item.author}
+      profileHref={`/profile/${encodeURIComponent(item.author.id)}`}
+      reshares={item.resharesCount}
+      reshared={item.viewerReshared}
+      time={relativeTime(item.created_at)}
+    />
   )
 }
+

@@ -299,7 +299,7 @@ export class PostsService {
     if (profileId) {
       const pId = new Types.ObjectId(profileId)
       if (tab === "posts") {
-        filter = { authorId: pId }
+        filter = { authorId: pId, type: "market" }
       } else if (tab === "markets") {
         filter = { authorId: pId, type: "market" }
       } else if (tab === "likes") {
@@ -307,13 +307,13 @@ export class PostsService {
           .find({ userId: pId })
           .select("postId")
         const postIds = likes.map((l) => l.postId)
-        filter = { _id: { $in: postIds } }
+        filter = { _id: { $in: postIds }, type: "market" }
       } else if (tab === "reshares") {
         const reshares = await this.reshareModel
           .find({ userId: pId })
           .select("postId")
         const postIds = reshares.map((r) => r.postId)
-        filter = { _id: { $in: postIds } }
+        filter = { _id: { $in: postIds }, type: "market" }
       } else if (tab === "comments") {
         const comments = await this.commentModel.aggregate([
           { $match: { authorId: new Types.ObjectId(pId) } },
@@ -487,9 +487,9 @@ export class PostsService {
           }
         })
       } else {
-        filter = { authorId: pId }
+        filter = { authorId: pId, type: "market" }
       }
-    } else if (onlyMarkets) {
+    } else {
       filter = { type: "market" }
     }
 

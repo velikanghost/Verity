@@ -10,14 +10,23 @@ export default function PeopleDiscovery() {
   const { items, loading } = useFeed()
   const people = Array.from(
     new Map(items.map((item) => [item.author.id, item.author])).values(),
-  ).slice(0, 4)
+  )
+    .map((person) => {
+      const accuracy =
+        person.freeVotesTotal && person.freeVotesTotal > 0
+          ? Math.round(((person.freeVotesCorrect || 0) / person.freeVotesTotal) * 100)
+          : 0
+      return { person, accuracy }
+    })
+    .sort((a, b) => b.accuracy - a.accuracy)
+    .slice(0, 4)
 
   return (
     <section className="verity-card overflow-hidden">
       <div className="border-b border-dashed border-stone-surface p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-charcoal-primary">
           <Users className="h-4 w-4 text-sky-blue" />
-          People to follow
+          Top Predictors
         </h2>
       </div>
 
@@ -41,20 +50,20 @@ export default function PeopleDiscovery() {
         </div>
       ) : people.length > 0 ? (
         <div className="grid gap-0 sm:grid-cols-2">
-          {people.map((person) => (
-            <PersonCard key={person.id} person={person} />
+          {people.map(({ person, accuracy }) => (
+            <PersonCard key={person.id} person={person} accuracy={accuracy} />
           ))}
         </div>
       ) : (
         <div className="p-4 text-sm tracking-[-0.18px] text-ash sm:p-5">
-          Creators will appear here once the feed has activity.
+          Predictors will appear here once the feed has activity.
         </div>
       )}
     </section>
   )
 }
 
-function PersonCard({ person }: { person: Profile }) {
+function PersonCard({ person, accuracy }: { person: Profile; accuracy: number }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-dashed border-stone-surface p-4 transition-colors hover:bg-parchment-card sm:p-5 sm:odd:border-r">
       <Link
@@ -69,7 +78,7 @@ function PersonCard({ person }: { person: Profile }) {
             {displayName(person)}
           </p>
           <p className="mt-1 truncate font-mono text-xs text-ash">
-            {displayHandle(person)}
+            {accuracy > 0 ? `${accuracy}% Accuracy` : displayHandle(person)}
           </p>
         </div>
       </Link>

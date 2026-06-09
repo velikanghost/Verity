@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
-  BarChart2,
   ShieldCheck,
   Plus,
   Trash2,
@@ -181,19 +180,28 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
   const [isValidating, setIsValidating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const handleFocusTake = () => {
+    setIsMarket(true)
+    if (content.trim()) {
+      setMarket((current) => ({
+        ...current,
+        question: content,
+      }))
+    }
+    window.requestAnimationFrame(() => {
+      marketQuestionRef.current?.focus()
+    })
+  }
+
   useEffect(() => {
     function applyIntent(intent: ComposeIntent) {
-      setIsMarket(intent === "market")
+      setIsMarket(true)
       window.requestAnimationFrame(() => {
         composerRef.current?.scrollIntoView({
           behavior: "smooth",
           block: "center",
         })
-        if (intent === "market") {
-          marketQuestionRef.current?.focus()
-        } else {
-          textareaRef.current?.focus()
-        }
+        marketQuestionRef.current?.focus()
       })
     }
 
@@ -507,9 +515,6 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
         setReviewedSignature("")
         setIsMarket(false)
         toast.success("Market successfully created!", { id: tid })
-      } else {
-        await createNormalPost({ authorId: user.id, content })
-        toast.success("Post successfully published!", { id: tid })
       }
 
       setContent("")
@@ -546,10 +551,11 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
               ref={textareaRef}
               disabled={!user || saving || isValidating}
               onChange={(event) => setContent(event.target.value)}
+              onFocus={handleFocusTake}
               placeholder={
                 user
-                  ? "What's your conviction? Post a Take..."
-                  : "Connect wallet to post a Take"
+                  ? "What's your conviction? Create a Market..."
+                  : "Connect wallet to create a market"
               }
               value={content}
               className="min-h-[60px] w-full resize-none border-none bg-transparent text-[19px] font-semibold leading-[1.3] tracking-[-0.25px] text-charcoal-primary outline-none placeholder:text-ash"
@@ -563,36 +569,48 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                 <span className="text-xs font-bold text-charcoal-primary">
                   Market Outcome Mode
                 </span>
-                <div className="flex rounded-lg bg-stone-surface/50 dark:bg-stone-surface/30 p-1 border border-border text-xs font-semibold">
+                <div className="flex items-center gap-2">
+                  <div className="flex rounded-lg bg-stone-surface/50 dark:bg-stone-surface/30 p-1 border border-border text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMultiOption(false)
+                        setAgentReview(null)
+                        setReviewedSignature("")
+                      }}
+                      className={`px-3 py-1.5 rounded-md transition-all ${
+                        !isMultiOption
+                          ? "bg-surface-solid text-charcoal-primary border border-border shadow-sm"
+                          : "text-ash hover:text-charcoal-primary"
+                      }`}
+                    >
+                      Binary YES/NO
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMultiOption(true)
+                        setAgentReview(null)
+                        setReviewedSignature("")
+                      }}
+                      className={`px-3 py-1.5 rounded-md transition-all ${
+                        isMultiOption
+                          ? "bg-surface-solid text-charcoal-primary border border-border shadow-sm"
+                          : "text-ash hover:text-charcoal-primary"
+                      }`}
+                    >
+                      Multi-Option List
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
-                      setIsMultiOption(false)
-                      setAgentReview(null)
-                      setReviewedSignature("")
+                      setIsMarket(false)
+                      setContent("")
                     }}
-                    className={`px-3 py-1.5 rounded-md transition-all ${
-                      !isMultiOption
-                        ? "bg-surface-solid text-charcoal-primary border border-border shadow-sm"
-                        : "text-ash hover:text-charcoal-primary"
-                    }`}
+                    className="text-xs text-ash hover:text-charcoal-primary px-2 py-1 cursor-pointer transition-colors"
                   >
-                    Binary YES/NO
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMultiOption(true)
-                      setAgentReview(null)
-                      setReviewedSignature("")
-                    }}
-                    className={`px-3 py-1.5 rounded-md transition-all ${
-                      isMultiOption
-                        ? "bg-surface-solid text-charcoal-primary border border-border shadow-sm"
-                        : "text-ash hover:text-charcoal-primary"
-                    }`}
-                  >
-                    Multi-Option List
+                    Cancel
                   </button>
                 </div>
               </div>
@@ -860,21 +878,7 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
 
           {/* Action Row */}
           <div className="flex items-center justify-between border-t border-border pt-3 mt-1">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsMarket((current) => !current)}
-                disabled={saving || isValidating}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ash hover:text-charcoal-primary hover:bg-surface-hover transition-all cursor-pointer disabled:opacity-50 ${
-                  isMarket
-                    ? "bg-meadow-green/10 text-meadow-green border-meadow-green/30"
-                    : ""
-                }`}
-                title="Toggle prediction market fields"
-              >
-                <BarChart2 className="w-5 h-5" />
-              </button>
-            </div>
+            <div className="flex items-center gap-2"></div>
 
             <button
               className={`verity-pill px-5 py-2 text-sm font-semibold tracking-[-0.18px] transition-all border ${
