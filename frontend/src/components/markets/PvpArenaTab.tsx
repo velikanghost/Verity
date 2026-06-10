@@ -107,7 +107,7 @@ export default function PvpArenaTab({
   selectedPvpEventId,
   setSelectedPvpEventId,
 }: PvpArenaTabProps) {
-  const { user, executeTxBatch } = useAuth()
+  const { user, executeTxBatch, closeTxConfirm } = useAuth()
   const { redeemMultipleWinnings } = useMarketResolution()
   const submitTicketMutation = useSubmitPvpTicketMutation()
   const { mutateAsync: executeMarketTrade } = useExecuteMarketTradeMutation()
@@ -380,6 +380,8 @@ export default function PvpArenaTab({
         batchCalls,
         `Purchase ${picks.length}-selection PvP ticket for ${totalAmount} USDC`,
         totalAmount,
+        undefined,
+        true, // Defer closing confirmation modal
       )
 
       // 4. Register trades on backend
@@ -408,12 +410,15 @@ export default function PvpArenaTab({
       })
       toast.dismiss(queueToastId)
 
+      closeTxConfirm() // Close modal after everything finishes successfully
+
       toast.success(
         "Successfully purchased picks & submitted ticket! Queued for opponent...",
       )
       void refetchPvpStatus()
       setShowBuilderOverride(false)
     } catch (err: any) {
+      closeTxConfirm() // Close modal on error
       toast.dismiss(toastId)
       if (!err.message?.includes("rejected")) {
         toast.error(err.message || "Failed to purchase tickets and queue.")
@@ -1059,13 +1064,14 @@ export default function PvpArenaTab({
                                 <button
                                   key={outcomeName}
                                   type="button"
+                                  disabled={isSubmitting}
                                   onClick={() =>
                                     handleToggleSelection(
                                       firstOpt.id,
                                       outcomeName,
                                     )
                                   }
-                                  className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl cursor-pointer transition-all ${btnColor}`}
+                                  className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl cursor-pointer transition-all ${btnColor} disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                   {/* <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">
                                     {isHome ? "Home" : isDraw ? "Draw" : "Away"}
@@ -1110,7 +1116,8 @@ export default function PvpArenaTab({
                                 onClick={() =>
                                   handleToggleSelection(opt.id, "YES")
                                 }
-                                className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl cursor-pointer transition-all ${
+                                disabled={isSubmitting}
+                                className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                   pvpSelections[opt.id] === "YES"
                                     ? `${catMeta.selectedBg} text-white shadow-md ring-2 ${catMeta.ring}`
                                     : `${catMeta.unselectedBg} hover:opacity-80`
@@ -1128,7 +1135,8 @@ export default function PvpArenaTab({
                                 onClick={() =>
                                   handleToggleSelection(opt.id, "NO")
                                 }
-                                className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl cursor-pointer transition-all ${
+                                disabled={isSubmitting}
+                                className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                   pvpSelections[opt.id] === "NO"
                                     ? `${catMeta.selectedBg} text-white shadow-md ring-2 ${catMeta.ring}`
                                     : `${catMeta.unselectedBg} hover:opacity-80`
@@ -1211,12 +1219,13 @@ export default function PvpArenaTab({
                       min="1"
                       max="1000"
                       value={betAmountPerSelection}
+                      disabled={isSubmitting}
                       onChange={(e) =>
                         setBetAmountPerSelection(
                           Math.max(1, Number(e.target.value)),
                         )
                       }
-                      className="w-20 h-9 px-2 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white outline-none focus:border-indigo-500 text-right"
+                      className="w-20 h-9 px-2 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white outline-none focus:border-indigo-500 text-right disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <span className="text-xs font-mono font-bold text-charcoal-primary dark:text-zinc-400">
                       USDC
@@ -1259,13 +1268,13 @@ export default function PvpArenaTab({
                 <button
                   onClick={handleSubmitPvpTicket}
                   disabled={
-                    submitTicketMutation.isPending ||
+                    isSubmitting ||
                     Object.keys(pvpSelections).length < 3
                   }
                   className="verity-pill px-6 h-11 bg-indigo-600 text-white hover:bg-indigo-500 font-bold uppercase tracking-wider text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {submitTicketMutation.isPending
-                    ? "Queuing..."
+                  {isSubmitting
+                    ? "Submitting..."
                     : Object.keys(pvpSelections).length < 3
                       ? `Select ${3 - Object.keys(pvpSelections).length} More Categories`
                       : "Submit ticket & Queue"}

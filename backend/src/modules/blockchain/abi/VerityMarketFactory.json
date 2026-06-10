@@ -555,9 +555,9 @@
         "internalType": "bytes32"
       },
       {
-        "name": "winningIsYes",
-        "type": "bool",
-        "internalType": "bool"
+        "name": "winningOutcomeIndex",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],

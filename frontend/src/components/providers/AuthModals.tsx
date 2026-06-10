@@ -45,6 +45,7 @@ export function useAuth() {
   const login = useAuthStore((s) => s.login)
   const logout = useAuthStore((s) => s.logout)
   const executeTxBatch = useTxStore((s) => s.executeTxBatch)
+  const closeTxConfirm = useTxStore((s) => s.closeTxConfirm)
 
   return {
     user: user ?? null,
@@ -53,6 +54,7 @@ export function useAuth() {
     login,
     logout,
     executeTxBatch,
+    closeTxConfirm,
   }
 }
 

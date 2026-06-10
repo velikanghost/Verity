@@ -481,8 +481,13 @@ export class LiquidityService {
           if (market.status !== "resolved") {
             const onChainMarket =
               await this.blockchainService.readOnChainMarketState(marketId)
-            market.status = "resolved"
-            market.resolvedOutcome = onChainMarket.winningIsYes ? "YES" : "NO"
+            const winIdx = onChainMarket.winningOutcomeIndex
+            market.winningOutcomeIndex = winIdx
+            if (market.outcomeCount && market.outcomeCount > 2) {
+              market.resolvedOutcome = market.outcomes[winIdx] as any
+            } else {
+              market.resolvedOutcome = (winIdx === 0 ? "YES" : "NO") as any
+            }
             market.resolvedByAdmin = "0xKeeper"
             changed = true
           }

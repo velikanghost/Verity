@@ -94,7 +94,7 @@ contract VerityOptimisticResolverTest is Test {
         uint256 initialBal = usdc.balanceOf(proposer);
 
         vm.prank(proposer);
-        resolver.proposeResolution(marketId, true);
+        resolver.proposeResolution(marketId, 0);
 
         // Check bond is locked in resolver contract
         assertEq(
@@ -111,14 +111,14 @@ contract VerityOptimisticResolverTest is Test {
         // Verify proposal state
         (
             address p,
-            bool winYes,
+            uint256 winYes,
             uint256 pTime,
             bool disp,
             address d,
             bool fin
         ) = resolver.proposals(marketId);
         assertEq(p, proposer);
-        assertTrue(winYes);
+        assertEq(winYes, 0);
         assertEq(pTime, block.timestamp);
         assertFalse(disp);
         assertEq(d, address(0));
@@ -131,7 +131,7 @@ contract VerityOptimisticResolverTest is Test {
         // Do not warp past deadline
         vm.expectRevert(VerityOptimisticResolver.MarketNotExpired.selector);
         vm.prank(proposer);
-        resolver.proposeResolution(marketId, true);
+        resolver.proposeResolution(marketId, 0);
     }
 
     function test_disputeResolution_success() public {
@@ -140,7 +140,7 @@ contract VerityOptimisticResolverTest is Test {
 
         // Propose
         vm.prank(proposer);
-        resolver.proposeResolution(marketId, true);
+        resolver.proposeResolution(marketId, 0);
 
         // Dispute
         uint256 initialBal = usdc.balanceOf(disputer);
@@ -171,7 +171,7 @@ contract VerityOptimisticResolverTest is Test {
         vm.warp(block.timestamp + 1 days + 1);
 
         vm.prank(proposer);
-        resolver.proposeResolution(marketId, true);
+        resolver.proposeResolution(marketId, 0);
 
         // Warp past dispute window (2 hours)
         vm.warp(block.timestamp + resolver.disputeWindow() + 1);
@@ -186,7 +186,7 @@ contract VerityOptimisticResolverTest is Test {
         vm.warp(block.timestamp + 1 days + 1);
 
         vm.prank(proposer);
-        resolver.proposeResolution(marketId, true);
+        resolver.proposeResolution(marketId, 0);
 
         // Warp past dispute window
         vm.warp(block.timestamp + resolver.disputeWindow() + 1);
@@ -222,7 +222,7 @@ contract VerityOptimisticResolverTest is Test {
         vm.warp(block.timestamp + 1 days + 1);
 
         vm.prank(proposer);
-        resolver.proposeResolution(marketId, true);
+        resolver.proposeResolution(marketId, 0);
 
         // Dispute window is 2 minutes, warp only 1 minute
         vm.warp(block.timestamp + 1 minutes);
@@ -236,7 +236,7 @@ contract VerityOptimisticResolverTest is Test {
         vm.warp(block.timestamp + 1 days + 1);
 
         vm.prank(proposer);
-        resolver.proposeResolution(marketId, true); // Proposes YES
+        resolver.proposeResolution(marketId, 0); // Proposes YES
 
         vm.prank(disputer);
         resolver.disputeResolution(marketId);
@@ -246,7 +246,7 @@ contract VerityOptimisticResolverTest is Test {
 
         // Arbitrator rules in favor of proposer (YES wins)
         vm.prank(arbitrator);
-        resolver.resolveDisputedMarket(marketId, true);
+        resolver.resolveDisputedMarket(marketId, 0);
 
         // Proposer gets both bonds (refunded original bond + disputer's bond)
         assertEq(
@@ -275,7 +275,7 @@ contract VerityOptimisticResolverTest is Test {
         vm.warp(block.timestamp + 1 days + 1);
 
         vm.prank(proposer);
-        resolver.proposeResolution(marketId, true); // Proposes YES
+        resolver.proposeResolution(marketId, 0); // Proposes YES
 
         vm.prank(disputer);
         resolver.disputeResolution(marketId);
@@ -285,7 +285,7 @@ contract VerityOptimisticResolverTest is Test {
 
         // Arbitrator rules in favor of disputer (NO wins)
         vm.prank(arbitrator);
-        resolver.resolveDisputedMarket(marketId, false);
+        resolver.resolveDisputedMarket(marketId, 1);
 
         // Disputer gets both bonds
         assertEq(

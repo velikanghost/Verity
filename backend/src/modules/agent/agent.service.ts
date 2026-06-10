@@ -138,6 +138,7 @@ export class AgentService {
     noCondition: string,
     resolutionSource: string,
     category?: string,
+    outcomes?: string[],
   ): Promise<AgentResolutionResult> {
     const provider = (
       this.configService.get<string>("LLM_PROVIDER") || "mock"
@@ -175,22 +176,29 @@ export class AgentService {
     // Perform web search to gather context
     const searchContext = await this.searchWeb(searchQuery)
 
+    const outcomesList = outcomes && outcomes.length > 2
+      ? `Possible Outcomes (choose exactly one of these strings): ${JSON.stringify(outcomes)}`
+      : `Yes Condition: ${yesCondition}\nNo Condition: ${noCondition}`
+
+    const outcomeSchema = outcomes && outcomes.length > 2
+      ? outcomes.map(o => `"${o}"`).join(" | ")
+      : `"YES" | "NO"`
+
     const prompt = `You are an expert prediction market resolution agent. Your task is to resolve the following market question using the provided search results.
 
 Market Question: ${cleanQuestion}
-Yes Condition: ${yesCondition}
-No Condition: ${noCondition}
+${outcomesList}
 Resolution Source Info: ${resolutionSource}
 
 Search Results:
 ${searchContext}
 
-Analyze the search results carefully. Determine whether the correct outcome is YES or NO. 
+Analyze the search results carefully. Determine whether the correct outcome is YES or NO (if it's a binary market), or one of the possible outcome strings (if it's a multi-outcome market).
 If the search results do not contain enough definitive information or if the outcome is still undecided/future/ambiguous, return INVALID.
 
 You must respond with a JSON object in exactly the following format:
 {
-  "outcome": "YES" | "NO" | "INVALID",
+  "outcome": ${outcomeSchema} | "INVALID",
   "reasoning": "A concise explanation of the facts and why they lead to this resolution, referencing specific search results.",
   "citations": ["url1", "url2", ...]
 }
@@ -207,8 +215,15 @@ Do not include any other markdown formatting, code block markers, or text outsid
     } else {
       // Mock Fallback for local testing/dev
       this.logger.log(`Using mock LLM resolution for question: "${question}"`)
-      let outcome: "YES" | "NO" | "INVALID"
-      if (category === "pvp") {
+      let outcome: string
+      if (outcomes && outcomes.length > 2) {
+        if (Math.random() < 0.1) {
+          outcome = "INVALID"
+        } else {
+          const randIdx = Math.floor(Math.random() * outcomes.length)
+          outcome = outcomes[randIdx]
+        }
+      } else if (category === "pvp") {
         outcome = Math.random() < 0.5 ? "YES" : "NO"
       } else {
         const lower = question.toLowerCase()
@@ -219,7 +234,7 @@ Do not include any other markdown formatting, code block markers, or text outsid
             : "YES"
       }
       return {
-        outcome,
+        outcome: outcome as any,
         reasoning: `Mock reasoning for question: ${question}. Web search returned ${searchContext.length} chars of context.`,
         citations: ["https://mock-source.com/verity"],
       }

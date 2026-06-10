@@ -952,8 +952,9 @@ export class BlockchainService implements OnModuleInit {
             inputs: [{ name: "", type: "bytes32" }],
             outputs: [
               { name: "resolved", type: "bool" },
-              { name: "winningIsYes", type: "bool" },
+              { name: "winningOutcomeIndex", type: "uint256" },
               { name: "totalCollateral", type: "uint256" },
+              { name: "outcomeCount", type: "uint256" },
             ],
             stateMutability: "view",
           },
@@ -961,12 +962,18 @@ export class BlockchainService implements OnModuleInit {
         functionName: "markets",
         args: [formattedMarketId],
       })
-      const [resolved, winningIsYes, totalCollateral] = result as [
-        boolean,
+      const [resolved, winningOutcomeIndex, totalCollateral, outcomeCount] = result as [
         boolean,
         bigint,
+        bigint,
+        bigint,
       ]
-      return { resolved, winningIsYes, totalCollateral }
+      return {
+        resolved,
+        winningOutcomeIndex: Number(winningOutcomeIndex),
+        totalCollateral,
+        outcomeCount: Number(outcomeCount),
+      }
     } catch (error) {
       throw new Error(
         `Failed to read on-chain market state for ${marketId}: ${error.message}`,
@@ -1135,7 +1142,7 @@ export class BlockchainService implements OnModuleInit {
             inputs: [{ name: "", type: "bytes32" }],
             outputs: [
               { name: "proposer", type: "address" },
-              { name: "proposedWinningOutcome", type: "bool" },
+              { name: "proposedOutcomeIndex", type: "uint256" },
               { name: "proposalTime", type: "uint256" },
               { name: "disputed", type: "bool" },
               { name: "disputer", type: "address" },
@@ -1149,15 +1156,15 @@ export class BlockchainService implements OnModuleInit {
       })
       const [
         proposer,
-        proposedWinningOutcome,
+        proposedOutcomeIndex,
         proposalTime,
         disputed,
         disputer,
         finalized,
-      ] = result as [string, boolean, bigint, boolean, string, boolean]
+      ] = result as [string, bigint, bigint, boolean, string, boolean]
       return {
         proposer,
-        proposedWinningOutcome,
+        proposedOutcomeIndex: Number(proposedOutcomeIndex),
         proposalTime,
         disputed,
         disputer,
@@ -1172,7 +1179,7 @@ export class BlockchainService implements OnModuleInit {
 
   async proposeResolution(
     marketId: string,
-    proposedOutcome: boolean,
+    proposedOutcomeIndex: number,
   ): Promise<string> {
     if (!this.walletClient) {
       throw new Error("Wallet client not initialized")
@@ -1190,14 +1197,14 @@ export class BlockchainService implements OnModuleInit {
             name: "proposeResolution",
             inputs: [
               { name: "marketId", type: "bytes32" },
-              { name: "proposedOutcome", type: "bool" },
+              { name: "proposedOutcomeIndex", type: "uint256" },
             ],
             outputs: [],
             stateMutability: "nonpayable",
           },
         ],
         functionName: "proposeResolution",
-        args: [formattedMarketId, proposedOutcome],
+        args: [formattedMarketId, BigInt(proposedOutcomeIndex)],
         chain: arcTestnet,
       })
       return txHash

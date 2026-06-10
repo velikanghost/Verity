@@ -509,7 +509,7 @@ contract VerityMarketFactory {
     /// @notice Resolution callback triggered by the authorized optimistic resolver contract.
     function resolveMarketFromResolver(
         bytes32 marketId,
-        bool winningIsYes
+        uint256 winningOutcomeIndex
     ) external {
         if (msg.sender != optimisticResolver) revert Unauthorized();
         MarketInfo storage info = marketRegistry[marketId];
@@ -518,9 +518,13 @@ contract VerityMarketFactory {
         if (info.voided) revert MarketAlreadyVoided();
 
         info.resolved = true;
-        VAULT.resolve(marketId, winningIsYes);
+        if (info.outcomeCount > 2) {
+            VAULT.resolveOutcome(marketId, winningOutcomeIndex);
+        } else {
+            VAULT.resolve(marketId, winningOutcomeIndex == 0);
+        }
         FPMM.markResolved(marketId);
-        emit MarketResolved(marketId, winningIsYes);
+        emit MarketResolved(marketId, winningOutcomeIndex == 0);
     }
 
     // ─── Void / Auto-Void ────────────────────────────────────────────────
