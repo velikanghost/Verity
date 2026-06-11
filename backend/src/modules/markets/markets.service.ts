@@ -595,60 +595,34 @@ export class MarketsService {
         const isResolved =
           market && (market.status === "resolved" || market.resolvedOutcome)
         const winningOutcome = market?.resolvedOutcome
+        const outcomes = market && market.outcomes && market.outcomes.length > 0
+          ? market.outcomes
+          : ["YES", "NO"]
 
         const onChain = await this.blockchainService.getUserOnChainBalances(
           marketId,
           user.walletAddress,
+          outcomes,
         )
 
-        // Sync YES Position
-        const isYesLosing = isResolved && winningOutcome === "NO"
-        if (!isYesLosing) {
-          if (onChain.yesBalance > 0) {
-            await this.marketPositionModel.updateOne(
-              {
-                marketId: new Types.ObjectId(marketId),
-                userId: new Types.ObjectId(profileId),
-                side: "YES",
-              },
-              {
-                $set: {
-                  shares: onChain.yesBalance,
-                },
-                $setOnInsert: {
-                  avgPrice: 0.5,
-                  investedUsdc: onChain.yesBalance * 0.5,
-                  realizedPnl: 0,
-                },
-              },
-              { upsert: true },
-            )
-          } else {
-            await this.marketPositionModel.deleteOne({
-              marketId: new Types.ObjectId(marketId),
-              userId: new Types.ObjectId(profileId),
-              side: "YES",
-            })
-          }
-        }
+        for (const outcome of outcomes) {
+          const balance = onChain[outcome] ?? 0
+          const isLosing = isResolved && winningOutcome !== outcome
 
-        // Sync NO Position
-        const isNoLosing = isResolved && winningOutcome === "YES"
-        if (!isNoLosing) {
-          if (onChain.noBalance > 0) {
+          if (!isLosing && balance > 0) {
             await this.marketPositionModel.updateOne(
               {
                 marketId: new Types.ObjectId(marketId),
                 userId: new Types.ObjectId(profileId),
-                side: "NO",
+                side: outcome,
               },
               {
                 $set: {
-                  shares: onChain.noBalance,
+                  shares: balance,
                 },
                 $setOnInsert: {
                   avgPrice: 0.5,
-                  investedUsdc: onChain.noBalance * 0.5,
+                  investedUsdc: balance * 0.5,
                   realizedPnl: 0,
                 },
               },
@@ -658,7 +632,7 @@ export class MarketsService {
             await this.marketPositionModel.deleteOne({
               marketId: new Types.ObjectId(marketId),
               userId: new Types.ObjectId(profileId),
-              side: "NO",
+              side: outcome,
             })
           }
         }

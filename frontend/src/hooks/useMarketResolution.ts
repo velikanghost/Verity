@@ -9,7 +9,9 @@ import {
   FPMM_ADDRESS,
   FACTORY_ADDRESS,
   publicClient,
+  erc20Abi,
 } from "@/lib/arc"
+import { verityOptimisticResolverAbi } from "@/lib/contracts-generated"
 import { toast } from "@/lib/toast"
 
 function formatMarketId(marketId: string): `0x${string}` {
@@ -34,15 +36,7 @@ export function useMarketResolution() {
 
       // Read bond amount
       const bondAmount = await publicClient.readContract({
-        abi: [
-          {
-            name: "resolutionBond",
-            type: "function",
-            stateMutability: "view",
-            inputs: [],
-            outputs: [{ name: "", type: "uint256" }],
-          },
-        ] as const,
+        abi: verityOptimisticResolverAbi,
         address: RESOLVER_ADDRESS,
         functionName: "resolutionBond",
       })
@@ -55,18 +49,7 @@ export function useMarketResolution() {
 
       // Check USDC allowance to Resolver
       const allowance = await publicClient.readContract({
-        abi: [
-          {
-            name: "allowance",
-            type: "function",
-            stateMutability: "view",
-            inputs: [
-              { name: "owner", type: "address" },
-              { name: "spender", type: "address" },
-            ],
-            outputs: [{ name: "", type: "uint256" }],
-          },
-        ] as const,
+        abi: erc20Abi,
         address: arcUsdcAddress,
         functionName: "allowance",
         args: [user!.walletAddress as `0x${string}`, RESOLVER_ADDRESS],
@@ -241,34 +224,21 @@ export function useMarketResolution() {
     try {
       const formattedMarketId = formatMarketId(marketId)
       const result = await publicClient.readContract({
-        abi: [
-          {
-            name: "proposals",
-            type: "function",
-            stateMutability: "view",
-            inputs: [{ name: "", type: "bytes32" }],
-            outputs: [
-              { name: "proposer", type: "address" },
-              { name: "proposedWinningOutcome", type: "bool" },
-              { name: "proposalTime", type: "uint256" },
-              { name: "disputed", type: "bool" },
-              { name: "disputer", type: "address" },
-              { name: "finalized", type: "bool" },
-            ],
-          },
-        ] as const,
+        abi: verityOptimisticResolverAbi,
         address: RESOLVER_ADDRESS,
         functionName: "proposals",
         args: [formattedMarketId],
       })
       const [
         proposer,
-        proposedWinningOutcome,
+        proposedOutcomeIndex,
         proposalTime,
         disputed,
         disputer,
         finalized,
-      ] = result as [string, boolean, bigint, boolean, string, boolean]
+      ] = result as [string, bigint, bigint, boolean, string, boolean]
+
+      const proposedWinningOutcome = proposedOutcomeIndex === BigInt(0)
 
       return {
         proposer,
@@ -287,15 +257,7 @@ export function useMarketResolution() {
   async function readResolutionBond() {
     try {
       const result = await publicClient.readContract({
-        abi: [
-          {
-            name: "resolutionBond",
-            type: "function",
-            stateMutability: "view",
-            inputs: [],
-            outputs: [{ name: "", type: "uint256" }],
-          },
-        ] as const,
+        abi: verityOptimisticResolverAbi,
         address: RESOLVER_ADDRESS,
         functionName: "resolutionBond",
       })

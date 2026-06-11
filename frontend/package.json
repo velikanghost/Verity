@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json}\"",
+    "wagmi": "npx wagmi generate"
   },
   "dependencies": {
     "@tanstack/react-query": "5.90.16",
@@ -36,6 +37,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@wagmi/cli": "^2.10.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "prettier": "^3.4.2",

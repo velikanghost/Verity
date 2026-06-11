@@ -178,21 +178,29 @@ export class PvpService {
 
       let optionGroupsMap: Record<string, string> = {}
       try {
-        optionGroupsMap = await this.agentService.categorizeOptions(dto.question, dto.options)
+        optionGroupsMap = await this.agentService.categorizeOptions(
+          dto.question,
+          dto.options,
+        )
       } catch (err) {
-        this.logger.error(`Failed to categorize options with AI: ${err.message}`)
+        this.logger.error(
+          `Failed to categorize options with AI: ${err.message}`,
+        )
       }
 
       // Map option groups to their clean names (and make sure match_winner/moneyline becomes major)
       const cleanGroupsMap: Record<string, string> = {}
       for (const [opt, grp] of Object.entries(optionGroupsMap)) {
-        cleanGroupsMap[opt] = (grp === "match_winner" || grp === "moneyline") ? "major" : grp
+        cleanGroupsMap[opt] =
+          grp === "match_winner" || grp === "moneyline" ? "major" : grp
       }
 
       const groups: Record<string, string[]> = {}
       for (let i = 0; i < dto.options.length; i++) {
         const optionName = dto.options[i]
-        let optionGroup = cleanGroupsMap[optionName] || determineOptionGroup(optionName, teamA, teamB)
+        let optionGroup =
+          cleanGroupsMap[optionName] ||
+          determineOptionGroup(optionName, teamA, teamB)
         if (optionGroup === "match_winner" || optionGroup === "moneyline") {
           optionGroup = "major"
         }
@@ -205,7 +213,7 @@ export class PvpService {
       // We will loop over each option group to create one child market per group!
       for (const [optionGroup, groupOptions] of Object.entries(groups)) {
         const outcomeCount = groupOptions.length
-        
+
         // Formulate question and optionName
         let questionSuffix = ""
         let optionName = ""
@@ -219,7 +227,10 @@ export class PvpService {
           questionSuffix = "Totals"
           optionName = "Totals"
         } else {
-          const capitalized = optionGroup.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+          const capitalized = optionGroup
+            .split("_")
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(" ")
           questionSuffix = capitalized
           optionName = capitalized
         }
@@ -238,7 +249,7 @@ export class PvpService {
         }
 
         // Generate clean outcomes (e.g. for Major, draw or win team names)
-        const outcomes = groupOptions.map(opt => opt.trim())
+        const outcomes = groupOptions.map((opt) => opt.trim())
 
         const childMarketId = new Types.ObjectId()
         childMarketIds.push(childMarketId)
@@ -564,7 +575,9 @@ export class PvpService {
     for (const pick of dto.picks) {
       const child = childMarkets.find((m) => m._id.toString() === pick.marketId)
       if (!child) {
-        throw new BadRequestException(`Market option ${pick.marketId} not found in this event.`)
+        throw new BadRequestException(
+          `Market option ${pick.marketId} not found in this event.`,
+        )
       }
       if (child.optionGroup) {
         if (!groupSelections[child.optionGroup]) {
@@ -739,10 +752,7 @@ export class PvpService {
     return match
   }
 
-  async resolvePvpMatchesForMarket(
-    marketId: string,
-    winningOutcome: string,
-  ) {
+  async resolvePvpMatchesForMarket(marketId: string, winningOutcome: string) {
     // Find all matched tickets containing this child market
     const tickets = await this.pvpTicketModel.find({
       status: "matched",
@@ -761,17 +771,25 @@ export class PvpService {
       let updated = false
       for (const pick of ticket.picks) {
         if (pick.marketId.toString() === marketId) {
-          const isStringMatch = pick.selection.toLowerCase().trim() === winningOutcome.toLowerCase().trim()
-          
+          const isStringMatch =
+            pick.selection.toLowerCase().trim() ===
+            winningOutcome.toLowerCase().trim()
+
           let isIndexMatch = false
           if (market && market.outcomes && market.outcomes.length > 0) {
-            const selIdx = market.outcomes.findIndex(o => o.toLowerCase().trim() === pick.selection.toLowerCase().trim())
-            const winIdx = market.outcomes.findIndex(o => o.toLowerCase().trim() === winningOutcome.toLowerCase().trim())
+            const selIdx = market.outcomes.findIndex(
+              (o) =>
+                o.toLowerCase().trim() === pick.selection.toLowerCase().trim(),
+            )
+            const winIdx = market.outcomes.findIndex(
+              (o) =>
+                o.toLowerCase().trim() === winningOutcome.toLowerCase().trim(),
+            )
             if (selIdx >= 0 && winIdx >= 0 && selIdx === winIdx) {
               isIndexMatch = true
             }
           }
-          
+
           pick.isCorrect = isStringMatch || isIndexMatch
           updated = true
 
@@ -932,9 +950,19 @@ export class PvpService {
       { matchId: match._id.toString() },
     )
     this.socketGateway.broadcastToRoom(
+      `user:${user1._id.toString()}`,
+      "user-updated",
+      {},
+    )
+    this.socketGateway.broadcastToRoom(
       `user:${user2._id.toString()}`,
       "pvp-resolved",
       { matchId: match._id.toString() },
+    )
+    this.socketGateway.broadcastToRoom(
+      `user:${user2._id.toString()}`,
+      "user-updated",
+      {},
     )
 
     // In-app Notifications
@@ -1029,92 +1057,53 @@ export class PvpService {
     if (user && user.walletAddress) {
       for (const child of children) {
         try {
-          // If the child market is resolved in DB, ensure it is also resolved on-chain
-          if (child.status === "resolved" && child.resolvedOutcome) {
-            try {
-              const onChainState =
-                await this.blockchainService.readOnChainMarketState(
-                  child._id.toString(),
-                )
-              if (!onChainState.resolved) {
-                this.logger.log(
-                  `Child market ${child._id} is resolved in DB but not on-chain. Resolving on-chain...`,
-                )
-                const winningIsYes =
-                  child.resolvedOutcome.toUpperCase().trim() === "YES"
-                await this.blockchainService.resolveMarket(
-                  child._id.toString(),
-                  winningIsYes,
-                )
-              }
-            } catch (err) {
-              this.logger.error(
-                `Failed to check/resolve child market ${child._id} on-chain in getPvpStatus: ${err.message}`,
-              )
-            }
-          }
+          const outcomes =
+            child.outcomes && child.outcomes.length > 0
+              ? child.outcomes
+              : ["YES", "NO"]
 
           const onChain = await this.blockchainService.getUserOnChainBalances(
             child._id.toString(),
             user.walletAddress,
+            outcomes,
           )
 
           const isResolved =
             child.status === "resolved" || child.resolvedOutcome
           const winningOutcome = child.resolvedOutcome
+          const isMulti = child.outcomeCount && child.outcomeCount > 2
 
-          // Sync YES Position
-          const isYesLosing = isResolved && winningOutcome === "NO"
-          if (!isYesLosing && onChain.yesBalance > 0) {
-            await this.marketPositionModel.updateOne(
-              {
+          for (let idx = 0; idx < outcomes.length; idx++) {
+            const outcome = outcomes[idx]
+            const normalizedSide = isMulti ? outcome : idx === 0 ? "YES" : "NO"
+
+            const balance = onChain[outcome] ?? 0
+            const isLosing = isResolved && winningOutcome !== normalizedSide
+
+            if (!isLosing && balance > 0) {
+              await this.marketPositionModel.updateOne(
+                {
+                  marketId: child._id,
+                  userId: new Types.ObjectId(userId),
+                  side: normalizedSide,
+                },
+                {
+                  $set: { shares: balance },
+                  $setOnInsert: {
+                    avgPrice: 0.5,
+                    investedUsdc: balance * 0.5,
+                    realizedPnl: 0,
+                  },
+                },
+                { upsert: true },
+              )
+            } else {
+              await this.marketPositionModel.deleteOne({
                 marketId: child._id,
                 userId: new Types.ObjectId(userId),
-                side: "YES",
-              },
-              {
-                $set: { shares: onChain.yesBalance },
-                $setOnInsert: {
-                  avgPrice: 0.5,
-                  investedUsdc: onChain.yesBalance * 0.5,
-                  realizedPnl: 0,
-                },
-              },
-              { upsert: true },
-            )
-          } else {
-            await this.marketPositionModel.deleteOne({
-              marketId: child._id,
-              userId: new Types.ObjectId(userId),
-              side: "YES",
-            })
-          }
-
-          // Sync NO Position
-          const isNoLosing = isResolved && winningOutcome === "YES"
-          if (!isNoLosing && onChain.noBalance > 0) {
-            await this.marketPositionModel.updateOne(
-              {
-                marketId: child._id,
-                userId: new Types.ObjectId(userId),
-                side: "NO",
-              },
-              {
-                $set: { shares: onChain.noBalance },
-                $setOnInsert: {
-                  avgPrice: 0.5,
-                  investedUsdc: onChain.noBalance * 0.5,
-                  realizedPnl: 0,
-                },
-              },
-              { upsert: true },
-            )
-          } else {
-            await this.marketPositionModel.deleteOne({
-              marketId: child._id,
-              userId: new Types.ObjectId(userId),
-              side: "NO",
-            })
+                side: normalizedSide,
+              })
+            }
           }
         } catch (err) {
           this.logger.error(
@@ -1355,10 +1344,10 @@ export class PvpService {
       const myPicks = myTicket
         ? myTicket.picks.map((p) => {
             const child = children.find(
-              (c) => c._id.toString() === p.marketId.toString()
+              (c) => c._id.toString() === p.marketId.toString(),
             )
             const trade = myTrades.find(
-              (t) => t.marketId.toString() === p.marketId.toString()
+              (t) => t.marketId.toString() === p.marketId.toString(),
             )
             const investedUsdc = trade ? trade.amountUsdc : 5
             let shares = trade ? trade.shares : 0
@@ -1395,10 +1384,10 @@ export class PvpService {
       const oppPicks = oppTicket
         ? oppTicket.picks.map((p) => {
             const child = children.find(
-              (c) => c._id.toString() === p.marketId.toString()
+              (c) => c._id.toString() === p.marketId.toString(),
             )
             const trade = oppTrades.find(
-              (t) => t.marketId.toString() === p.marketId.toString()
+              (t) => t.marketId.toString() === p.marketId.toString(),
             )
             const investedUsdc = trade ? trade.amountUsdc : 5
             let shares = trade ? trade.shares : 0

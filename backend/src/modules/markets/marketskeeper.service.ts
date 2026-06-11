@@ -263,6 +263,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
               market.resolutionSource,
               market.category,
               market.outcomes,
+              market.deadline,
             )
 
             if (result.outcome === "INVALID") {
@@ -275,10 +276,14 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
             let proposedIndex: number
             if (market.outcomeCount && market.outcomeCount > 2) {
               const idx = market.outcomes.findIndex(
-                (o) => o.toLowerCase().trim() === result.outcome.toLowerCase().trim()
+                (o) =>
+                  o.toLowerCase().trim() ===
+                  result.outcome.toLowerCase().trim(),
               )
               if (idx === -1) {
-                this.logger.warn(`AI returned invalid outcome name: ${result.outcome}. Skipping proposal.`)
+                this.logger.warn(
+                  `AI returned invalid outcome name: ${result.outcome}. Skipping proposal.`,
+                )
                 continue
               }
               proposedIndex = idx
@@ -288,7 +293,9 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
               } else if (result.outcome === "NO") {
                 proposedIndex = 1
               } else {
-                this.logger.warn(`AI returned invalid binary outcome: ${result.outcome}. Skipping proposal.`)
+                this.logger.warn(
+                  `AI returned invalid binary outcome: ${result.outcome}. Skipping proposal.`,
+                )
                 continue
               }
             }

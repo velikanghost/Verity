@@ -45,7 +45,7 @@ function MarketsContent() {
   // PvP API queries
   const { data: pvpEventsRaw = [], isLoading: pvpEventsLoading } =
     useActivePvpEventsQuery()
-  const { data: myActiveTicketEvents = [] } = useMyActivePvpTicketsQuery()
+  const { data: myActiveTicketEvents = [], isLoading: myTicketsLoading } = useMyActivePvpTicketsQuery()
 
   // Merge active events + events where user has active tickets (dedup by id)
   const pvpEvents = useMemo(() => {
@@ -156,7 +156,7 @@ function MarketsContent() {
           {/* Main Duelling Area */}
           <PvpArenaTab
             pvpEvents={pvpEvents}
-            pvpEventsLoading={pvpEventsLoading}
+            pvpEventsLoading={pvpEventsLoading || myTicketsLoading}
             pvpStatus={pvpStatus}
             pvpStatusLoading={pvpStatusLoading}
             refetchPvpStatus={refetchPvpStatus}

@@ -115,7 +115,7 @@ export default function AdminPage() {
     null,
   )
   const [winningOutcome, setWinningOutcome] = useState<"YES" | "NO">("YES")
-  const [resolveTxHash, setResolveTxHash] = useState("0x" + "a".repeat(64))
+  const [resolveTxHash, setResolveTxHash] = useState("")
   const [adminAddress, setAdminAddress] = useState(
     "0x0000000000000000000000000000000000000000",
   )

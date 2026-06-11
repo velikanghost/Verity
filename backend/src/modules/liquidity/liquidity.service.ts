@@ -410,40 +410,34 @@ export class LiquidityService {
         pool.currentPoolBalance = Number(onChainState.totalDeposited) / 1e6
         pool.status = onChainState.resolved ? "resolved" : "active"
 
-        // Sync LP positions from chain for all depositors (optimized: parallelized & batched)
+        // Sync LP positions from chain for all depositors (optimized: batched using multicall)
         const positions = await this.lpPositionModel.find({ poolId: pool._id })
-        const shareResults = await Promise.all(
-          positions.map(async (pos) => {
-            try {
-              const shares = await this.blockchainService.readLPShares(
-                marketId,
-                pos.walletAddress,
-              )
-              return { pos, shares: Number(shares) / 1e6 }
-            } catch (err) {
-              this.logger.warn(
-                `Failed to read LP shares for wallet ${pos.walletAddress} on market ${marketId}: ${err.message}`,
-              )
-              return { pos, shares: null }
+        if (positions.length > 0) {
+          const walletAddresses = positions.map((pos) => pos.walletAddress)
+          try {
+            const sharesList = await this.blockchainService.readLPSharesBatch(marketId, walletAddresses)
+            if (sharesList && sharesList.length === positions.length) {
+              const ops = positions.map((pos, idx) => {
+                const shares = Number(sharesList[idx]) / 1e6
+                return shares === 0
+                  ? { deleteOne: { filter: { _id: pos._id } } }
+                  : {
+                      updateOne: {
+                        filter: { _id: pos._id },
+                        update: { $set: { lpShares: shares } },
+                      },
+                    }
+              })
+
+              if (ops.length > 0) {
+                await this.lpPositionModel.bulkWrite(ops)
+              }
             }
-          }),
-        )
-
-        const ops = shareResults
-          .filter((r) => r.shares !== null)
-          .map(({ pos, shares }) =>
-            shares === 0
-              ? { deleteOne: { filter: { _id: pos._id } } }
-              : {
-                  updateOne: {
-                    filter: { _id: pos._id },
-                    update: { $set: { lpShares: shares } },
-                  },
-                },
-          )
-
-        if (ops.length > 0) {
-          await this.lpPositionModel.bulkWrite(ops)
+          } catch (err: any) {
+            this.logger.warn(
+              `Failed to batch read LP shares for pool ${pool._id}: ${err.message}`,
+            )
+          }
         }
       } else {
         const escrowBalance = await this.blockchainService.readEscrowBalance(
@@ -594,13 +588,23 @@ export class LiquidityService {
     })
 
     for (const pool of expiredPools) {
-      pool.status = "voided"
-      await pool.save()
+      try {
+        this.logger.log(`Voiding expired pool ${pool._id} on-chain...`)
+        await this.blockchainService.voidMarket(pool.marketId.toString())
 
-      const market = await this.marketModel.findById(pool.marketId)
-      if (market) {
-        market.status = "voided"
-        await market.save()
+        pool.status = "voided"
+        await pool.save()
+
+        const market = await this.marketModel.findById(pool.marketId)
+        if (market) {
+          market.status = "voided"
+          await market.save()
+        }
+        this.logger.log(`Successfully voided pool ${pool._id} on-chain and in DB.`)
+      } catch (err: any) {
+        this.logger.error(
+          `Failed to void pool ${pool._id} on-chain: ${err.message}`,
+        )
       }
     }
   }

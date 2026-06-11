@@ -155,22 +155,28 @@ export class PostsService {
   ) {}
 
   validateMarketHeuristics(input: CreateMarketPostDto) {
-    const question = input.question.trim()
+    const question = input.question ? input.question.trim() : ""
     if (!question.endsWith("?")) {
       throw new BadRequestException(
         "Market question must end with a question mark '?'.",
       )
     }
 
-    const resolutionSource = input.resolutionSource.trim()
+    const resolutionSource = input.resolutionSource ? input.resolutionSource.trim() : ""
     if (resolutionSource.length < 5) {
       throw new BadRequestException(
         "Resolution source must specify a clear, verifiable platform or oracle.",
       )
     }
 
-    const yesCondition = input.yesCondition.trim()
-    const noCondition = input.noCondition.trim()
+    // Skip yes/no conditions check if this is a multi-option market
+    const isMultiOption = input.options && input.options.length > 0
+    if (isMultiOption) {
+      return
+    }
+
+    const yesCondition = input.yesCondition ? input.yesCondition.trim() : ""
+    const noCondition = input.noCondition ? input.noCondition.trim() : ""
     if (yesCondition.length < 12 || noCondition.length < 12) {
       throw new BadRequestException(
         "YES and NO resolution conditions must be detailed and clear (minimum 12 characters).",

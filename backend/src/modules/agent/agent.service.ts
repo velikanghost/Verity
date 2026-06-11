@@ -47,7 +47,9 @@ export class AgentService {
         )
         const response = await fetch(url, { headers })
         if (!response.ok) {
-          throw new Error(`Returned status ${response.status} ${response.statusText}`)
+          throw new Error(
+            `Returned status ${response.status} ${response.statusText}`,
+          )
         }
         const html = await response.text()
         const parts = html.split(
@@ -91,11 +93,13 @@ export class AgentService {
         }
 
         if (results.length === 0) {
-          throw new Error("No results could be parsed from response HTML structure.")
+          throw new Error(
+            "No results could be parsed from response HTML structure.",
+          )
         }
 
         return results
-          .slice(0, 5)
+          .slice(0, 10)
           .map(
             (r, idx) =>
               `[Source ${idx + 1}] Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.snippet}\n`,
@@ -103,9 +107,7 @@ export class AgentService {
           .join("\n")
       } catch (err: any) {
         lastError = err
-        this.logger.warn(
-          `Web search attempt ${attempt} failed: ${err.message}`,
-        )
+        this.logger.warn(`Web search attempt ${attempt} failed: ${err.message}`)
         if (attempt < maxAttempts) {
           const delay = attempt * 1000 // exponential backoff: 1s, 2s
           this.logger.log(`Waiting ${delay}ms before retrying...`)
@@ -128,7 +130,6 @@ export class AgentService {
     return "Error performing web search."
   }
 
-
   /**
    * Main entrypoint to resolve a market using AI.
    */
@@ -139,6 +140,7 @@ export class AgentService {
     resolutionSource: string,
     category?: string,
     outcomes?: string[],
+    deadline?: Date,
   ): Promise<AgentResolutionResult> {
     const provider = (
       this.configService.get<string>("LLM_PROVIDER") || "mock"
@@ -149,24 +151,34 @@ export class AgentService {
     if (cleanQuestion.includes(" - Major")) {
       cleanQuestion = cleanQuestion.replace(" - Major", " Match Winner")
     } else if (cleanQuestion.includes(" - First Goal")) {
-      cleanQuestion = cleanQuestion.replace(" - First Goal", " First Team to Score")
-    } else if (cleanQuestion.includes(" - Red Card")) {
-      cleanQuestion = cleanQuestion.replace(" - Red Card", " Red Card")
-    } else if (cleanQuestion.includes(" - Yellow Cards") || cleanQuestion.includes(" - Cards")) {
-      cleanQuestion = cleanQuestion.replace(/ - (Yellow Cards|Cards)/g, " Yellow Cards")
-    } else if (cleanQuestion.includes(" - Corners")) {
-      cleanQuestion = cleanQuestion.replace(" - Corners", " Corners")
-    } else if (cleanQuestion.includes(" - Goals")) {
-      cleanQuestion = cleanQuestion.replace(" - Goals", " Goals")
+      cleanQuestion = cleanQuestion.replace(
+        " - First Goal",
+        " First Team to Score",
+      )
     } else if (cleanQuestion.includes(" - Spread")) {
       cleanQuestion = cleanQuestion.replace(" - Spread", " Spread Winner")
     } else if (cleanQuestion.includes(" - Totals")) {
       cleanQuestion = cleanQuestion.replace(" - Totals", " Totals")
+    } else {
+      // For standard categories like Total Corners, Total Goals, Red Cards, Yellow Cards, etc.,
+      // just remove the " - " divider to keep standard search terms intact.
+      cleanQuestion = cleanQuestion.replace(/\s*-\s*/g, " ")
     }
 
-    // Extract year from resolution source, falling back to the current year
-    const yearMatch = resolutionSource ? resolutionSource.match(/\b\d{4}\b/) : null
-    const year = yearMatch ? yearMatch[0] : String(new Date().getFullYear())
+    // Extract year from question or resolution source.
+    // If no year is specified, check the deadline year. If still none, fallback to the current year.
+    const qYearMatch = question ? question.match(/\b\d{4}\b/) : null
+    const rYearMatch = resolutionSource
+      ? resolutionSource.match(/\b\d{4}\b/)
+      : null
+    
+    let year = qYearMatch ? qYearMatch[0] : rYearMatch ? rYearMatch[0] : null
+    if (!year && deadline) {
+      year = String(new Date(deadline).getFullYear())
+    }
+    if (!year) {
+      year = String(new Date().getFullYear())
+    }
 
     let searchQuery = cleanQuestion
     if (!searchQuery.includes(year)) {
@@ -176,13 +188,15 @@ export class AgentService {
     // Perform web search to gather context
     const searchContext = await this.searchWeb(searchQuery)
 
-    const outcomesList = outcomes && outcomes.length > 2
-      ? `Possible Outcomes (choose exactly one of these strings): ${JSON.stringify(outcomes)}`
-      : `Yes Condition: ${yesCondition}\nNo Condition: ${noCondition}`
+    const outcomesList =
+      outcomes && outcomes.length > 2
+        ? `Possible Outcomes (choose exactly one of these strings): ${JSON.stringify(outcomes)}`
+        : `Yes Condition: ${yesCondition}\nNo Condition: ${noCondition}`
 
-    const outcomeSchema = outcomes && outcomes.length > 2
-      ? outcomes.map(o => `"${o}"`).join(" | ")
-      : `"YES" | "NO"`
+    const outcomeSchema =
+      outcomes && outcomes.length > 2
+        ? outcomes.map((o) => `"${o}"`).join(" | ")
+        : `"YES" | "NO"`
 
     const prompt = `You are an expert prediction market resolution agent. Your task is to resolve the following market question using the provided search results.
 
@@ -194,12 +208,13 @@ Search Results:
 ${searchContext}
 
 Analyze the search results carefully. Determine whether the correct outcome is YES or NO (if it's a binary market), or one of the possible outcome strings (if it's a multi-outcome market).
+The "Resolution Source Info" is the preferred source. However, if the preferred source does not explicitly contain the required statistics (such as corner, card, or goal counts) but other reputable sources in the search results (e.g. stats trackers, match reports, wiki, Reddit match logs, etc.) clearly do, you should resolve the market using those sources instead of returning INVALID.
 If the search results do not contain enough definitive information or if the outcome is still undecided/future/ambiguous, return INVALID.
 
 You must respond with a JSON object in exactly the following format:
 {
-  "outcome": ${outcomeSchema} | "INVALID",
   "reasoning": "A concise explanation of the facts and why they lead to this resolution, referencing specific search results.",
+  "outcome": ${outcomeSchema} | "INVALID",
   "citations": ["url1", "url2", ...]
 }
 Do not include any other markdown formatting, code block markers, or text outside the JSON.`
@@ -561,7 +576,11 @@ Do not include any other markdown formatting, code block markers, or text outsid
       const name = opt.toLowerCase()
       if (name.includes("win") || name.includes("draw")) {
         mapping[opt] = "match_winner"
-      } else if (name.includes("goal") || name.includes("score first") || name.includes("scores first")) {
+      } else if (
+        name.includes("goal") ||
+        name.includes("score first") ||
+        name.includes("scores first")
+      ) {
         mapping[opt] = "first_goal"
       } else if (name.includes("halftime")) {
         mapping[opt] = "halftime_leader"

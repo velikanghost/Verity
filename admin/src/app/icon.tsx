@@ -12,7 +12,7 @@ export default function Icon() {
     <div
       style={{
         alignItems: "center",
-        background: "#fbfaf9",
+        background: "transparent",
         display: "flex",
         height: "100%",
         justifyContent: "center",
@@ -22,18 +22,18 @@ export default function Icon() {
       <div
         style={{
           alignItems: "center",
-          background: "#ffbb26",
+          background: "#ff2a3a",
           borderRadius: 22,
           color: "#121212",
           display: "flex",
           fontFamily: "Arial, sans-serif",
           fontSize: 36,
           fontWeight: 700,
-          height: 52,
+          height: 56,
           justifyContent: "center",
           letterSpacing: -2,
           lineHeight: 1,
-          width: 52,
+          width: 56,
         }}
       >
         V

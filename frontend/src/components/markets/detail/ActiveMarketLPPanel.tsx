@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MarketPost } from "@/lib/verity"
 
 interface ActiveMarketLPPanelProps {
@@ -23,14 +23,41 @@ export default function ActiveMarketLPPanel({
 }: ActiveMarketLPPanelProps) {
   const [addAmount, setAddAmount] = useState("10")
   const [removeShares, setRemoveShares] = useState("10")
+  const [timeLeft, setTimeLeft] = useState<number>(0)
 
   const myPosition = lpPositions?.[0]
   const myShares = myPosition?.lpShares ?? 0
   const myDeposited = myPosition?.depositedUsdc ?? 0
-  const canRemove = myPosition?.canRemoveLiquidity ?? true
+  const isCreator = myPosition?.isCreator ?? false
+
+  useEffect(() => {
+    if (!myPosition || isCreator) return
+
+    const updateCountdown = () => {
+      const depositTime = new Date(myPosition.depositedAt).getTime()
+      const lockDuration = 24 * 60 * 60 * 1000 // 24 hours
+      const now = Date.now()
+      const remaining = depositTime + lockDuration - now
+      setTimeLeft(Math.max(0, remaining))
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+    return () => clearInterval(interval)
+  }, [myPosition, isCreator])
+
+  const canRemove = myShares > 0 && !isCreator && timeLeft === 0
 
   const totalPoolShares = poolState?.pool?.totalLPShares ?? 0
   const currentPoolBalance = poolState?.pool?.currentPoolBalance ?? 0
+
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.ceil(ms / 1000)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return `${hours}h ${minutes}m ${seconds}s`
+  }
 
   return (
     <section className="verity-card p-4 sm:p-5">
@@ -131,11 +158,20 @@ export default function ActiveMarketLPPanel({
               {actionLoading === "remove_lp" ? "Removing..." : "Remove"}
             </button>
           </div>
-          {!canRemove && (
-            <p className="mt-2 text-[10px] leading-relaxed text-ember-orange">
-              * Liquidity is locked for 24 hours after adding to prevent
-              front-running.
-            </p>
+          {myShares > 0 && (
+            <>
+              {isCreator && (
+                <p className="mt-2 text-[10px] leading-relaxed text-ember-orange">
+                  * Creator liquidity is locked until the market is resolved.
+                </p>
+              )}
+              {!isCreator && timeLeft > 0 && (
+                <p className="mt-2 text-[10px] leading-relaxed text-ember-orange">
+                  * Liquidity is locked for 24 hours to prevent front-running.
+                  Available in {formatTime(timeLeft)}.
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>

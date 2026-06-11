@@ -122,128 +122,14 @@ export const erc1155Abi = [
   },
 ] as const
 
-export const factoryAbi = [
-  {
-    name: "depositPreMarketLiquidity",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "marketId", type: "bytes32" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  {
-    name: "createMarketPreDeposit",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "marketId", type: "bytes32" },
-      { name: "creatorLpAmount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  {
-    name: "claimRefund",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "marketId", type: "bytes32" }],
-    outputs: [],
-  },
-] as const
+import {
+  conditionalTokenVaultAbi as vaultAbi,
+  verityFpmmAbi as fpmmAbi,
+  verityMarketFactoryAbi as factoryAbi,
+  verityOptimisticResolverAbi as resolverAbi,
+} from "./contracts-generated"
 
-export const fpmmAbi = [
-  {
-    name: "addLiquidity",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "marketId", type: "bytes32" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  {
-    name: "removeLiquidity",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "marketId", type: "bytes32" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  {
-    name: "buy",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "marketId", type: "bytes32" },
-      { name: "buyYes", type: "bool" },
-      { name: "investmentAmount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  {
-    name: "sell",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "marketId", type: "bytes32" },
-      { name: "sellYes", type: "bool" },
-      { name: "returnAmount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  {
-    name: "claimCreatorLiquidity",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "marketId", type: "bytes32" }],
-    outputs: [],
-  },
-] as const
-
-export const resolverAbi = [
-  {
-    name: "disputeResolution",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "marketId", type: "bytes32" }],
-    outputs: [],
-  },
-  {
-    name: "resolutionBond",
-    type: "function",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    name: "proposals",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "", type: "bytes32" }],
-    outputs: [
-      { name: "proposer", type: "address" },
-      { name: "proposedWinningOutcome", type: "bool" },
-      { name: "proposalTime", type: "uint256" },
-      { name: "disputed", type: "bool" },
-      { name: "disputer", type: "address" },
-      { name: "finalized", type: "bool" },
-    ],
-  },
-] as const
-
-export const vaultAbi = [
-  {
-    name: "redeem",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "marketId", type: "bytes32" }],
-    outputs: [],
-  },
-] as const
+export { vaultAbi, fpmmAbi, factoryAbi, resolverAbi }
 
 export function formatWeb3Error(error: any): string {
   if (!error) return "Unknown error occurred."

@@ -7,7 +7,9 @@ import {
   FPMM_ADDRESS,
   VAULT_ADDRESS,
   publicClient,
+  erc20Abi,
 } from "@/lib/arc"
+import { conditionalTokenVaultAbi } from "@/lib/contracts-generated"
 import {
   useFundPoolMutation,
   useAddLiquidityMutation,
@@ -60,18 +62,7 @@ export function useMarketLiquidity() {
 
       // Check USDC allowance to Factory
       const allowance = await publicClient.readContract({
-        abi: [
-          {
-            name: "allowance",
-            type: "function",
-            stateMutability: "view",
-            inputs: [
-              { name: "owner", type: "address" },
-              { name: "spender", type: "address" },
-            ],
-            outputs: [{ name: "", type: "uint256" }],
-          },
-        ] as const,
+        abi: erc20Abi,
         address: arcUsdcAddress,
         functionName: "allowance",
         args: [user!.walletAddress as `0x${string}`, FACTORY_ADDRESS],
@@ -154,18 +145,7 @@ export function useMarketLiquidity() {
 
       // Check USDC allowance to FPMM
       const allowance = await publicClient.readContract({
-        abi: [
-          {
-            name: "allowance",
-            type: "function",
-            stateMutability: "view",
-            inputs: [
-              { name: "owner", type: "address" },
-              { name: "spender", type: "address" },
-            ],
-            outputs: [{ name: "", type: "uint256" }],
-          },
-        ] as const,
+        abi: erc20Abi,
         address: arcUsdcAddress,
         functionName: "allowance",
         args: [user!.walletAddress as `0x${string}`, FPMM_ADDRESS],
@@ -292,18 +272,7 @@ export function useMarketLiquidity() {
 
       // Check USDC allowance to FPMM
       const allowance = await publicClient.readContract({
-        abi: [
-          {
-            name: "allowance",
-            type: "function",
-            stateMutability: "view",
-            inputs: [
-              { name: "owner", type: "address" },
-              { name: "spender", type: "address" },
-            ],
-            outputs: [{ name: "", type: "uint256" }],
-          },
-        ] as const,
+        abi: erc20Abi,
         address: arcUsdcAddress,
         functionName: "allowance",
         args: [user!.walletAddress as `0x${string}`, FPMM_ADDRESS],
@@ -389,18 +358,7 @@ export function useMarketLiquidity() {
 
       // Check if FPMM is approved as ERC1155 operator on the Vault
       const isApproved = await publicClient.readContract({
-        abi: [
-          {
-            name: "isApprovedForAll",
-            type: "function",
-            stateMutability: "view",
-            inputs: [
-              { name: "account", type: "address" },
-              { name: "operator", type: "address" },
-            ],
-            outputs: [{ name: "", type: "bool" }],
-          },
-        ] as const,
+        abi: conditionalTokenVaultAbi,
         address: VAULT_ADDRESS,
         functionName: "isApprovedForAll",
         args: [user!.walletAddress as `0x${string}`, FPMM_ADDRESS],
