@@ -1,85 +1,104 @@
 # Verity Frontend
 
-The client-side application for Verity, built with **Next.js (App Router)** and **React 19**. Provides the social feed, prediction market trading interface, smart wallet onboarding, and real-time activity updates.
+The client-side interface for the Verity prediction market platform, built with **Next.js (App Router)**, **React 19**, and styled with **Tailwind CSS v4**. It features a responsive social feed, on-chain trading modules, Smart Contract Account onboarding, and real-time activity tracking.
 
-## Pages
+---
 
-| Route | What it does |
-|---|---|
-| `/` | Home feed — unified stream of normal posts and prediction market cards |
-| `/markets/[id]` | Market detail — full trading interface with buy/sell, LP, voting, comments, resolution status |
-| `/explore` | Browse and filter markets by category |
-| `/profile/[id]` | Public user profile — posts, bio, signal stats |
-| `/wallet` | Wallet dashboard — USDC balance, positions, transaction history |
-| `/notifications` | Activity feed — likes, comments, reshares, market events (backed by MongoDB) |
-| `/how-it-works` | Product guide — lifecycle explanation, glossary, earning mechanics |
-| `/posts/[id]` | Single post detail with threaded comments |
+## Page Routes
 
-## Component Architecture
+| Route            | View Description                                                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `/`              | **Home Feed**: A unified stream of normal posts and prediction market cards with daily voting options.                   |
+| `/markets/[id]`  | **Market Detail**: Complete trading interface with swap panels, liquidity provider tabs, and resolution/dispute options. |
+| `/explore`       | **Market Discovery**: Browse prediction markets by category or volume metrics.                                           |
+| `/profile/[id]`  | **Public Profile**: User statistics, past posts, active positions, and Arena XP.                                         |
+| `/wallet`        | **Wallet Dashboard**: View USDC balances, portfolio position values, and transaction histories.                          |
+| `/notifications` | **Activity Center**: Lists comment threads, matchup results, and resolution events.                                      |
+| `/how-it-works`  | **Glossary & Guide**: Detailed instructions on qualification, trading mechanics, and fee setups.                         |
+| `/posts/[id]`    | **Thread View**: Displays a single post with its comment trees.                                                          |
+
+---
+
+## Component Taxonomy
 
 ```
-components/
-├── feed/        # FeedShell, FeedTabs, ComposeBox — main feed orchestration
-├── post/        # PostCard, MarketCard — individual feed item rendering
-├── markets/     # MarketDetail — full trading view with swap card, LP panel, resolution UI
-├── social/      # CommentModal — threaded comment dialog
-├── wallet/      # PrivyOnboardingModal — 4-step onboarding flow (wallet → username → fund → success)
-├── profile/     # PublicProfileView — user profile display
-├── layout/      # Sidebar, RightPanel, MobileNav, MobileLeaderboardButton, ThemeToggle
-├── providers/   # AppProviders — Privy, SmartWallets, QueryClient, ThemeProvider, Toaster
-└── ui/          # Reusable generic components (buttons, inputs, modals, badges, skeletons)
+src/components/
+├── feed/        # ComposeBox, FeedTabs, FeedShell - main feed stream coordination
+├── post/        # PostCard, MarketCard - individual items rendering
+├── markets/     # SwapTicket, LPPanel, ResolutionCard - details page trading tools
+├── social/      # CommentModal, CommentThread - interaction dialogs
+├── profile/     # ProfileBio, PortfolioPositions - user dashboard blocks
+├── layout/      # Sidebar, RightPanel, ThemeToggle - workspace shell
+├── providers/   # AppProviders, QueryClient, ThemeProvider - bootstrap wrappers
+└── ui/          # Button, Input, Modal, Table, Skeleton - generic atomic elements
 ```
 
-## Key Hooks
+---
 
-| Hook | Purpose |
-|---|---|
-| `useMarketLiquidity` | Pre-market funding, LP deposits, token buying — handles USDC approve + Router contract calls via smart wallet |
-| `useMarketResolution` | Propose/dispute resolution through the Resolver contract, bond management |
-| `useUsdcTransfer` | Direct USDC transfers on Arc Testnet |
-| `useUsdcBalance` | Read USDC balance from chain for the connected wallet |
-| `usePrivyWallet` | Extract the smart wallet address from the Privy SDK |
-| `useWalletProfile` | Fetch/cache the authenticated user's backend profile |
-| `useFeed` | Load feed items from the API with market-only filtering |
-| `useDailyVotes` | Track remaining free daily votes (10/day cap) |
-| `useSocket` | Socket.IO connection for real-time feed/market/user room events |
-| `useUserPortfolio` | Fetch user positions and trade history across markets |
+## Custom React Hooks
 
-## Web3 Stack
+The client uses specialized custom hooks to interface with NestJS REST/WebSocket endpoints and Arc Testnet smart contracts:
 
-- **Privy** — email-based login, embedded wallet creation, smart wallet (Account Abstraction / ERC-4337)
-- **Viem** — direct RPC reads (balances, prices, LP shares, allowances) and transaction encoding
-- **Arc Testnet** — custom chain definition (`chainId: 5042002`), USDC at `0x3600...0000`
-- **Contract ABIs** — defined in `src/lib/arc.ts` for Factory, FPMM, Resolver, Vault, Router, ERC20, ERC1155
+| Hook                  | Category      | Description                                                                  |
+| --------------------- | ------------- | ---------------------------------------------------------------------------- |
+| `useMarketLiquidity`  | Web3/On-Chain | Handles pre-market launch funding approvals and LP deposits to `VerityFPMM`. |
+| `useMarketResolution` | Web3/On-Chain | Triggers resolution disputes and bond approvals.                             |
+| `useUsdcTransfer`     | Web3/On-Chain | Sends USDC directly on-chain using Smart Accounts.                           |
+| `useUsdcBalance`      | Web3/On-Chain | Queries the smart account's USDC balance.                                    |
+| `useDailyVotes`       | API/State     | Tracks remaining free daily signal votes (capped at 10/day).                 |
+| `useFeed`             | API/State     | Fetches feed posts from NestJS with market-only filtering.                   |
+| `useSocket`           | WebSocket     | Manages Socket.IO listener rooms for instant updates.                        |
+| `useUserPortfolio`    | API/State     | Retrieves positions, trade logs, and balances.                               |
 
-## State Management
+---
 
-- **Zustand** — lightweight global stores
-- **TanStack Query** — API fetching, caching, mutations, and optimistic UI updates via custom hooks in `store/verity/`
+## Design System & Styling
 
-## Styling
+Verity v1 is built with a premium look matching modern design aesthetics:
 
-- **Tailwind CSS v4** with custom theme tokens (HSL-based dark/light mode)
-- **Geist font family** (Sans + Mono) via `next/font/google`
-- Custom design system: `.verity-card`, `.verity-pill`, `.verity-blob` utility classes
-- `next-themes` for system/dark/light theme switching
+- **Tailwind CSS v4**: Utilizes the latest compiler with custom theme definitions.
+- **HSL Color Variables**: Dynamic color palettes defining `.verity-card`, `.verity-pill`, and `.verity-blob` classes supporting light and dark theme toggling.
+- **Geist Font Family**: Renders modern typography using `next/font/google` (Geist Sans & Geist Mono).
+- **Subtle Animations**: Micro-animations using transitions for interactive hover feedback and transaction wait states.
+
+---
 
 ## Getting Started
+
+### Installation
 
 ```bash
 # From monorepo root
 pnpm install
 
-# Configure environment
+# Setup Env
 cd frontend
 cp .env.example .env
-
-# Start dev server
-pnpm run dev    # http://localhost:3000
 ```
 
-### Build
+### Environment Parameters
+
+Ensure the following variables are configured in `.env`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5050/api
+NEXT_PUBLIC_WS_URL=http://localhost:5050
+
+# Arc Testnet Configuration
+NEXT_PUBLIC_ARC_TESTNET_CHAIN_ID=5042002
+NEXT_PUBLIC_ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
+NEXT_PUBLIC_ARC_TESTNET_USDC_ADDRESS=0x3600000000000000000000000000000000000000
+
+# Contract Addresses
+NEXT_PUBLIC_FACTORY_ADDRESS=
+NEXT_PUBLIC_FPMM_ADDRESS=
+NEXT_PUBLIC_RESOLVER_ADDRESS=
+NEXT_PUBLIC_VAULT_ADDRESS=
+```
+
+### Development Server
 
 ```bash
-pnpm run build
+pnpm run dev      # Launches dev client on http://localhost:3000
+pnpm run build    # Compiles and bundles Next.js for production
 ```

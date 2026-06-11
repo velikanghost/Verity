@@ -1,81 +1,93 @@
 # Verity Smart Contracts
 
-Foundry-based Solidity smart contracts powering Verity's on-chain prediction market infrastructure on the **Arc Testnet**. These contracts manage the full market lifecycle: USDC escrow, conditional outcome token minting, AMM trading, liquidity provisioning, and optimistic dispute-based resolution.
+Solidity smart contracts powering Verity's prediction market infrastructure on the **Arc Testnet**. These contracts handle the full market lifecycle: USDC escrow, ERC-1155 outcome token minting, AMM pool trading, liquidity provision, and dispute-window optimistic resolution.
 
-## Contracts
+---
 
-### `ConditionalTokenVault.sol`
+## Architecture Overview
 
-ERC-1155 conditional token system. Accepts USDC collateral and mints paired YES/NO outcome tokens for a given market ID. After resolution, winning token holders redeem their shares 1:1 for the escrowed USDC.
+The system uses a shared contract model. All prediction markets and AMM pools use a single, global deployment of the following four contracts:
 
-### `VerityMarketFactory.sol`
+```
+                  ┌──────────────────────┐
+                  │ VerityMarketFactory  │◄─────── callback
+                  └──────────┬───────────┘
+                             │
+            ┌────────────────┴────────────────┐
+            ▼                                 ▼
+   ┌─────────────────┐               ┌─────────────────┐
+   │   VerityFPMM    │               │OptimisticResolver│
+   └────────┬────────┘               └─────────────────┘
+            │
+            ▼
+┌──────────────────────┐
+│ConditionalTokenVault │ (ERC-1155)
+└──────────────────────┘
+```
 
-Central market registry. Handles:
+1.  **`ConditionalTokenVault.sol`**: A global ERC-1155 token registry. Accepts USDC collateral and mints paired YES/NO outcome tokens for active markets. Post-resolution, winning outcome token holders redeem their shares 1:1 for the vault's USDC.
+2.  **`VerityFPMM.sol`**: Fixed Product Market Maker (AMM). Manages reserves for all outcome pools. Supports swapping USDC for outcome tokens (`buy()`), selling outcome tokens back to reserves (`sell()`), and adding/removing liquidity.
+3.  **`VerityMarketFactory.sol`**: The entrypoint registry. Handles market registration, pre-market funding, auto-deployment of pools when the threshold is met, and resolution trigger callbacks.
+4.  **`VerityOptimisticResolver.sol`**: An optimistic resolution protocol. Resolves subjective markets using staked bonds. Proposers and disputers stake bonds (10 USDC). Undisputed outcomes are finalized; disputed outcomes are arbitrated by the protocol arbitrator.
 
-- Market creation with a 1 USDC fee
-- Pre-market liquidity escrow deposits (via `createMarketPreDeposit` and `depositPreMarketLiquidity`)
-- Automatic FPMM pool deployment when the escrow reaches the 40 USDC threshold
-- Resolution callbacks from authorized resolver contracts
-- Refund claims for voided markets
+---
 
-### `VerityFPMM.sol`
+## Protocol Constants & Parameters
 
-Fixed Product Market Maker. Provides constant-product AMM pricing for YES/NO outcome tokens. Supports:
+The deployed contracts are configured with the following parameters:
 
-- `buy` / `sell` — trade outcome tokens against USDC
-- `addLiquidity` / `addLiquidityFor` — LP deposits that mint proportional LP shares
-- `removeLiquidity` — LP withdrawals with a 24-hour lock from last deposit
-- `claimCreatorLiquidity` — creator-specific LP claim after market resolution
-- Trading fee collection (configurable BPS, default 2%)
+- **Minimum Pool Balance (`MIN_POOL_BALANCE`)**: `40 USDC` (6 decimals). A market's pre-market escrow must reach this amount before it graduates to tradable status and deploys the AMM pool.
+- **Creator Minimum Lock (`CREATOR_MIN_LOCK`)**: `10 USDC` (6 decimals). The market creator must pre-deposit at least this amount to register a market. Creator shares are locked and cannot be withdrawn until the market resolves.
+- **LP Lock Duration (`LP_LOCK_DURATION`)**: `24 Hours`. Public liquidity providers are locked from removing their deposits for 24 hours starting from their last deposit block timestamp.
+- **Trading Fee (`FEE_BPS`)**: `200 BPS` (2.0% of trade volume).
+- **Fee Split**:
+  - **60%** is distributed to the pool's Liquidity Providers (`LP_FEE_SHARE`).
+  - **40%** is sent to the Verity Protocol Treasury (`TREASURY_FEE_SHARE`).
+- **Resolution Proposal Bond (`resolutionBond`)**: `10 USDC`. Required stake to propose an outcome.
+- **Dispute Window (`disputeWindow`)**: `2 Minutes` (in Testnet environment) / `4 Hours` (in Production environment). Time allowed for users to dispute a proposed outcome.
 
-### `VerityOptimisticResolver.sol`
+---
 
-Dispute-window resolution system for subjective markets:
-
-- `proposeResolution` / `proposeResolutionFor` — stake a 10 USDC bond to propose YES or NO
-- `disputeResolution` / `disputeResolutionFor` — stake a 10 USDC bond to flag a proposal as disputed, forwarding to the arbitrator
-- `finalizeResolution` — settles undisputed proposals after the dispute window (configurable: 120s for testing, 2 hours in production)
-- Bond payouts: winner gets both bonds back; disputed outcomes are settled by the arbitrator
-
-
-## Dependencies
-
-- [OpenZeppelin Contracts](https://github.com/openzeppelin/openzeppelin-contracts) — `IERC20`, `SafeERC20`, `ERC1155Holder`
-- [Forge Std](https://github.com/foundry-rs/forge-std) — testing utilities
-- [Pyth SDK Solidity](https://www.npmjs.com/package/@pythnetwork/pyth-sdk-solidity) — price feed integration for objective markets
-
-## Test Suite
-
-Four test files covering the core contracts:
-
-| Test                             | What it covers                                                         |
-| -------------------------------- | ---------------------------------------------------------------------- |
-| `ConditionalTokenVault.t.sol`    | Token minting, redemption, collateral escrow                           |
-| `VerityFPMM.t.sol`               | AMM pricing, buy/sell, LP add/remove, fee collection, lock enforcement |
-| `VerityOptimisticResolver.t.sol` | Proposal, dispute, finalization, bond payouts                          |
-
-## Development
+## Developer Guide
 
 ### Prerequisites
 
-- [Foundry](https://book.getfoundry.sh/getting-started/installation) installed
-- Solidity 0.8.24 (configured in `foundry.toml`)
+- Install [Foundry](https://book.getfoundry.sh/getting-started/installation)
+- Solidity compiler `0.8.24`
 
-### Build
+### Installation
+
+Clone dependencies (OpenZeppelin Contracts, Pyth SDK, Forge Std):
 
 ```bash
-forge install   # Initialize git submodule dependencies
-forge build     # Compile contracts → out/
+forge install
 ```
 
-### Test
+### Build Contracts
+
+Compile Solidity source files:
 
 ```bash
-forge test          # Run all tests
-forge test -vvvv    # Verbose with stack traces and gas
+forge build
+```
+
+### Test Suite
+
+Run the full test suite covering token vaults, AMM formulas, resolver states, and edge cases:
+
+```bash
+forge test
+```
+
+For verbose logging and stack traces:
+
+```bash
+forge test -vvvv
 ```
 
 ### Deploy to Arc Testnet
+
+Deploy contracts using the Foundry script:
 
 ```bash
 forge script script/Deploy.s.sol:Deploy \
@@ -84,9 +96,10 @@ forge script script/Deploy.s.sol:Deploy \
   --broadcast
 ```
 
-After deployment, update the contract addresses in `backend/.env` and `frontend/.env`:
+After deployment, update the addresses in the backend/frontend `.env` configurations:
 
-- `CONDITIONAL_TOKEN_VAULT_ADDRESS`
-- `FPMM_ADDRESS`
+- `USDC_ADDRESS`
 - `FACTORY_ADDRESS`
+- `FPMM_ADDRESS`
 - `RESOLVER_ADDRESS`
+- `CONDITIONAL_TOKEN_VAULT_ADDRESS`
