@@ -68,6 +68,7 @@ interface TradeTicketProps {
   outcomeCount?: number
   outcomes?: string[]
   outcomePrices?: number[]
+  isBalanceInsufficient?: boolean
 }
 
 export default function TradeTicket({
@@ -96,6 +97,7 @@ export default function TradeTicket({
   outcomeCount = 2,
   outcomes = [],
   outcomePrices = [],
+  isBalanceInsufficient = false,
 }: TradeTicketProps) {
   const quickBuyAmounts = [1, 5, 10, 100]
   const sellPercentages = [25, 50, 75, 100]
@@ -116,7 +118,11 @@ export default function TradeTicket({
   }
 
   const isMulti = outcomeCount > 2
-  const sideLabel = isMulti ? selectedSide : (selectedSide === "YES" ? yesCondition : noCondition)
+  const sideLabel = isMulti
+    ? selectedSide
+    : selectedSide === "YES"
+      ? yesCondition
+      : noCondition
 
   return (
     <section className="verity-card overflow-hidden">
@@ -148,9 +154,11 @@ export default function TradeTicket({
 
       <div className="p-4">
         {isMulti ? (
-          <div className={`mb-6 grid gap-3 ${outcomes.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          <div
+            className={`mb-6 grid gap-3 ${outcomes.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}
+          >
             {outcomes.map((outcomeName, idx) => {
-              const oPrice = outcomePrices[idx] ?? (1 / outcomeCount)
+              const oPrice = outcomePrices[idx] ?? 1 / outcomeCount
               const priceCents = oPrice * 100
               const active = selectedSide === outcomeName
 
@@ -193,7 +201,9 @@ export default function TradeTicket({
             >
               {action === "BUY" ? "Amount" : "Shares"}
             </label>
-            <p className="mt-0.5 font-mono text-[11px] text-ash">
+            <p
+              className={`mt-0.5 font-mono text-[11px] ${isBalanceInsufficient ? "text-red-500 font-bold" : "text-ash"}`}
+            >
               {action === "BUY"
                 ? `${balanceLabel} USDC balance`
                 : `${maxSellShares.toFixed(4)} ${sideLabel} available`}
@@ -211,6 +221,11 @@ export default function TradeTicket({
             value={amount}
           />
         </div>
+        {action === "BUY" && isBalanceInsufficient && (
+          <p className="text-[10px] text-red-500 font-semibold text-right -mt-2.5 mb-3">
+            Insufficient USDC balance.
+          </p>
+        )}
 
         {action === "BUY" ? (
           <div className="mb-4 flex flex-wrap justify-end gap-2">
@@ -275,14 +290,20 @@ export default function TradeTicket({
 
         <button
           className="verity-pill mt-4 flex h-11 w-full items-center justify-center bg-inverse text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-          disabled={disabled || !isConnected}
+          disabled={
+            disabled ||
+            !isConnected ||
+            (action === "BUY" && isBalanceInsufficient)
+          }
           onClick={onTrade}
           type="button"
         >
           {actionPending
             ? "Processing..."
             : isConnected
-              ? `${action === "BUY" ? "Buy" : "Sell"} ${sideLabel}`
+              ? action === "BUY" && isBalanceInsufficient
+                ? "Insufficient USDC Balance"
+                : `${action === "BUY" ? "Buy" : "Sell"} ${sideLabel}`
               : "Connect Wallet"}
         </button>
       </div>

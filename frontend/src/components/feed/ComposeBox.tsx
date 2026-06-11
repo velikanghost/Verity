@@ -1,31 +1,18 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import {
-  ShieldCheck,
-  Plus,
-  Trash2,
-  Calendar,
-  Sparkles,
-  HelpCircle,
-} from "lucide-react"
+import { Plus, Trash2, Calendar, Sparkles } from "lucide-react"
 import { type MarketInput, type Profile } from "@/lib/verity"
 import { reviewPredictionPost, type VerityAgentReview } from "@/lib/verityAgent"
 import { useUsdcTransfer } from "@/hooks/useUsdcTransfer"
+import { useUsdcBalance } from "@/hooks/useUsdcBalance"
 import { useAuth } from "@/components/providers/AuthModals"
 import {
   useCreateMarketPostMutation,
-  useCreateNormalPostMutation,
   useValidateMarketPostMutation,
 } from "@/store/verity/verityQueries"
 import { toast } from "@/lib/toast"
-import {
-  FACTORY_ADDRESS,
-  arcUsdcAddress,
-  publicClient,
-  erc20Abi,
-} from "@/lib/arc"
-import type { Address } from "viem"
+import { FACTORY_ADDRESS } from "@/lib/arc"
 
 interface ComposeBoxProps {
   profile: Profile | null
@@ -153,11 +140,11 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
   const composerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const marketQuestionRef = useRef<HTMLInputElement>(null)
-  const { user, executeTxBatch } = useAuth()
+  const { user } = useAuth()
   const { createMarketPreDeposit } = useUsdcTransfer()
+  const { rawBalance } = useUsdcBalance()
   const { mutateAsync: validateMarketPost } = useValidateMarketPostMutation()
   const { mutateAsync: createMarketPost } = useCreateMarketPostMutation()
-  const { mutateAsync: createNormalPost } = useCreateNormalPostMutation()
 
   const [content, setContent] = useState("")
   const [isMarket, setIsMarket] = useState(false)
@@ -311,11 +298,32 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
   const visibleAgentReview =
     reviewIsCurrent && agentReview ? agentReview : liveAgentReview
 
+  const requiredMarketCost = useMemo(() => {
+    if (isMultiOption) {
+      return options.filter((o) => o.trim().length > 0).length * 11
+    }
+    return 11
+  }, [isMultiOption, options])
+
+  const isBalanceInsufficient = useMemo(() => {
+    if (!user || !isMarket) return false
+    const rawRequired = BigInt(requiredMarketCost * 1e6)
+    return rawBalance < rawRequired
+  }, [user, isMarket, requiredMarketCost, rawBalance])
+
   const canUsePrimaryAction = useMemo(() => {
     if (!user || saving || isValidating) return false
     if (!isMarket) return content.trim().length > 0
-    return hasMarketFields
-  }, [content, hasMarketFields, isMarket, user, saving, isValidating])
+    return hasMarketFields && !isBalanceInsufficient
+  }, [
+    content,
+    hasMarketFields,
+    isMarket,
+    user,
+    saving,
+    isValidating,
+    isBalanceInsufficient,
+  ])
 
   async function runAgentReview() {
     setIsValidating(true)
@@ -382,10 +390,17 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
   const primaryLabel = useMemo(() => {
     if (saving) return "Posting..."
     if (isValidating) return "Reviewing..."
-    if (!isMarket) return "Take"
+    if (!isMarket) return "Post"
     if (!predictionApproved) return "Review"
     return `Pay ${dynamicCost} USDC & Create Market`
-  }, [isMarket, predictionApproved, saving, isValidating, dynamicCost])
+  }, [
+    isMarket,
+    predictionApproved,
+    saving,
+    isValidating,
+    dynamicCost,
+    isBalanceInsufficient,
+  ])
 
   async function submit() {
     if (!user || !canUsePrimaryAction) return
@@ -393,6 +408,15 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
     if (isMarket && !predictionApproved) {
       await runAgentReview()
       return
+    }
+
+    if (isMarket) {
+      if (isBalanceInsufficient) {
+        toast.error(
+          `Insufficient USDC balance. You need at least ${requiredMarketCost} USDC to create a market`,
+        )
+        return
+      }
     }
 
     setSaving(true)
@@ -832,6 +856,13 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
 
           {error && (
             <p className="text-xs text-coral-red font-semibold">{error}</p>
+          )}
+
+          {isMarket && user && isBalanceInsufficient && (
+            <p className="text-xs text-red-500 font-semibold mt-1">
+              Insufficient USDC balance. You need at least {requiredMarketCost}{" "}
+              USDC
+            </p>
           )}
 
           {/* Action Row */}

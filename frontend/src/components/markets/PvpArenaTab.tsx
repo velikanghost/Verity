@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/components/providers/AuthModals"
 import { useMarketResolution } from "@/hooks/useMarketResolution"
+import { useUsdcBalance } from "@/hooks/useUsdcBalance"
 import { arcUsdcAddress, FPMM_ADDRESS, publicClient } from "@/lib/arc"
 import {
   useSubmitPvpTicketMutation,
@@ -20,10 +21,9 @@ import {
   Trophy,
   Flag,
   Target,
-  AlertTriangle,
   ChevronDown,
   ChevronUp,
-  ShieldAlert,
+  RectangleVertical,
 } from "lucide-react"
 import { toast } from "@/lib/toast"
 import PvpLiquidityModal from "./PvpLiquidityModal"
@@ -116,6 +116,7 @@ export default function PvpArenaTab({
 }: PvpArenaTabProps) {
   const { user, executeTxBatch, closeTxConfirm } = useAuth()
   const { redeemMultipleWinnings } = useMarketResolution()
+  const { rawBalance } = useUsdcBalance()
   const submitTicketMutation = useSubmitPvpTicketMutation()
   const { mutateAsync: executeMarketTrade } = useExecuteMarketTradeMutation()
 
@@ -300,10 +301,17 @@ export default function PvpArenaTab({
       return
     }
 
-    setIsSubmitting(true)
     const totalAmount = betAmountPerSelection * picks.length
     const rawTotalAmount = BigInt(Math.round(totalAmount * 1e6))
 
+    if (rawBalance < rawTotalAmount) {
+      toast.error(
+        `Insufficient USDC balance. You need at least ${totalAmount} USDC to submit this ticket, but your balance is ${(Number(rawBalance) / 1e6).toFixed(2)} USDC.`,
+      )
+      return
+    }
+
+    setIsSubmitting(true)
     const toastId = toast.loading("Preparing ticket transaction batch...")
     try {
       // 1. Check current USDC allowance to FPMM_ADDRESS
@@ -1039,6 +1047,26 @@ export default function PvpArenaTab({
                       (o: any) => pvpSelections[o.id],
                     )
 
+                    // Determine highlight color based on active selection: Draw = amber, other = emerald
+                    let selectedOptionColor: string | null = null
+                    if (hasSelection) {
+                      if (isMulti) {
+                        const selection = pvpSelections[firstOpt.id]
+                        if (selection) {
+                          const isDrawOption =
+                            selection.toLowerCase().includes("draw") ||
+                            selection.toLowerCase().includes("no goal") ||
+                            selection.toLowerCase().includes("equal")
+                          selectedOptionColor = isDrawOption
+                            ? "amber"
+                            : "emerald"
+                        }
+                      } else {
+                        // Binary market
+                        selectedOptionColor = "emerald"
+                      }
+                    }
+
                     return (
                       <ArenaCategory
                         key={groupKey}
@@ -1049,7 +1077,7 @@ export default function PvpArenaTab({
                             : catMeta.subtitle
                         }
                         icon={catMeta.icon}
-                        accentColor={catMeta.accent}
+                        accentColor={selectedOptionColor || catMeta.accent}
                         volume={groupVolume}
                         hasSelection={hasSelection}
                         onAddLiquidity={() => setLiquidityMarketId(firstOpt.id)}
@@ -1423,7 +1451,7 @@ function getCategoryMeta(groupKey: string): CatMeta {
     red_card: {
       title: "Red Card",
       subtitle: "Red card shown in match",
-      icon: <ShieldAlert className="h-4 w-4" />,
+      icon: <RectangleVertical className="h-4 w-4 fill-current rotate-12" />,
       accent: "emerald",
       selectedBg: "bg-emerald-600",
       ring: "ring-emerald-400/30",
@@ -1433,7 +1461,7 @@ function getCategoryMeta(groupKey: string): CatMeta {
     red_cards: {
       title: "Red Card",
       subtitle: "Red card shown in match",
-      icon: <ShieldAlert className="h-4 w-4" />,
+      icon: <RectangleVertical className="h-4 w-4 fill-current rotate-12" />,
       accent: "emerald",
       selectedBg: "bg-emerald-600",
       ring: "ring-emerald-400/30",
@@ -1483,7 +1511,7 @@ function getCategoryMeta(groupKey: string): CatMeta {
     cards: {
       title: "Yellow Cards",
       subtitle: "Over / Under",
-      icon: <AlertTriangle className="h-4 w-4" />,
+      icon: <RectangleVertical className="h-4 w-4 fill-current rotate-12" />,
       accent: "emerald",
       selectedBg: "bg-emerald-600",
       ring: "ring-emerald-400/30",
@@ -1493,7 +1521,7 @@ function getCategoryMeta(groupKey: string): CatMeta {
     yellow_cards: {
       title: "Yellow Cards",
       subtitle: "Over / Under",
-      icon: <AlertTriangle className="h-4 w-4" />,
+      icon: <RectangleVertical className="h-4 w-4 fill-current rotate-12" />,
       accent: "emerald",
       selectedBg: "bg-emerald-600",
       ring: "ring-emerald-400/30",
@@ -1503,7 +1531,7 @@ function getCategoryMeta(groupKey: string): CatMeta {
     total_yellow_cards: {
       title: "Yellow Cards",
       subtitle: "Over / Under",
-      icon: <AlertTriangle className="h-4 w-4" />,
+      icon: <RectangleVertical className="h-4 w-4 fill-current rotate-12" />,
       accent: "emerald",
       selectedBg: "bg-emerald-600",
       ring: "ring-emerald-400/30",
@@ -1632,7 +1660,7 @@ function ArenaCategory({
           <button
             type="button"
             onClick={onAddLiquidity}
-            className="px-2 py-0.5 rounded-[6px] text-[9px] font-bold font-mono transition-all text-ash hover:text-charcoal-primary dark:hover:text-white bg-[#FFBB25]/80 dark:bg-zinc-900/30 border border-border dark:border-zinc-800 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 cursor-pointer shadow-sm"
+            className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border border-border dark:border-zinc-800 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-stone-600 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer shadow-xs bg-stone-50/50 dark:bg-zinc-900/20"
           >
             + LP
           </button>

@@ -5,18 +5,21 @@ import { apiRequest } from "@/store/apiClient"
 import { toast } from "react-hot-toast"
 import { Button } from "@/components/ui/button"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   ShieldAlert,
   Swords,
   TrendingUp,
-  Key,
   Mail,
   LogOut,
-  Calendar,
-  CheckCircle,
-  HelpCircle,
   RefreshCw,
   Plus,
-  Trash2,
   Wallet,
   Copy,
   Info,
@@ -56,7 +59,8 @@ function parseTeams(question: string): { teamA: string; teamB: string } {
   const vsMatch = question.match(/(.+?)\s+vs\.?\s+(.+)/i)
   if (vsMatch) return { teamA: vsMatch[1].trim(), teamB: vsMatch[2].trim() }
   const dashMatch = question.match(/(.+?)\s+-\s+(.+)/)
-  if (dashMatch) return { teamA: dashMatch[1].trim(), teamB: dashMatch[2].trim() }
+  if (dashMatch)
+    return { teamA: dashMatch[1].trim(), teamB: dashMatch[2].trim() }
   return { teamA: "Team A", teamB: "Team B" }
 }
 
@@ -103,6 +107,13 @@ export default function AdminPage() {
 
   // Arbitration / Resolve Form State
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null)
+
+  // Add Liquidity Dialog State
+  const [isAddLiquidityOpen, setIsAddLiquidityOpen] = useState(false)
+  const [liquidityAmount, setLiquidityAmount] = useState("40")
+  const [liquidityMarketId, setLiquidityMarketId] = useState<string | null>(
+    null,
+  )
   const [winningOutcome, setWinningOutcome] = useState<"YES" | "NO">("YES")
   const [resolveTxHash, setResolveTxHash] = useState("0x" + "a".repeat(64))
   const [adminAddress, setAdminAddress] = useState(
@@ -110,10 +121,7 @@ export default function AdminPage() {
   )
 
   // Parse team names from question
-  const { teamA, teamB } = useMemo(
-    () => parseTeams(pvpQuestion),
-    [pvpQuestion],
-  )
+  const { teamA, teamB } = useMemo(() => parseTeams(pvpQuestion), [pvpQuestion])
 
   const hasTeams = pvpQuestion.trim().length > 0
 
@@ -161,25 +169,19 @@ export default function AdminPage() {
     return [...opts, ...customOptions]
   }, [categories, customOptions, teamA, teamB, hasTeams])
 
-  const toggleCategory = useCallback(
-    (key: string) => {
-      setCategories((prev) => ({
-        ...prev,
-        [key]: { ...prev[key], enabled: !prev[key].enabled },
-      }))
-    },
-    [],
-  )
+  const toggleCategory = useCallback((key: string) => {
+    setCategories((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], enabled: !prev[key].enabled },
+    }))
+  }, [])
 
-  const setCategoryLine = useCallback(
-    (key: string, line: number) => {
-      setCategories((prev) => ({
-        ...prev,
-        [key]: { ...prev[key], line },
-      }))
-    },
-    [],
-  )
+  const setCategoryLine = useCallback((key: string, line: number) => {
+    setCategories((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], line },
+    }))
+  }, [])
 
   // Fetch admin status/balances
   async function fetchAdminStatus() {
@@ -205,7 +207,9 @@ export default function AdminPage() {
     const text = customOptionText.trim()
     if (!text) return
     if (
-      [...generatedOptions].map((o) => o.toLowerCase()).includes(text.toLowerCase())
+      [...generatedOptions]
+        .map((o) => o.toLowerCase())
+        .includes(text.toLowerCase())
     ) {
       toast.error("Option already exists.")
       return
@@ -321,8 +325,13 @@ export default function AdminPage() {
       return
     }
 
-    if (generatedOptions.length < 3 || generatedOptions.some((opt) => !opt.trim())) {
-      toast.error("You must enable enough categories for at least 3 propositions.")
+    if (
+      generatedOptions.length < 3 ||
+      generatedOptions.some((opt) => !opt.trim())
+    ) {
+      toast.error(
+        "You must enable enough categories for at least 3 propositions.",
+      )
       return
     }
 
@@ -376,11 +385,18 @@ export default function AdminPage() {
     }
   }
 
+  const openAddLiquidityModal = (marketId: string) => {
+    setLiquidityMarketId(marketId)
+    setLiquidityAmount("40")
+    setIsAddLiquidityOpen(true)
+  }
+
   // Add Liquidity to a prediction market pool
-  async function handleAddLiquidity(marketId: string) {
-    const amountStr = prompt("Enter USDC amount to deposit:", "40")
-    if (amountStr === null) return // Cancelled
-    const amount = parseFloat(amountStr)
+  async function handleAddLiquidity(e?: React.FormEvent) {
+    if (e) e.preventDefault()
+    if (!liquidityMarketId) return
+
+    const amount = parseFloat(liquidityAmount)
     if (isNaN(amount) || amount <= 0) {
       toast.error("Please enter a valid positive number.")
       return
@@ -389,14 +405,15 @@ export default function AdminPage() {
     setLoading(true)
     try {
       const response = await apiRequest<{ success: boolean; txHash: string }>(
-        `/markets/${marketId}/admin-deposit-liquidity`,
+        `/markets/${liquidityMarketId}/admin-deposit-liquidity`,
         {
           method: "POST",
           body: JSON.stringify({ amount }),
           headers: { "Content-Type": "application/json" },
-        }
+        },
       )
       toast.success(`Liquidity added successfully! Tx: ${response.txHash}`)
+      setIsAddLiquidityOpen(false)
       void fetchMarkets()
     } catch (err: any) {
       toast.error(err.message || "Failed to add liquidity.")
@@ -782,19 +799,25 @@ export default function AdminPage() {
                 >
                   <div className="grid grid-cols-3 gap-2">
                     <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
-                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">Home</span>
+                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">
+                        Home
+                      </span>
                       <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300 text-center leading-tight">
                         {hasTeams ? teamA : "Team A"}
                       </span>
                     </div>
                     <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-stone-100/80 dark:bg-zinc-800/40 border border-stone-200 dark:border-zinc-700/60">
-                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">Draw</span>
+                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">
+                        Draw
+                      </span>
                       <span className="text-sm font-bold text-stone-600 dark:text-zinc-300 text-center leading-tight">
                         Draw
                       </span>
                     </div>
                     <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-rose-50/80 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40">
-                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">Away</span>
+                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">
+                        Away
+                      </span>
                       <span className="text-sm font-bold text-rose-700 dark:text-rose-300 text-center leading-tight">
                         {hasTeams ? teamB : "Team B"}
                       </span>
@@ -813,19 +836,25 @@ export default function AdminPage() {
                 >
                   <div className="grid grid-cols-3 gap-2">
                     <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-orange-50/80 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/40">
-                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">Home</span>
+                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">
+                        Home
+                      </span>
                       <span className="text-sm font-bold text-orange-700 dark:text-orange-300 text-center leading-tight">
                         {hasTeams ? teamA : "Team A"}
                       </span>
                     </div>
                     <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-stone-100/80 dark:bg-zinc-800/40 border border-stone-200 dark:border-zinc-700/60">
-                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">No Goal</span>
+                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">
+                        No Goal
+                      </span>
                       <span className="text-sm font-bold text-stone-600 dark:text-zinc-300 text-center leading-tight">
                         No Goal
                       </span>
                     </div>
                     <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-rose-50/80 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40">
-                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">Away</span>
+                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">
+                        Away
+                      </span>
                       <span className="text-sm font-bold text-rose-700 dark:text-rose-300 text-center leading-tight">
                         {hasTeams ? teamB : "Team B"}
                       </span>
@@ -844,13 +873,17 @@ export default function AdminPage() {
                 >
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-red-50/80 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40">
-                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">Yes</span>
+                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">
+                        Yes
+                      </span>
                       <span className="text-sm font-bold text-red-700 dark:text-red-300 text-center leading-tight">
                         Red card shown
                       </span>
                     </div>
                     <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-stone-100/80 dark:bg-zinc-800/40 border border-stone-200 dark:border-zinc-700/60">
-                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">No</span>
+                      <span className="text-[10px] font-bold uppercase text-ash tracking-wider">
+                        No
+                      </span>
                       <span className="text-sm font-bold text-stone-600 dark:text-zinc-300 text-center leading-tight">
                         No red cards
                       </span>
@@ -1050,7 +1083,8 @@ export default function AdminPage() {
               {generatedOptions.length > 0 && (
                 <div className="rounded-xl bg-stone-50 dark:bg-zinc-900/40 border border-border dark:border-zinc-800 p-3">
                   <span className="block text-[10px] font-bold uppercase text-ash tracking-wider mb-2">
-                    Preview — {generatedOptions.length} propositions will be created
+                    Preview — {generatedOptions.length} propositions will be
+                    created
                   </span>
                   <div className="space-y-1">
                     {generatedOptions.map((opt, idx) => (
@@ -1271,7 +1305,7 @@ export default function AdminPage() {
                           )}
                           {market.status === "funding_pool" && (
                             <Button
-                              onClick={() => handleAddLiquidity(market.id)}
+                              onClick={() => openAddLiquidityModal(market.id)}
                               variant="default"
                               size="sm"
                               className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-[8px] transition-colors cursor-pointer"
@@ -1282,7 +1316,7 @@ export default function AdminPage() {
                           {market.status === "tradable" && (
                             <>
                               <Button
-                                onClick={() => handleAddLiquidity(market.id)}
+                                onClick={() => openAddLiquidityModal(market.id)}
                                 variant="outline"
                                 size="sm"
                                 className="border-indigo-200 dark:border-indigo-900 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 font-semibold rounded-[8px] transition-colors cursor-pointer"
@@ -1309,9 +1343,12 @@ export default function AdminPage() {
                               Arbitrate Resolve
                             </Button>
                           )}
-                          {!["qualified", "funding_pool", "tradable", "resolving"].includes(
-                            market.status,
-                          ) && (
+                          {![
+                            "qualified",
+                            "funding_pool",
+                            "tradable",
+                            "resolving",
+                          ].includes(market.status) && (
                             <span className="text-[10px] text-ash font-mono uppercase">
                               No Actions
                             </span>
@@ -1326,6 +1363,66 @@ export default function AdminPage() {
           </div>
         </section>
       </main>
+
+      {/* Dialog for Add Liquidity */}
+      <Dialog open={isAddLiquidityOpen} onOpenChange={setIsAddLiquidityOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-zinc-950 border border-border dark:border-zinc-800 rounded-lg shadow-lg">
+          <form onSubmit={handleAddLiquidity}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold text-charcoal-primary dark:text-white">
+                Deposit Pre-Market Liquidity
+              </DialogTitle>
+              <DialogDescription className="text-xs text-ash mt-1">
+                Fund the on-chain escrow balance for this prediction market.
+                Funding meets the threshold to activate the market for trading.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 my-2">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-mono font-bold uppercase tracking-wider text-ash">
+                  Market ID
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={liquidityMarketId || ""}
+                  className="w-full h-9 px-3 border border-border dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 text-xs font-mono rounded-[8px] outline-none text-ash"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-mono font-bold uppercase tracking-wider text-ash">
+                  USDC Deposit Amount
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={liquidityAmount}
+                  onChange={(e) => setLiquidityAmount(e.target.value)}
+                  className="w-full h-9 px-3 border border-border dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-semibold rounded-[8px] outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex gap-2 justify-end pt-2 border-t border-border dark:border-zinc-800/80">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddLiquidityOpen(false)}
+                className="h-9 px-4 rounded-[8px] text-xs font-semibold cursor-pointer border border-border"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="h-9 px-4 rounded-[8px] text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer"
+              >
+                {loading ? "Depositing..." : "Confirm Deposit"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1351,7 +1448,10 @@ function CategoryCard({
   children: React.ReactNode
 }) {
   // Map accent colors to classes
-  const colorMap: Record<string, { bg: string; border: string; text: string; toggle: string }> = {
+  const colorMap: Record<
+    string,
+    { bg: string; border: string; text: string; toggle: string }
+  > = {
     indigo: {
       bg: "bg-indigo-50/50 dark:bg-indigo-950/10",
       border: "border-indigo-200 dark:border-indigo-900/50",

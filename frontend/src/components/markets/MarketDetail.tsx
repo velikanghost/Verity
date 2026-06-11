@@ -24,7 +24,6 @@ import {
   calculateGrossUsdc,
   FeedPost,
   MarketComment,
-  MarketPosition,
   MarketTradeAction,
   MarketPost,
   VoteSide,
@@ -41,7 +40,6 @@ import {
   useLPPositionsQuery,
   usePoolStateQuery,
   useMarketTradesQuery,
-  useResolveMarketMutation,
   useMarketDetailQuery,
 } from "@/store/verity/verityQueries"
 
@@ -60,7 +58,12 @@ import PreMarketFundingPanel from "./detail/PreMarketFundingPanel"
 import ActiveMarketLPPanel from "./detail/ActiveMarketLPPanel"
 import ResolutionPanel from "./detail/ResolutionPanel"
 import { RedeemPanel, RefundPanel } from "./detail/RedeemPanel"
-import { RulesPanel, MarketStatsPanel, CreatorPanel, SocialActions } from "./detail/MarketMetadata"
+import {
+  RulesPanel,
+  MarketStatsPanel,
+  CreatorPanel,
+  SocialActions,
+} from "./detail/MarketMetadata"
 import MyHoldingsPanel from "./detail/MyHoldingsPanel"
 
 interface MarketDetailProps {
@@ -86,9 +89,12 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   const [commentDraft, setCommentDraft] = useState("")
   const [commentLoading, setCommentLoading] = useState(false)
   const [tradeAmount, setTradeAmount] = useState("1")
-  const [tradeAction, setTradeAction] = useState<MarketTradeAction>(queryAction || "BUY")
+  const [tradeAction, setTradeAction] = useState<MarketTradeAction>(
+    queryAction || "BUY",
+  )
   const [selectedSide, setSelectedSide] = useState<VoteSide>(querySide || "YES")
-  const [replyingToComment, setReplyingToComment] = useState<MarketComment | null>(null)
+  const [replyingToComment, setReplyingToComment] =
+    useState<MarketComment | null>(null)
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
 
   const { dailyVotes, refetch: reloadDailyVotes } = useDailyVotes(profileId)
@@ -112,7 +118,9 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
       market.childMarkets.length > 0 &&
       !selectedChildId
     ) {
-      const matchingChild = market.childMarkets.find((child) => child.id === marketId)
+      const matchingChild = market.childMarkets.find(
+        (child) => child.id === marketId,
+      )
       if (matchingChild) {
         setSelectedChildId(matchingChild.id)
       } else {
@@ -163,7 +171,11 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
 
   // Set default side for multi-outcome markets
   useEffect(() => {
-    if (activeMarket && activeMarket.outcomeCount && activeMarket.outcomeCount > 2) {
+    if (
+      activeMarket &&
+      activeMarket.outcomeCount &&
+      activeMarket.outcomeCount > 2
+    ) {
       const outcomes = activeMarket.outcomes || []
       if (outcomes.length > 0 && !outcomes.includes(selectedSide)) {
         setSelectedSide(outcomes[0])
@@ -173,14 +185,21 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
 
   // Queries
   const { data: poolStateData } = usePoolStateQuery(activeMarketId || "")
-  const { data: lpPositionsData } = useLPPositionsQuery(activeMarketId || "", profileId || "")
+  const { data: lpPositionsData } = useLPPositionsQuery(
+    activeMarketId || "",
+    profileId || "",
+  )
   const { data: fetchedTrades } = useMarketTradesQuery(activeMarketId || "")
   const { data: fetchedComments } = usePostCommentsQuery(postId || "")
-  const { data: fetchedPositions } = useMarketPositionsQuery(activeMarketId || "", profileId || "")
+  const { data: fetchedPositions } = useMarketPositionsQuery(
+    activeMarketId || "",
+    profileId || "",
+  )
 
   // Mutations
   const { mutateAsync: addComment } = useAddCommentMutation()
-  const { mutateAsync: approveMarketForTrading } = useApproveMarketForTradingMutation()
+  const { mutateAsync: approveMarketForTrading } =
+    useApproveMarketForTradingMutation()
   const { mutateAsync: castFreeVote } = useCastFreeVoteMutation()
   const { mutateAsync: toggleReshare } = useToggleReshareMutation()
   const { mutateAsync: devQualifyMarket } = useDevQualifyMutation()
@@ -193,7 +212,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     buyTokens,
     sellTokens,
   } = useMarketLiquidity()
-  const { disputeResolution, redeemWinnings, claimCreatorLP, claimRefund } = useMarketResolution()
+  const { disputeResolution, redeemWinnings, claimCreatorLP, claimRefund } =
+    useMarketResolution()
 
   // Derived Values
   const poolYesPrice = poolStateData?.prices?.yesPrice
@@ -214,18 +234,23 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
       return poolStateData.pool.currentPoolBalance
     }
     return activeMarket
-      ? Number(activeMarket.usdc_yes_amount) + Number(activeMarket.usdc_no_amount)
+      ? Number(activeMarket.usdc_yes_amount) +
+          Number(activeMarket.usdc_no_amount)
       : 0
   }, [poolStateData, activeMarket])
 
   const hasUsdcOpinion = totalUsdc > 0
 
   const tradeAmountNumber = Number(tradeAmount)
-  const validTradeAmount = Number.isFinite(tradeAmountNumber) && tradeAmountNumber > 0
-  const selectedPrice = activeMarket ? getMarketPrice(activeMarket, selectedSide) : 0.5
+  const validTradeAmount =
+    Number.isFinite(tradeAmountNumber) && tradeAmountNumber > 0
+  const selectedPrice = activeMarket
+    ? getMarketPrice(activeMarket, selectedSide)
+    : 0.5
   const buyShares = validTradeAmount ? tradeAmountNumber / selectedPrice : 0
   const sellProceeds = validTradeAmount ? tradeAmountNumber * selectedPrice : 0
-  const tradeBaseAmount = tradeAction === "BUY" ? tradeAmountNumber : sellProceeds
+  const tradeBaseAmount =
+    tradeAction === "BUY" ? tradeAmountNumber : sellProceeds
   const tradeFee =
     activeMarket && validTradeAmount
       ? calculateTradingFee(tradeBaseAmount, activeMarket.trading_fee_bps)
@@ -237,12 +262,28 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         : Math.max(0, sellProceeds - tradeFee)
       : 0
 
+  const isBalanceInsufficient = useMemo(() => {
+    if (!user || tradeAction !== "BUY" || !validTradeAmount) return false
+    const rawRequired = BigInt(Math.round(tradeTotal * 1e6))
+    return balance.rawBalance < rawRequired
+  }, [user, tradeAction, validTradeAmount, tradeTotal, balance.rawBalance])
+
   const leadingSide: VoteSide = yesPercent >= noPercent ? "YES" : "NO"
   const leadingPercent = Math.max(yesPercent, noPercent)
 
-  const createdAt = useMemo(() => (activeMarket ? new Date(activeMarket.created_at) : null), [activeMarket])
-  const closesAt = useMemo(() => (activeMarket ? new Date(activeMarket.deadline) : null), [activeMarket])
-  const settlesAt = useMemo(() => (closesAt ? new Date(closesAt.getTime() + 24 * 60 * 60 * 1000) : null), [closesAt])
+  const createdAt = useMemo(
+    () => (activeMarket ? new Date(activeMarket.created_at) : null),
+    [activeMarket],
+  )
+  const closesAt = useMemo(
+    () => (activeMarket ? new Date(activeMarket.deadline) : null),
+    [activeMarket],
+  )
+  const settlesAt = useMemo(
+    () =>
+      closesAt ? new Date(closesAt.getTime() + 24 * 60 * 60 * 1000) : null,
+    [closesAt],
+  )
 
   const isPastDeadline = useMemo(() => {
     if (!closesAt) return false
@@ -250,7 +291,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   }, [closesAt])
 
   const creatorMarkets = useMemo(() => {
-    return items.filter((feedItem) => feedItem.author_id === item?.author_id).length
+    return items.filter((feedItem) => feedItem.author_id === item?.author_id)
+      .length
   }, [item, items])
 
   const creatorTotalVolume = useMemo(() => {
@@ -283,7 +325,9 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   }, [trades])
 
   const liveLiquidity = useMemo(() => {
-    return poolStateData?.pool?.currentPoolBalance ?? market?.liquidity ?? totalUsdc
+    return (
+      poolStateData?.pool?.currentPoolBalance ?? market?.liquidity ?? totalUsdc
+    )
   }, [poolStateData, market, totalUsdc])
 
   // Transactions execution handler helper
@@ -301,16 +345,32 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         await Promise.all([
           refetchMarket(),
           reloadDailyVotes(),
-          queryClient.invalidateQueries({ queryKey: ["pool-state", detailMarketId] }),
-          queryClient.invalidateQueries({ queryKey: ["lp-positions", detailMarketId] }),
-          queryClient.invalidateQueries({ queryKey: ["positions", detailMarketId] }),
-          queryClient.invalidateQueries({ queryKey: ["trades", detailMarketId] }),
+          queryClient.invalidateQueries({
+            queryKey: ["pool-state", detailMarketId],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["lp-positions", detailMarketId],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["positions", detailMarketId],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["trades", detailMarketId],
+          }),
           ...(activeMarketId && activeMarketId !== detailMarketId
             ? [
-                queryClient.invalidateQueries({ queryKey: ["pool-state", activeMarketId] }),
-                queryClient.invalidateQueries({ queryKey: ["lp-positions", activeMarketId] }),
-                queryClient.invalidateQueries({ queryKey: ["positions", activeMarketId] }),
-                queryClient.invalidateQueries({ queryKey: ["trades", activeMarketId] }),
+                queryClient.invalidateQueries({
+                  queryKey: ["pool-state", activeMarketId],
+                }),
+                queryClient.invalidateQueries({
+                  queryKey: ["lp-positions", activeMarketId],
+                }),
+                queryClient.invalidateQueries({
+                  queryKey: ["positions", activeMarketId],
+                }),
+                queryClient.invalidateQueries({
+                  queryKey: ["trades", activeMarketId],
+                }),
               ]
             : []),
         ])
@@ -320,7 +380,14 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         setActionPending(null)
       }
     },
-    [profileId, refetchMarket, reloadDailyVotes, queryClient, detailMarketId, activeMarketId],
+    [
+      profileId,
+      refetchMarket,
+      reloadDailyVotes,
+      queryClient,
+      detailMarketId,
+      activeMarketId,
+    ],
   )
 
   const handleDispute = useCallback(async () => {
@@ -390,7 +457,14 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         }
       })
     },
-    [activeMarketId, profileId, poolStateData, fundPreMarket, addPoolLiquidity, runAction],
+    [
+      activeMarketId,
+      profileId,
+      poolStateData,
+      fundPreMarket,
+      addPoolLiquidity,
+      runAction,
+    ],
   )
 
   const handleRemoveLP = useCallback(
@@ -420,14 +494,23 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
     async (side: VoteSide) => {
       if (!activeMarket || !profileId) return
 
+      if (tradeAction === "BUY" && isBalanceInsufficient) {
+        toast.error(`Insufficient USDC balance`)
+        return
+      }
+
       await runAction("trade", async () => {
         const amount = Number(tradeAmount)
         if (!Number.isFinite(amount) || amount <= 0) {
           throw new Error("Enter a valid USDC amount.")
         }
-        const isMulti = activeMarket.outcomeCount !== undefined && activeMarket.outcomeCount > 2
-        const outcomeIndex = isMulti ? activeMarket.outcomes?.indexOf(side) ?? -1 : -1
-        const isYesOrIndex = isMulti ? outcomeIndex : (side === "YES")
+        const isMulti =
+          activeMarket.outcomeCount !== undefined &&
+          activeMarket.outcomeCount > 2
+        const outcomeIndex = isMulti
+          ? (activeMarket.outcomes?.indexOf(side) ?? -1)
+          : -1
+        const isYesOrIndex = isMulti ? outcomeIndex : side === "YES"
 
         if (tradeAction === "BUY") {
           await buyTokens(
@@ -464,6 +547,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
       tradeFee,
       buyShares,
       tradeTotal,
+      isBalanceInsufficient,
+      balance.formattedBalance,
     ],
   )
 
@@ -508,7 +593,9 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           }}
         />
 
-        {["open_for_votes", "qualified", "funding_pool"].includes(activeMarket.status) ? (
+        {["open_for_votes", "qualified", "funding_pool"].includes(
+          activeMarket.status,
+        ) ? (
           <PreMarketFundingPanel
             actionLoading={actionPending}
             authorId={item.author_id || item.authorId}
@@ -524,6 +611,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
             action={tradeAction}
             amount={tradeAmount}
             balanceLabel={balance.isLoading ? "..." : balance.formattedBalance}
+            isBalanceInsufficient={isBalanceInsufficient}
             disabled={
               Boolean(actionPending) ||
               activeMarket.status !== "tradable" ||
@@ -545,8 +633,12 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
             noPrice={noPercent}
             actionPending={actionPending === "trade"}
             maxSellShares={selectedSideShares}
-            yesCondition={activeMarket?.yes_condition || activeMarket?.yesCondition || "Yes"}
-            noCondition={activeMarket?.no_condition || activeMarket?.noCondition || "No"}
+            yesCondition={
+              activeMarket?.yes_condition || activeMarket?.yesCondition || "Yes"
+            }
+            noCondition={
+              activeMarket?.no_condition || activeMarket?.noCondition || "No"
+            }
             outcomeCount={activeMarket?.outcomeCount}
             outcomes={activeMarket?.outcomes}
             outcomePrices={activeMarket?.outcomePrices}
@@ -607,7 +699,10 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
   ])
 
   const rightPanelSlot = useMemo(
-    () => (sidebarPanels ? <div className="flex flex-col gap-3">{sidebarPanels}</div> : null),
+    () =>
+      sidebarPanels ? (
+        <div className="flex flex-col gap-3">{sidebarPanels}</div>
+      ) : null,
     [sidebarPanels],
   )
   useSetRightPanelSlot(rightPanelSlot)
@@ -681,7 +776,9 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
         freeYesVotes={market.free_yes_votes}
         dailyVotesRemaining={dailyVotes?.votesRemaining ?? 0}
         marketStatus={activeMarket.status}
-        onComment={() => document.getElementById("market-comment-input")?.focus()}
+        onComment={() =>
+          document.getElementById("market-comment-input")?.focus()
+        }
         onReshare={() =>
           runAction("reshare", () =>
             toggleReshare({
