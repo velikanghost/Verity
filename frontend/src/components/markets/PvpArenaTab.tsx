@@ -27,6 +27,13 @@ import {
 } from "lucide-react"
 import { toast } from "@/lib/toast"
 import PvpLiquidityModal from "./PvpLiquidityModal"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 function formatMarketId(marketId: string): `0x${string}` {
   const clean = marketId.replace(/^0x/, "")
@@ -517,17 +524,28 @@ export default function PvpArenaTab({
               <label className="block text-xs font-mono font-bold uppercase tracking-wider text-ash">
                 Select Matchup Event
               </label>
-              <select
+              <Select
                 value={selectedPvpEventId || ""}
-                onChange={(e) => setSelectedPvpEventId(e.target.value)}
-                className="w-full h-11 px-3 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-sm rounded-[10px] text-charcoal-primary dark:text-white outline-none cursor-pointer focus:border-indigo-500 transition-colors"
+                onValueChange={(val) => setSelectedPvpEventId(val)}
               >
-                {pvpEvents.map((evt: any) => (
-                  <option key={evt.id} value={evt.id}>
-                    {evt.question}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-11 px-3 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-sm rounded-[10px] text-charcoal-primary dark:text-white focus:border-indigo-500 transition-colors cursor-pointer justify-between">
+                  <SelectValue placeholder="Select Matchup Event" />
+                </SelectTrigger>
+                <SelectContent
+                  position="popper"
+                  className="bg-white dark:bg-zinc-900 border border-border dark:border-zinc-800"
+                >
+                  {pvpEvents.map((evt: any) => (
+                    <SelectItem
+                      key={evt.id}
+                      value={evt.id}
+                      className="cursor-pointer"
+                    >
+                      {evt.question}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex flex-col items-start md:items-end justify-center shrink-0">
@@ -1059,17 +1077,15 @@ export default function PvpArenaTab({
                                 const isHome = idx === 0
                                 const isDrawOption =
                                   displayName.toLowerCase().includes("draw") ||
-                                  displayName.toLowerCase().includes("no goal") ||
+                                  displayName
+                                    .toLowerCase()
+                                    .includes("no goal") ||
                                   displayName.toLowerCase().includes("equal")
                                 const btnColor = isSelected
                                   ? isDrawOption
                                     ? "bg-amber-500 text-white shadow-md ring-2 ring-amber-400/30"
                                     : "bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400/30"
-                                  : isHome
-                                    ? "bg-indigo-50/80 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-950/30"
-                                    : isDrawOption
-                                      ? "bg-amber-50/80 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-950/30"
-                                      : "bg-rose-50/80 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-900/40 hover:bg-rose-100 dark:hover:bg-rose-950/30"
+                                  : "bg-stone-50/50 dark:bg-zinc-900/20 text-stone-600 dark:text-zinc-400 border border-stone-200/80 dark:border-zinc-800/60 hover:bg-stone-100/60 dark:hover:bg-zinc-800/40"
 
                                 return (
                                   <button
@@ -1262,15 +1278,8 @@ export default function PvpArenaTab({
                 {/* XP boost indicator and submit button */}
                 <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-t border-border dark:border-zinc-800 pt-4 mt-2">
                   <div className="flex items-center gap-2">
-                    <Zap
-                      className={`h-4.5 w-4.5 ${
-                        referralsData && referralsData.doubleBoostRemaining > 0
-                          ? "text-indigo-500 animate-pulse"
-                          : "text-ash"
-                      }`}
-                    />
                     <span className="text-xs font-mono text-ash">
-                      ⚡ Boosts Remaining:{" "}
+                      Boosts Remaining:{" "}
                       <strong className="text-charcoal-primary dark:text-white">
                         {referralsData?.doubleBoostRemaining ?? 0}
                       </strong>
@@ -1517,7 +1526,12 @@ function getCategoryMeta(groupKey: string): CatMeta {
       "bg-stone-100/80 dark:bg-zinc-800/40 text-stone-700 dark:text-zinc-300 border border-stone-200 dark:border-zinc-700/60",
   }
 
-  return map[groupKey] || fallback
+  const meta = map[groupKey] || fallback
+  return {
+    ...meta,
+    unselectedBg:
+      "bg-stone-50/50 dark:bg-zinc-900/20 text-stone-600 dark:text-zinc-400 border border-stone-200/80 dark:border-zinc-800/60 hover:bg-stone-100/60 dark:hover:bg-zinc-800/40",
+  }
 }
 
 /* ──────────────────────────────────────────────

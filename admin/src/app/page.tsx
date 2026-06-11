@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { apiRequest } from "@/store/apiClient"
 import { toast } from "react-hot-toast"
+import { Button } from "@/components/ui/button"
 import {
   ShieldAlert,
   Swords,
@@ -375,6 +376,35 @@ export default function AdminPage() {
     }
   }
 
+  // Add Liquidity to a prediction market pool
+  async function handleAddLiquidity(marketId: string) {
+    const amountStr = prompt("Enter USDC amount to deposit:", "40")
+    if (amountStr === null) return // Cancelled
+    const amount = parseFloat(amountStr)
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid positive number.")
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await apiRequest<{ success: boolean; txHash: string }>(
+        `/markets/${marketId}/admin-deposit-liquidity`,
+        {
+          method: "POST",
+          body: JSON.stringify({ amount }),
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+      toast.success(`Liquidity added successfully! Tx: ${response.txHash}`)
+      void fetchMarkets()
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add liquidity.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Resolve prediction market
   async function handleResolveMarket(e: React.FormEvent) {
     e.preventDefault()
@@ -450,13 +480,13 @@ export default function AdminPage() {
                   className="w-full h-11 px-3 border border-border dark:border-zinc-800 bg-transparent text-sm rounded-[10px] outline-none focus:border-indigo-500 transition-colors"
                 />
               </div>
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
-                className="verity-pill w-full h-11 bg-indigo-600 text-white hover:bg-indigo-500 text-xs uppercase tracking-wider disabled:opacity-50"
+                className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white text-xs uppercase tracking-wider font-semibold rounded-[8px] transition-colors cursor-pointer"
               >
                 {loading ? "Requesting OTP..." : "Send OTP Verification Code"}
-              </button>
+              </Button>
             </form>
           ) : (
             <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
@@ -475,20 +505,21 @@ export default function AdminPage() {
                 />
               </div>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={() => setOtpSent(false)}
-                  className="verity-pill flex-1 h-11 bg-stone-100 hover:bg-stone-200 text-stone-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider"
+                  variant="secondary"
+                  className="flex-1 h-11 bg-stone-100 hover:bg-stone-200 text-stone-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider font-semibold rounded-[8px] cursor-pointer"
                 >
                   Back
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={loading}
-                  className="verity-pill flex-2 h-11 bg-indigo-600 text-white hover:bg-indigo-500 text-xs uppercase tracking-wider disabled:opacity-50"
+                  className="flex-2 h-11 bg-indigo-600 hover:bg-indigo-500 text-white text-xs uppercase tracking-wider font-semibold rounded-[8px] disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? "Verifying..." : "Verify & Sign In"}
-                </button>
+                </Button>
               </div>
             </form>
           )}
@@ -514,12 +545,12 @@ export default function AdminPage() {
                 className="w-full p-2 border border-border dark:border-zinc-800 bg-transparent text-[11px] font-mono rounded-[10px] outline-none focus:border-indigo-500 transition-colors"
               />
             </div>
-            <button
+            <Button
               type="submit"
-              className="verity-pill w-full h-11 bg-stone-900 text-white hover:bg-stone-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs uppercase tracking-wider"
+              className="w-full h-11 bg-stone-900 text-white hover:bg-stone-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs uppercase tracking-wider font-semibold rounded-[8px] cursor-pointer"
             >
               Direct JWT Login
-            </button>
+            </Button>
           </form>
         </div>
       </main>
@@ -1035,17 +1066,17 @@ export default function AdminPage() {
                 </div>
               )}
 
-              <button
+              <Button
                 type="submit"
                 disabled={loading || generatedOptions.length < 3}
-                className="verity-pill w-full h-11 bg-indigo-600 text-white hover:bg-indigo-500 text-xs uppercase tracking-wider shadow-subtle disabled:opacity-40 disabled:cursor-not-allowed mt-1"
+                className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white text-xs uppercase tracking-wider font-semibold rounded-[8px] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed mt-1 cursor-pointer"
               >
                 {loading
                   ? "Deploying..."
                   : generatedOptions.length < 3
                     ? `Enable more categories (${generatedOptions.length}/3 min)`
                     : `Deploy Event — ${generatedOptions.length} Propositions`}
-              </button>
+              </Button>
             </form>
           </div>
         </section>
@@ -1140,15 +1171,15 @@ export default function AdminPage() {
                       />
                     </div>
 
-                    <button
+                    <Button
                       type="submit"
                       disabled={loading}
-                      className="verity-pill w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold uppercase tracking-wider text-xs shadow-md mt-2 disabled:opacity-50"
+                      className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold uppercase tracking-wider text-xs shadow-md mt-2 disabled:opacity-50 cursor-pointer"
                     >
                       {loading
                         ? "Finalizing Settlement..."
                         : "Publish Settlement & Distribute Pools"}
-                    </button>
+                    </Button>
                   </form>
                 </div>
               )
@@ -1227,25 +1258,58 @@ export default function AdminPage() {
                             {market.status}
                           </span>
                         </td>
-                        <td className="p-3 text-right align-middle shrink-0">
+                        <td className="p-3 text-right align-middle shrink-0 flex items-center justify-end gap-1.5">
                           {market.status === "qualified" && (
-                            <button
+                            <Button
                               onClick={() => handleApproveTrading(market.id)}
-                              className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-[10px] font-bold uppercase tracking-wider font-mono cursor-pointer transition-colors shadow-subtle"
+                              variant="default"
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-[8px] transition-colors cursor-pointer"
                             >
                               Approve Trading
-                            </button>
+                            </Button>
                           )}
-                          {(market.status === "tradable" ||
-                            market.status === "resolving") && (
-                            <button
+                          {market.status === "funding_pool" && (
+                            <Button
+                              onClick={() => handleAddLiquidity(market.id)}
+                              variant="default"
+                              size="sm"
+                              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-[8px] transition-colors cursor-pointer"
+                            >
+                              Add Liquidity
+                            </Button>
+                          )}
+                          {market.status === "tradable" && (
+                            <>
+                              <Button
+                                onClick={() => handleAddLiquidity(market.id)}
+                                variant="outline"
+                                size="sm"
+                                className="border-indigo-200 dark:border-indigo-900 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 font-semibold rounded-[8px] transition-colors cursor-pointer"
+                              >
+                                Add Liquidity
+                              </Button>
+                              <Button
+                                onClick={() => setSelectedMarketId(market.id)}
+                                variant="default"
+                                size="sm"
+                                className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-[8px] transition-colors cursor-pointer"
+                              >
+                                Arbitrate Resolve
+                              </Button>
+                            </>
+                          )}
+                          {market.status === "resolving" && (
+                            <Button
                               onClick={() => setSelectedMarketId(market.id)}
-                              className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold uppercase tracking-wider font-mono cursor-pointer transition-colors shadow-subtle"
+                              variant="default"
+                              size="sm"
+                              className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-[8px] transition-colors cursor-pointer"
                             >
                               Arbitrate Resolve
-                            </button>
+                            </Button>
                           )}
-                          {!["qualified", "tradable", "resolving"].includes(
+                          {!["qualified", "funding_pool", "tradable", "resolving"].includes(
                             market.status,
                           ) && (
                             <span className="text-[10px] text-ash font-mono uppercase">

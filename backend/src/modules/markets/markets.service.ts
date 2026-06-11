@@ -32,6 +32,7 @@ import { BlockchainService } from "../blockchain/blockchain.service"
 import { SocketGateway } from "../socket/socket.gateway"
 import { NotificationsService } from "../notifications/notifications.service"
 import { PvpService } from "../pvp/pvp.service"
+import { LiquidityService } from "../liquidity/liquidity.service"
 
 export interface DailyVotesResponse {
   votesLimit: number
@@ -101,6 +102,7 @@ export class MarketsService {
     private readonly socketGateway: SocketGateway,
     private readonly notificationsService: NotificationsService,
     private readonly pvpService: PvpService,
+    private readonly liquidityService: LiquidityService,
   ) {}
 
   private todayKey(date = new Date()): string {
@@ -560,6 +562,26 @@ export class MarketsService {
     )
 
     return this.postsService.serializeMarket(updatedMarket!)
+  }
+
+  async adminDepositLiquidity(marketId: string, amount: number) {
+    const market = await this.marketModel.findById(marketId)
+    if (!market) {
+      throw new NotFoundException("Market not found.")
+    }
+
+    const txHash = await this.blockchainService.adminDepositPreMarketLiquidity(
+      marketId,
+      amount,
+    )
+
+    // Sync database pool state from chain
+    await this.liquidityService.syncPoolFromChain(marketId)
+
+    return {
+      success: true,
+      txHash,
+    }
   }
 
   async fetchMarketPositions(
