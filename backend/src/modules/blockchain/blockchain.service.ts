@@ -639,6 +639,9 @@ export class BlockchainService implements OnModuleInit {
         await new Promise((resolve) => setTimeout(resolve, 1000))
       }
     }
+    if (receipt && receipt.status === "reverted") {
+      throw new Error(`Transaction reverted on-chain: ${txHash}`)
+    }
     return receipt
   }
 
@@ -767,7 +770,10 @@ export class BlockchainService implements OnModuleInit {
         ],
         chain: arcTestnet,
       })
-      await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      if (receipt.status === "reverted") {
+        throw new Error("Transaction reverted on-chain: registerMarket")
+      }
       return txHash
     } catch (error) {
       throw new Error(`Failed to register market ${marketId}: ${error.message}`)
@@ -796,11 +802,46 @@ export class BlockchainService implements OnModuleInit {
         chain: arcTestnet,
       })
       // Wait for block confirmation
-      await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      if (receipt.status === "reverted") {
+        throw new Error("Transaction reverted on-chain: createMarketPreDeposit")
+      }
       return txHash
     } catch (error) {
       throw new Error(
         `Failed to create market pre-deposit for ${marketId}: ${error.message}`,
+      )
+    }
+  }
+
+  async adminDepositPreMarketLiquidity(
+    marketId: string,
+    amountUsdc: number,
+  ): Promise<string> {
+    if (!this.walletClient) {
+      throw new Error("Wallet client not initialized")
+    }
+
+    const rawAmount = BigInt(Math.round(amountUsdc * 1e6))
+    await this.approveUsdcIfNecessary(this.factoryAddress, rawAmount)
+
+    const formattedMarketId = this.formatMarketId(marketId)
+    try {
+      const txHash = await this.walletClient.writeContract({
+        address: this.factoryAddress,
+        abi: this.factoryAbi,
+        functionName: "depositPreMarketLiquidity",
+        args: [formattedMarketId, rawAmount],
+        chain: arcTestnet,
+      })
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      if (receipt.status === "reverted") {
+        throw new Error("Transaction reverted on-chain: depositPreMarketLiquidity")
+      }
+      return txHash
+    } catch (error) {
+      throw new Error(
+        `Failed to deposit pre-market liquidity for ${marketId}: ${error.message}`,
       )
     }
   }
@@ -822,7 +863,10 @@ export class BlockchainService implements OnModuleInit {
         args: [formattedMarketId, winningIsYes],
         chain: arcTestnet,
       })
-      await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      if (receipt.status === "reverted") {
+        throw new Error("Transaction reverted on-chain: resolveMarket")
+      }
       return txHash
     } catch (error) {
       throw new Error(
@@ -848,7 +892,10 @@ export class BlockchainService implements OnModuleInit {
         args: [formattedMarketId, BigInt(winningOutcomeIndex)],
         chain: arcTestnet,
       })
-      await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      if (receipt.status === "reverted") {
+        throw new Error("Transaction reverted on-chain: resolveMarketOutcome")
+      }
       return txHash
     } catch (error) {
       throw new Error(
@@ -929,7 +976,10 @@ export class BlockchainService implements OnModuleInit {
         ],
         chain: arcTestnet,
       })
-      await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      if (receipt.status === "reverted") {
+        throw new Error("Transaction reverted on-chain: registerPythMarket")
+      }
       return txHash
     } catch (error) {
       throw new Error(
@@ -1082,7 +1132,10 @@ export class BlockchainService implements OnModuleInit {
       return null
     }
 
-    // Approve
+    // Approve max uint256 to avoid future race conditions/approvals
+    const maxUint256 = BigInt(
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+    )
     const txHash = await this.walletClient.writeContract({
       address: this.usdcAddress,
       abi: [
@@ -1098,12 +1151,15 @@ export class BlockchainService implements OnModuleInit {
         },
       ],
       functionName: "approve",
-      args: [spender as `0x${string}`, amount],
+      args: [spender as `0x${string}`, maxUint256],
       chain: arcTestnet,
     })
 
-    // Wait for approval transaction receipt
-    await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+    // Wait for approval transaction receipt and check status
+    const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+    if (receipt.status === "reverted") {
+      throw new Error(`Approval transaction reverted on-chain for spender ${spender}`)
+    }
     return txHash
   }
 
