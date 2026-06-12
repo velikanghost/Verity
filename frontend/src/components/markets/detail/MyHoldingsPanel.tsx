@@ -1,6 +1,11 @@
 "use client"
 
-import { MarketPost, MarketPosition, VoteSide, getMarketPrice } from "@/lib/verity"
+import {
+  MarketPost,
+  MarketPosition,
+  VoteSide,
+  getMarketPrice,
+} from "@/lib/verity"
 
 interface MyHoldingsPanelProps {
   positions: MarketPosition[]
@@ -40,9 +45,7 @@ export default function MyHoldingsPanel({
       </div>
 
       {positions.length === 0 ? (
-        <p className="text-xs text-ash">
-          No cash positions in this market.
-        </p>
+        <p className="text-xs text-ash">No cash positions in this market.</p>
       ) : (
         <div className="flex flex-col gap-3">
           {positions.map((pos) => {
@@ -75,10 +78,7 @@ export default function MyHoldingsPanel({
                       }`}
                     >
                       {isWinner ? "WINNING" : "LOST"}{" "}
-                      {pos.side === "YES"
-                        ? activeMarket.yes_condition || "YES"
-                        : activeMarket.no_condition || "NO"}{" "}
-                      POSITION
+                      {pos.side === "YES" ? "YES" : "NO"} Shares
                     </span>
                   ) : (
                     <span
@@ -88,10 +88,7 @@ export default function MyHoldingsPanel({
                           : "bg-ember-orange/10 text-ember-orange"
                       }`}
                     >
-                      {pos.side === "YES"
-                        ? activeMarket.yes_condition || "YES"
-                        : activeMarket.no_condition || "NO"}{" "}
-                      POSITION
+                      {pos.side === "YES" ? "YES" : "NO"} Shares
                     </span>
                   )}
 
