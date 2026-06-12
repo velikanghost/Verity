@@ -30,6 +30,8 @@ import {
   Target,
   AlertTriangle,
   Minus,
+  Clock,
+  ExternalLink,
 } from "lucide-react"
 
 interface Market {
@@ -41,6 +43,17 @@ interface Market {
   resolutionSource?: string
   yesCondition?: string
   noCondition?: string
+  outcomes?: string[]
+  outcomeCount?: number
+  proposalReasoning?: string | null
+  proposalCitations?: string[] | null
+  proposalProposer?: string | null
+  proposalDisputer?: string | null
+  disputed?: boolean
+  proposedOutcome?: boolean | null
+  proposedAt?: string | null
+  disputeWindowSeconds?: number
+  resolvedOutcome?: string | null
 }
 
 /* ─────────────────────────────────────────────
@@ -115,11 +128,20 @@ export default function AdminPage() {
   const [liquidityMarketId, setLiquidityMarketId] = useState<string | null>(
     null,
   )
-  const [winningOutcome, setWinningOutcome] = useState<"YES" | "NO">("YES")
+  const [winningOutcome, setWinningOutcome] = useState<string>("YES")
   const [resolveTxHash, setResolveTxHash] = useState("")
   const [adminAddress, setAdminAddress] = useState(
     "0x0000000000000000000000000000000000000000",
   )
+
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    if (!selectedMarketId) return
+    const timer = setInterval(() => {
+      setNow(Date.now())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [selectedMarketId])
 
   // Parse team names from question
   const { teamA, teamB } = useMemo(() => parseTeams(pvpQuestion), [pvpQuestion])
@@ -248,6 +270,17 @@ export default function AdminPage() {
         resolutionSource: item.resolutionSource || item.resolution_source,
         yesCondition: item.yesCondition || item.yes_condition,
         noCondition: item.noCondition || item.no_condition,
+        outcomes: item.outcomes || [],
+        outcomeCount: item.outcomeCount ?? 2,
+        proposalReasoning: item.proposalReasoning || item.proposal_reasoning,
+        proposalCitations: item.proposalCitations || item.proposal_citations,
+        proposalProposer: item.proposalProposer || item.proposal_proposer,
+        proposalDisputer: item.proposalDisputer || item.proposal_disputer,
+        disputed: item.disputed ?? false,
+        proposedOutcome: item.proposedOutcome ?? null,
+        proposedAt: item.proposedAt || item.proposed_at || null,
+        disputeWindowSeconds: item.disputeWindowSeconds ?? 120,
+        resolvedOutcome: item.resolvedOutcome || item.resolved_outcome || null,
       }))
       setMarkets(parsed)
     } catch (err: any) {
@@ -437,7 +470,7 @@ export default function AdminPage() {
         method: "POST",
         body: JSON.stringify({
           winningOutcome,
-          txHash: resolveTxHash.trim(),
+          txHash: resolveTxHash ? resolveTxHash.trim() : undefined,
           adminAddress: adminAddress.trim(),
         }),
       })
@@ -447,6 +480,34 @@ export default function AdminPage() {
       void fetchAdminStatus()
     } catch (err: any) {
       toast.error(err.message || "Failed to resolve market.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOpenArbitrateResolve = useCallback((market: Market) => {
+    setSelectedMarketId(market.id)
+    setResolveTxHash("")
+    const outcomes = market.outcomes && market.outcomes.length > 0
+      ? market.outcomes
+      : ["YES", "NO"]
+    setWinningOutcome(outcomes[0])
+  }, [])
+
+  async function handleDisputeMarket(marketId: string) {
+    setLoading(true)
+    try {
+      await apiRequest(`/markets/${marketId}/dispute`, {
+        method: "POST",
+        body: JSON.stringify({
+          adminAddress: adminAddress.trim(),
+        }),
+      })
+      toast.success("Market disputed successfully!")
+      setSelectedMarketId(null)
+      void fetchMarkets()
+    } catch (err: any) {
+      toast.error(err.message || "Failed to dispute market.")
     } finally {
       setLoading(false)
     }
@@ -1141,15 +1202,47 @@ export default function AdminPage() {
               const selectedMarket = markets.find(
                 (m) => m.id === selectedMarketId,
               )
+              if (!selectedMarket) return null
+
+              const outcomes = selectedMarket.outcomes && selectedMarket.outcomes.length > 0
+                ? selectedMarket.outcomes
+                : ["YES", "NO"]
+
+              const hasProposal = !!selectedMarket.proposalProposer
+
+              // Countdown calculation
+              const proposedTime = selectedMarket.proposedAt ? new Date(selectedMarket.proposedAt).getTime() : 0
+              const disputeWindowSeconds = selectedMarket.disputeWindowSeconds ?? 120
+              const endTime = proposedTime + (disputeWindowSeconds * 1000)
+              const remainingMs = endTime - now
+              const remainingSecs = Math.max(0, Math.floor(remainingMs / 1000))
+              const isWindowActive = remainingSecs > 0
+
+              const formatCountdown = (secs: number) => {
+                const m = Math.floor(secs / 60)
+                const s = secs % 60
+                return `${m}m ${s}s`
+              }
+
+              const getProposedOutcomeText = (market: Market) => {
+                if (market.proposedOutcome === null || market.proposedOutcome === undefined) return "None"
+                const opts = market.outcomes && market.outcomes.length > 0 ? market.outcomes : ["YES", "NO"]
+                if (market.proposedOutcome === true) {
+                  return opts[0] || "YES"
+                } else {
+                  return opts[1] || "NO"
+                }
+              }
+
               return (
-                <div className="verity-card p-5 border border-amber-300 dark:border-amber-950 bg-amber-500/5">
-                  <div className="flex items-center justify-between border-b border-dashed border-border pb-3 mb-4">
+                <div className="verity-card p-5 border border-amber-300 dark:border-amber-950 bg-amber-500/5 flex flex-col gap-4">
+                  <div className="flex items-center justify-between border-b border-dashed border-border pb-3">
                     <div>
                       <h3 className="text-base font-bold tracking-tight text-amber-600 dark:text-amber-400">
                         Arbitrate / Resolve Prediction Market
                       </h3>
                       <span className="text-[10px] font-mono text-ash uppercase block truncate max-w-[280px]">
-                        Question: {selectedMarket?.question}
+                        Question: {selectedMarket.question}
                       </span>
                       <span className="text-[9px] font-mono text-ash uppercase block">
                         Market ID: {selectedMarketId}
@@ -1163,6 +1256,121 @@ export default function AdminPage() {
                     </button>
                   </div>
 
+                  {/* Deadline & General Info */}
+                  <div className="flex flex-col gap-1 text-[11px] text-ash font-sans bg-stone-50 dark:bg-zinc-950 p-2.5 rounded-[8px] border border-border dark:border-zinc-800/40">
+                    <div className="flex justify-between items-center">
+                      <span>Expiration Deadline:</span>
+                      <span className="font-semibold text-charcoal-primary dark:text-zinc-100">
+                        {selectedMarket.deadline ? new Date(selectedMarket.deadline).toLocaleString() : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Proposal Details Card */}
+                  {hasProposal && (
+                    <div className="border border-indigo-100 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 rounded-[12px] p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between border-b border-border dark:border-zinc-800/80 pb-2">
+                        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                          <Info className="h-3.5 w-3.5" /> LLM Proposal Details
+                        </span>
+                        <span className="text-[9px] font-mono text-ash">
+                          Proposer: {selectedMarket.proposalProposer}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-ash block text-[10px] uppercase font-bold tracking-wider">Proposed Outcome</span>
+                          <span className="font-semibold text-charcoal-primary dark:text-zinc-100">
+                            {getProposedOutcomeText(selectedMarket)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-ash block text-[10px] uppercase font-bold tracking-wider">Proposed At</span>
+                          <span className="font-semibold text-charcoal-primary dark:text-zinc-100">
+                            {selectedMarket.proposedAt ? new Date(selectedMarket.proposedAt).toLocaleTimeString() : "N/A"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {selectedMarket.proposalReasoning && (
+                        <div className="text-xs">
+                          <span className="text-ash block text-[10px] uppercase font-bold tracking-wider mb-1">Reasoning</span>
+                          <p className="text-charcoal-primary dark:text-zinc-200 leading-relaxed font-sans bg-stone-50 dark:bg-zinc-950 p-2.5 rounded-lg border border-border dark:border-zinc-800/40">
+                            {selectedMarket.proposalReasoning}
+                          </p>
+                        </div>
+                      )}
+
+                      {selectedMarket.proposalCitations && selectedMarket.proposalCitations.length > 0 && (
+                        <div className="text-xs">
+                          <span className="text-ash block text-[10px] uppercase font-bold tracking-wider mb-1">Citations</span>
+                          <ul className="list-disc pl-4 text-ash font-sans space-y-1">
+                            {selectedMarket.proposalCitations.map((citation, i) => {
+                              const isUrl = citation.startsWith("http://") || citation.startsWith("https://")
+                              return (
+                                <li key={i} className="truncate max-w-[400px]">
+                                  {isUrl ? (
+                                    <a
+                                      href={citation}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-indigo-600 hover:text-indigo-500 underline inline-flex items-center gap-0.5"
+                                    >
+                                      {citation} <ExternalLink className="h-2.5 w-2.5 inline" />
+                                    </a>
+                                  ) : (
+                                    citation
+                                  )}
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Dispute Window Countdown and Action */}
+                      <div className="border-t border-dashed border-border dark:border-zinc-800/80 pt-3 mt-1 flex flex-col gap-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-ash flex items-center gap-1 font-semibold">
+                            <Clock className="h-3.5 w-3.5" /> Dispute Window Status:
+                          </span>
+                          {selectedMarket.disputed ? (
+                            <span className="text-red-500 font-bold flex items-center gap-1">
+                              <AlertTriangle className="h-3.5 w-3.5" /> DISPUTED
+                            </span>
+                          ) : isWindowActive ? (
+                            <span className="text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded">
+                              ACTIVE ({formatCountdown(remainingSecs)})
+                            </span>
+                          ) : (
+                            <span className="text-ash font-bold">CLOSED</span>
+                          )}
+                        </div>
+
+                        {selectedMarket.disputed ? (
+                          <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-[8px] text-xs font-semibold flex items-center gap-1.5 border border-red-200 dark:border-red-950">
+                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                            <span>This proposal has been disputed (Disputer: {selectedMarket.proposalDisputer}). Please arbitrate manual resolution below.</span>
+                          </div>
+                        ) : isWindowActive ? (
+                          <Button
+                            type="button"
+                            onClick={() => handleDisputeMarket(selectedMarket.id)}
+                            disabled={loading}
+                            className="w-full h-9 bg-red-600 hover:bg-red-500 text-white font-bold uppercase tracking-wider text-[10px] shadow-sm flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5" /> Dispute LLM Proposal
+                          </Button>
+                        ) : (
+                          <div className="bg-stone-100 dark:bg-zinc-950 text-ash p-2.5 rounded-[8px] text-[11px] font-sans border border-border dark:border-zinc-800/40">
+                            Dispute window has closed. You can now finalize resolution below using the proposed outcome or publish your own manual arbitrated outcome.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <form
                     onSubmit={handleResolveMarket}
                     className="flex flex-col gap-4"
@@ -1171,29 +1379,24 @@ export default function AdminPage() {
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-ash">
                         Winning Outcome
                       </label>
-                      <div className="flex bg-white dark:bg-zinc-900 border border-border dark:border-zinc-800 rounded-[10px] p-0.5 w-fit">
-                        <button
-                          type="button"
-                          onClick={() => setWinningOutcome("YES")}
-                          className={`px-4 py-2 rounded-[8px] text-xs font-bold transition-all ${
-                            winningOutcome === "YES"
-                              ? "bg-meadow-green text-white shadow-subtle"
-                              : "text-ash hover:text-charcoal-primary dark:hover:text-white"
-                          }`}
-                        >
-                          Resolve {selectedMarket?.yesCondition || "YES"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setWinningOutcome("NO")}
-                          className={`px-4 py-2 rounded-[8px] text-xs font-bold transition-all ${
-                            winningOutcome === "NO"
-                              ? "bg-ember-orange text-white shadow-subtle"
-                              : "text-ash hover:text-charcoal-primary dark:hover:text-white"
-                          }`}
-                        >
-                          Resolve {selectedMarket?.noCondition || "NO"}
-                        </button>
+                      <div className="flex flex-wrap gap-2">
+                        {outcomes.map((outcome) => {
+                          const isSelected = winningOutcome === outcome
+                          return (
+                            <button
+                              key={outcome}
+                              type="button"
+                              onClick={() => setWinningOutcome(outcome)}
+                              className={`px-3.5 py-2 rounded-[8px] text-xs font-bold transition-all border ${
+                                isSelected
+                                  ? "bg-amber-500 border-amber-500 text-white shadow-subtle"
+                                  : "bg-white dark:bg-zinc-900 border-border dark:border-zinc-800 text-charcoal-primary dark:text-zinc-200 hover:bg-stone-50 dark:hover:bg-zinc-800"
+                              }`}
+                            >
+                              Resolve {outcome}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
 
@@ -1203,11 +1406,14 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        required
                         value={resolveTxHash}
                         onChange={(e) => setResolveTxHash(e.target.value)}
+                        placeholder="0x..."
                         className="w-full h-11 px-3 border border-border dark:border-zinc-800 bg-white dark:bg-zinc-900 font-mono text-[11px] rounded-[10px] outline-none"
                       />
+                      <p className="text-[10px] text-ash">
+                        Optional. If left blank, the backend automatically submits the resolution on-chain using the admin wallet key.
+                      </p>
                     </div>
 
                     <div className="space-y-1.5">
@@ -1342,7 +1548,7 @@ export default function AdminPage() {
                                 Add Liquidity
                               </Button>
                               <Button
-                                onClick={() => setSelectedMarketId(market.id)}
+                                onClick={() => handleOpenArbitrateResolve(market)}
                                 variant="default"
                                 size="sm"
                                 className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-[8px] transition-colors cursor-pointer"
@@ -1353,7 +1559,7 @@ export default function AdminPage() {
                           )}
                           {market.status === "resolving" && (
                             <Button
-                              onClick={() => setSelectedMarketId(market.id)}
+                              onClick={() => handleOpenArbitrateResolve(market)}
                               variant="default"
                               size="sm"
                               className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-[8px] transition-colors cursor-pointer"

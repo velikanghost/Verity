@@ -163,13 +163,13 @@ export class ResolveMarketDto {
   @IsString()
   winningOutcome: string
 
-  @ApiProperty({
-    description: "Transaction hash of the resolution on-chain",
+  @ApiPropertyOptional({
+    description: "Transaction hash of the resolution on-chain (optional, backend resolves if blank)",
     example: "0x123abc...",
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  txHash: string
+  txHash?: string
 
   @ApiProperty({
     description: "Admin address performing resolution",

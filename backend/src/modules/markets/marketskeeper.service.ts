@@ -317,6 +317,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
             market.proposalCitations = result.citations
             market.proposedOutcome = proposedIndex === 0
             market.proposalProposer = "0xKeeper" // Mark keeper as proposer
+            market.proposedAt = new Date()
             market.status = "resolving"
             await market.save()
 

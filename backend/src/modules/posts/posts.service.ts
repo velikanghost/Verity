@@ -8,6 +8,7 @@ import {
   Logger,
 } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
+import { ConfigService } from "@nestjs/config"
 import { BlockchainService } from "../blockchain/blockchain.service"
 import { LiquidityService } from "../liquidity/liquidity.service"
 import { Model, Types } from "mongoose"
@@ -90,6 +91,8 @@ export interface MarketResponse {
   proposalDisputer?: string | null
   disputed?: boolean
   proposedOutcome?: boolean | null
+  proposedAt?: string | null
+  disputeWindowSeconds?: number
   marketType: "binary" | "parent" | "child"
   parentMarketId: string | null
   optionName: string | null
@@ -154,6 +157,7 @@ export class PostsService {
     private blockchainService: BlockchainService,
     private liquidityService: LiquidityService,
     private socketGateway: SocketGateway,
+    private readonly configService: ConfigService,
   ) {}
 
   validateMarketHeuristics(input: CreateMarketPostDto) {
@@ -267,6 +271,8 @@ export class PostsService {
       proposalDisputer: market.proposalDisputer,
       disputed: market.disputed,
       proposedOutcome: market.proposedOutcome,
+      proposedAt: market.proposedAt ? new Date(market.proposedAt).toISOString() : null,
+      disputeWindowSeconds: this.configService.get<number>("DISPUTE_WINDOW_SECONDS") || 120,
       marketType: market.marketType || "binary",
       parentMarketId: market.parentMarketId
         ? market.parentMarketId.toString()

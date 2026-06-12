@@ -184,6 +184,7 @@ export class AgentService {
     if (!searchQuery.includes(year)) {
       searchQuery = `${cleanQuestion} ${year}`
     }
+    searchQuery = `${searchQuery} ESPN`
 
     // Perform web search to gather context
     const searchContext = await this.searchWeb(searchQuery)

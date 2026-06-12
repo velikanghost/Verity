@@ -222,11 +222,16 @@ export default function PvpTicketBuilder({
                   type="number"
                   min="1"
                   max="1000"
-                  value={betAmountPerSelection}
+                  value={betAmountPerSelection === 0 ? "" : betAmountPerSelection}
                   disabled={isSubmitting}
-                  onChange={(e) =>
-                    onSetBetAmount(Math.max(1, Number(e.target.value)))
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === "") {
+                      onSetBetAmount(0)
+                    } else {
+                      onSetBetAmount(Number(val))
+                    }
+                  }}
                   className="w-20 h-9 px-2 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white focus-visible:ring-1 focus-visible:ring-indigo-500 text-right disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="text-xs font-mono font-bold text-charcoal-primary dark:text-zinc-400">

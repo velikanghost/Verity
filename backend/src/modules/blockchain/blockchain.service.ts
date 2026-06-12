@@ -8,6 +8,8 @@ import {
   defineChain,
   decodeFunctionData,
   decodeEventLog,
+  keccak256,
+  encodePacked,
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import fpmmAbi from "./abi/VerityFPMM.json"
@@ -19,6 +21,11 @@ export const arcTestnet = defineChain({
   nativeCurrency: { name: "Arc", symbol: "ARC", decimals: 18 },
   rpcUrls: {
     default: { http: ["https://rpc.testnet.arc.network"] },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
   },
 })
 
@@ -1113,23 +1120,14 @@ export class BlockchainService implements OnModuleInit {
       const balances: Record<string, number> = {}
       
       const balancePromises = outcomes.map(async (outcome, idx) => {
-        const tokenId = await this.publicClient.readContract({
-          address: vaultAddress,
-          abi: [
-            {
-              type: "function",
-              name: "outcomeTokenId",
-              inputs: [
-                { name: "marketId", type: "bytes32" },
-                { name: "outcomeIndex", type: "uint256" },
-              ],
-              outputs: [{ name: "", type: "uint256" }],
-              stateMutability: "pure",
-            },
-          ],
-          functionName: "outcomeTokenId",
-          args: [formattedMarketId, BigInt(idx)],
-        })
+        const tokenId = BigInt(
+          keccak256(
+            encodePacked(
+              ["bytes32", "uint256"],
+              [formattedMarketId, BigInt(idx)]
+            )
+          )
+        )
 
         const balance = await this.publicClient.readContract({
           address: vaultAddress,
@@ -1146,7 +1144,7 @@ export class BlockchainService implements OnModuleInit {
             },
           ],
           functionName: "balanceOf",
-          args: [userAddress as `0x${string}`, tokenId],
+          args: [this.formatAddress(userAddress), tokenId],
         })
 
         balances[outcome] = Number(balance) / 1e6
@@ -1161,6 +1159,85 @@ export class BlockchainService implements OnModuleInit {
       }
       return fallback
     }
+  }
+
+  async getUserOnChainBalancesBatch(
+    queries: { marketId: string; outcomes: string[] }[],
+    userAddress: string,
+  ): Promise<Record<string, Record<string, number>>> {
+    if (queries.length === 0) return {}
+
+    const vaultAddress = this.configService.get<string>(
+      "CONDITIONAL_TOKEN_VAULT_ADDRESS",
+    ) as `0x${string}`
+
+    const calls: any[] = []
+    const mapping: { marketId: string; outcome: string; callIndex: number }[] = []
+
+    let callIndex = 0
+    for (const query of queries) {
+      const formattedMarketId = this.formatMarketId(query.marketId)
+      query.outcomes.forEach((outcome, idx) => {
+        const tokenId = BigInt(
+          keccak256(
+            encodePacked(
+              ["bytes32", "uint256"],
+              [formattedMarketId, BigInt(idx)]
+            )
+          )
+        )
+
+        calls.push({
+          address: vaultAddress,
+          abi: [
+            {
+              type: "function",
+              name: "balanceOf",
+              inputs: [
+                { name: "account", type: "address" },
+                { name: "id", type: "uint256" },
+              ],
+              outputs: [{ name: "", type: "uint256" }],
+              stateMutability: "view",
+            },
+          ],
+          functionName: "balanceOf",
+          args: [this.formatAddress(userAddress), tokenId],
+        })
+
+        mapping.push({
+          marketId: query.marketId,
+          outcome,
+          callIndex,
+        })
+        callIndex++
+      })
+    }
+
+    const resultsMap: Record<string, Record<string, number>> = {}
+    for (const query of queries) {
+      resultsMap[query.marketId] = {}
+      for (const outcome of query.outcomes) {
+        resultsMap[query.marketId][outcome] = 0
+      }
+    }
+
+    try {
+      const response = await this.publicClient.multicall({
+        contracts: calls,
+      })
+
+      mapping.forEach((map) => {
+        const resp = response[map.callIndex]
+        if (resp && resp.status === "success") {
+          resultsMap[map.marketId][map.outcome] = Number(resp.result as bigint) / 1e6
+        }
+      })
+    } catch (error) {
+      this.logger.error(`Failed to batch read user balances via multicall: ${error.message}`)
+    }
+
+    return resultsMap
   }
 
   async approveUsdcIfNecessary(

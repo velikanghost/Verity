@@ -251,6 +251,11 @@ export default function PvpArenaTab({
       return { marketId, selection, shares }
     })
 
+    if (betAmountPerSelection < 1) {
+      toast.error("Please enter a bet amount of at least 1 USDC per selection.")
+      return
+    }
+
     if (picks.length < 3) {
       toast.error(
         "Please make a selection for at least 3 options from different categories.",

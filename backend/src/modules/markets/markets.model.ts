@@ -200,6 +200,9 @@ export class Market {
   proposedOutcome: boolean | null
 
   @Prop({ type: Date, default: null, index: true })
+  proposedAt: Date | null
+
+  @Prop({ type: Date, default: null, index: true })
   lockTime: Date | null
 
   createdAt?: Date

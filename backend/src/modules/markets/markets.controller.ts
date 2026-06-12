@@ -226,6 +226,26 @@ export class MarketsController {
     )
   }
 
+  @Post(":marketId/dispute")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Admin: Dispute a proposed outcome on-chain",
+  })
+  @ApiParam({
+    name: "marketId",
+    description: "Market ID",
+    example: "60d0fe4f5311236168a109ca",
+  })
+  @ApiResponse({ status: 200, description: "Market disputed successfully." })
+  async disputeMarket(
+    @Param("marketId") marketId: string,
+    @Body("adminAddress") adminAddress: string,
+  ) {
+    return this.marketsService.disputeMarket(marketId, adminAddress)
+  }
+
   @Post(":marketId/admin-deposit-liquidity")
   @UseGuards(JwtAuthGuard, AdminGuard)
   @ApiBearerAuth()

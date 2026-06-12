@@ -835,7 +835,7 @@ export class MarketsService implements OnModuleInit {
   async resolveMarket(
     marketId: string,
     winningOutcome: string,
-    txHash: string,
+    txHash: string | undefined,
     adminAddress: string,
   ): Promise<MarketResponse> {
     const market = await this.marketModel.findById(marketId)
@@ -843,16 +843,11 @@ export class MarketsService implements OnModuleInit {
       throw new NotFoundException("Market not found.")
     }
 
-    // Verify transaction receipt
-    await this.blockchainService.getTransactionReceipt(txHash as `0x${string}`)
-
-    const oldStatus = market.status
-    market.status = "resolved"
-    market.resolvedByAdmin = adminAddress
+    let finalTxHash = txHash?.trim() || null
 
     const outcomeCount = market.outcomeCount ?? 2
+    let winningIndex = -1
     if (outcomeCount > 2) {
-      let winningIndex = -1
       if (/^\d+$/.test(winningOutcome)) {
         winningIndex = parseInt(winningOutcome, 10)
       } else if (market.outcomes && market.outcomes.length > 0) {
@@ -860,7 +855,54 @@ export class MarketsService implements OnModuleInit {
           (o) => o.toLowerCase().trim() === winningOutcome.toLowerCase().trim(),
         )
       }
+      if (winningIndex === -1) {
+        winningIndex = 0 // fallback
+      }
+    } else {
+      winningIndex = (winningOutcome === "YES" || winningOutcome.toLowerCase() === "yes") ? 0 : 1
+    }
 
+    if (finalTxHash) {
+      // Verify transaction receipt if provided
+      await this.blockchainService.getTransactionReceipt(finalTxHash as `0x${string}`)
+    } else {
+      // No txHash provided: Backend executes the transaction on-chain on behalf of the admin!
+      if (market.marketType !== "parent") {
+        try {
+          const isDisputed = market.disputed || false
+          if (isDisputed) {
+            finalTxHash = await this.blockchainService.resolveDisputedMarket(
+              marketId,
+              winningIndex,
+            )
+          } else {
+            if (outcomeCount > 2) {
+              finalTxHash = await this.blockchainService.resolveMarketOutcome(
+                marketId,
+                winningIndex,
+              )
+            } else {
+              const winningIsYes = winningIndex === 0
+              finalTxHash = await this.blockchainService.resolveMarket(
+                marketId,
+                winningIsYes,
+              )
+            }
+          }
+          if (finalTxHash) {
+            this.logger.log(`On-chain resolution executed by backend for market ${marketId}: tx ${finalTxHash}`)
+          }
+        } catch (error) {
+          this.logger.warn(`Failed to execute on-chain resolution directly: ${error.message}. Proceeding with database-only resolution.`)
+        }
+      }
+    }
+
+    const oldStatus = market.status
+    market.status = "resolved"
+    market.resolvedByAdmin = adminAddress
+
+    if (outcomeCount > 2) {
       if (winningIndex >= 0 && winningIndex < outcomeCount) {
         market.winningOutcomeIndex = winningIndex
         market.resolvedOutcome = market.outcomes[winningIndex] as any
@@ -1027,6 +1069,38 @@ export class MarketsService implements OnModuleInit {
       "post-updated",
       { postId: market.postId.toString() },
     )
+
+    return this.postsService.serializeMarket(market)
+  }
+
+  async disputeMarket(marketId: string, adminAddress: string): Promise<MarketResponse> {
+    const market = await this.marketModel.findById(marketId)
+    if (!market) {
+      throw new NotFoundException("Market not found.")
+    }
+
+    try {
+      // Execute on-chain dispute
+      const txHash = await this.blockchainService.disputeResolution(marketId)
+      await this.blockchainService.getTransactionReceipt(txHash as `0x${string}`)
+
+      // Update DB
+      market.disputed = true
+      market.proposalDisputer = adminAddress
+      market.status = "resolving"
+      await market.save()
+
+      this.logger.log(`Market ${marketId} disputed on-chain by admin. tx: ${txHash}`)
+    } catch (error) {
+      this.logger.error(`Failed to dispute market ${marketId}: ${error.message}`)
+      throw new BadRequestException(`Failed to dispute market on-chain: ${error.message}`)
+    }
+
+    // Emit Socket events
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {})
+    this.socketGateway.broadcastToRoom(`market:${marketId}`, "market-updated", {
+      marketId,
+    })
 
     return this.postsService.serializeMarket(market)
   }

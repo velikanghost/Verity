@@ -1110,6 +1110,30 @@ export class PvpService {
 
     const user = await this.userModel.findById(userId)
     if (user && user.walletAddress) {
+      // Pre-fetch on-chain balances for all child markets in a single batch query
+      const batchQueries = children.map((child) => {
+        const outcomes =
+          child.outcomes && child.outcomes.length > 0
+            ? child.outcomes
+            : ["YES", "NO"]
+        return {
+          marketId: child._id.toString(),
+          outcomes,
+        }
+      })
+
+      let balancesMap: Record<string, Record<string, number>> = {}
+      try {
+        balancesMap = await this.blockchainService.getUserOnChainBalancesBatch(
+          batchQueries,
+          user.walletAddress,
+        )
+      } catch (err) {
+        this.logger.error(
+          `Error syncing position batch in getPvpStatus: ${err.message}`,
+        )
+      }
+
       for (const child of children) {
         try {
           const outcomes =
@@ -1117,11 +1141,7 @@ export class PvpService {
               ? child.outcomes
               : ["YES", "NO"]
 
-          const onChain = await this.blockchainService.getUserOnChainBalances(
-            child._id.toString(),
-            user.walletAddress,
-            outcomes,
-          )
+          const onChain = balancesMap[child._id.toString()] || {}
 
           const isResolved =
             child.status === "resolved" || child.resolvedOutcome
