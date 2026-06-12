@@ -44,6 +44,8 @@ export interface MarketResponse {
   question: string
   category: string
   deadline: string
+  lockTime?: string | null
+  lock_time?: string | null
   resolutionSource: string
   resolution_source: string
   yesCondition: string
@@ -206,6 +208,9 @@ export class PostsService {
     const deadline = market.deadline
       ? new Date(market.deadline).toISOString()
       : new Date().toISOString()
+    const lockTime = market.lockTime
+      ? new Date(market.lockTime).toISOString()
+      : null
 
     return {
       id: market.id || (market as any)._id?.toString(),
@@ -216,6 +221,8 @@ export class PostsService {
       question: market.question,
       category: market.category,
       deadline,
+      lockTime,
+      lock_time: lockTime,
       resolutionSource: market.resolutionSource,
       resolution_source: market.resolutionSource,
       yesCondition: market.yesCondition,

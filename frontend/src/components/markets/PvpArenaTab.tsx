@@ -10,6 +10,7 @@ import {
   useExecuteMarketTradeMutation,
 } from "@/store/verity/verityQueries"
 import { toast } from "@/lib/toast"
+import { Lock } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -151,8 +152,10 @@ export default function PvpArenaTab({
 
   const isEventEnded =
     selectedPvpEvent &&
-    (new Date() >= new Date(selectedPvpEvent.deadline) ||
-      selectedPvpEvent.status === "resolved")
+    (new Date() >=
+      new Date(selectedPvpEvent.lockTime || selectedPvpEvent.deadline) ||
+      selectedPvpEvent.status === "resolved" ||
+      selectedPvpEvent.status === "closed")
 
   // ─── Effects ────────────────────────────────────────────────
 
@@ -486,15 +489,25 @@ export default function PvpArenaTab({
       {/* Ticket Builder Form */}
       {(!hasActiveDuel || showBuilderOverride) &&
         (isEventEnded ? (
-          <div className="verity-card p-8 text-center flex flex-col items-center justify-center gap-3">
-            <span className="text-3xl">🔒</span>
-            <h3 className="text-base font-bold text-charcoal-primary dark:text-white">
-              Predictions are closed
-            </h3>
-            <p className="text-xs text-ash max-w-sm">
-              The deadline for this event has passed or the event has been
-              resolved. Please select another event from the dropdown to play.
-            </p>
+          <div className="verity-card p-10 text-center flex flex-col items-center justify-center gap-6 relative overflow-hidden bg-linear-to-b from-white to-stone-50/50 dark:from-zinc-950 dark:to-zinc-900/30 border border-border/60 dark:border-zinc-800/40 shadow-sm">
+            {/* Glowing Icon Container */}
+            <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-stone-100 dark:bg-zinc-900 border border-border/80 dark:border-zinc-800/80 shadow-sm my-2">
+              <div className="relative z-10 bg-white dark:bg-zinc-950 p-3.5 rounded-full border border-border/50 dark:border-zinc-800/50 shadow-inner text-black/70 dark:text-black/60">
+                <Lock className="h-6 w-6" strokeWidth={2.2} />
+              </div>
+            </div>
+
+            {/* Title & Description */}
+            <div className="space-y-2 max-w-sm">
+              <h3 className="text-lg font-bold tracking-tight text-charcoal-primary dark:text-white">
+                Predictions are Closed
+              </h3>
+              <p className="text-xs text-ash leading-relaxed">
+                The kickoff time for this match has passed or the event has been
+                resolved. Please select another event from the dropdown list
+                above to play.
+              </p>
+            </div>
           </div>
         ) : (
           <PvpTicketBuilder

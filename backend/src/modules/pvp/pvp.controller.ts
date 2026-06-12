@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Query } from "@nestjs/common"
+import { Controller, Get, Post, Body, UseGuards, Request, Query, Param } from "@nestjs/common"
 import { PvpService } from "./pvp.service"
 import { CreatePvpEventDto, SubmitTicketDto } from "./pvp.dto"
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard"
+import { AdminGuard } from "../../common/guards/admin.guard"
 import {
   ApiTags,
   ApiOperation,
@@ -22,6 +23,16 @@ export class PvpController {
   })
   async createPvpEvent(@Request() req: any, @Body() dto: CreatePvpEventDto) {
     return this.pvpService.createPvpEvent(req.user.id, dto)
+  }
+
+  @Post("events/:parentMarketId/lock")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Admin-only: Lock a PvP Parent and its Child Markets to prevent further entries/trades",
+  })
+  async lockPvpEvent(@Request() req: any, @Param("parentMarketId") parentMarketId: string) {
+    return this.pvpService.lockPvpEvent(req.user.id, parentMarketId)
   }
 
   @Get("active-events")

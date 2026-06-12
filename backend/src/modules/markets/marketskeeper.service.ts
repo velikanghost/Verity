@@ -214,7 +214,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
       //   { outcomeCount: { $exists: false } },
       //   { outcomeCount: { $lte: 2 } },
       // ],
-      status: { $in: ["tradable", "resolving"] },
+      status: { $in: ["tradable", "resolving", "closed"] },
       deadline: { $lte: now },
     })
 

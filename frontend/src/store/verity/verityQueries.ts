@@ -682,6 +682,7 @@ export function useCreatePvpEventMutation() {
     mutationFn: (body: {
       question: string
       deadline: string
+      lockTime?: string
       resolutionSource: string
       options: string[]
     }) =>

@@ -618,6 +618,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
             disabled={
               Boolean(actionPending) ||
               activeMarket.status !== "tradable" ||
+              new Date() >= new Date(activeMarket.lockTime || activeMarket.deadline) ||
               !validTradeAmount
             }
             estimatedShares={buyShares}

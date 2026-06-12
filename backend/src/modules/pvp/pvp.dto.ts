@@ -1,4 +1,4 @@
-import { IsString, IsArray, ValidateNested, ArrayMinSize, ArrayMaxSize, IsEnum, IsNotEmpty } from "class-validator"
+import { IsString, IsArray, ValidateNested, ArrayMinSize, ArrayMaxSize, IsEnum, IsNotEmpty, IsOptional } from "class-validator"
 import { Type } from "class-transformer"
 import { ApiProperty } from "@nestjs/swagger"
 
@@ -12,6 +12,11 @@ export class CreatePvpEventDto {
   @IsString()
   @IsNotEmpty()
   deadline: string
+
+  @ApiProperty({ description: "Optional lock date when kickoff starts and predictions/trading lock", example: "2026-06-20T18:00:00Z", required: false })
+  @IsString()
+  @IsOptional()
+  lockTime?: string
 
   @ApiProperty({ description: "Official resolution source details", example: "ESPN / FIFA Official site" })
   @IsString()

@@ -79,6 +79,7 @@ export default function AdminPage() {
   // PvP Event Form State
   const [pvpQuestion, setPvpQuestion] = useState("")
   const [pvpDeadline, setPvpDeadline] = useState("")
+  const [pvpLockTime, setPvpLockTime] = useState("")
   const [pvpResolutionSource, setPvpResolutionSource] =
     useState("World Cup Oracle")
 
@@ -342,6 +343,9 @@ export default function AdminPage() {
         body: JSON.stringify({
           question: pvpQuestion.trim(),
           deadline: new Date(pvpDeadline).toISOString(),
+          lockTime: pvpLockTime
+            ? new Date(pvpLockTime).toISOString()
+            : undefined,
           resolutionSource: pvpResolutionSource.trim(),
           options: generatedOptions.map((opt) => opt.trim()),
         }),
@@ -351,6 +355,7 @@ export default function AdminPage() {
       )
       setPvpQuestion("")
       setPvpDeadline("")
+      setPvpLockTime("")
       setCategories({
         winner: { enabled: false },
         corners: { enabled: false, line: 9.5 },
@@ -742,18 +747,31 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Deadline */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-ash">
-                  Event Lock-In Deadline
-                </label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={pvpDeadline}
-                  onChange={(e) => setPvpDeadline(e.target.value)}
-                  className="w-full h-11 px-3 border border-border dark:border-zinc-800 bg-transparent text-sm rounded-[10px] outline-none focus:border-indigo-500 transition-colors text-ash"
-                />
+              {/* Deadline & Lock Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-ash">
+                    Lock Time (Optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={pvpLockTime}
+                    onChange={(e) => setPvpLockTime(e.target.value)}
+                    className="w-full h-11 px-3 border border-border dark:border-zinc-800 bg-transparent text-sm rounded-[10px] outline-none focus:border-indigo-500 transition-colors text-ash"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-ash">
+                    Resolution Deadline (Required)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={pvpDeadline}
+                    onChange={(e) => setPvpDeadline(e.target.value)}
+                    className="w-full h-11 px-3 border border-border dark:border-zinc-800 bg-transparent text-sm rounded-[10px] outline-none focus:border-indigo-500 transition-colors text-ash"
+                  />
+                </div>
               </div>
 
               {/* Resolution Source */}

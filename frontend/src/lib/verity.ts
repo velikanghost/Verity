@@ -41,6 +41,8 @@ export interface MarketPost {
   question: string
   category: string
   deadline: string
+  lockTime?: string | null
+  lock_time?: string | null
   resolution_source: string
   resolutionSource?: string
   yes_condition: string

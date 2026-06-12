@@ -665,6 +665,15 @@ export class MarketsService implements OnModuleInit {
       throw new NotFoundException("User not found.")
     }
 
+    if (market.status !== "tradable") {
+      throw new BadRequestException("Trading is not active for this market.")
+    }
+
+    const lockTimeLimit = market.lockTime || market.deadline
+    if (new Date() >= lockTimeLimit) {
+      throw new BadRequestException("Trading deadline/lock time has passed for this market.")
+    }
+
     // Verify txHash if provided
     if (dto.txHash) {
       await this.blockchainService.getTransactionReceipt(

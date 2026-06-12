@@ -51,7 +51,13 @@ export function determineOptionGroup(
     return "major"
   }
 
-  if (name.includes("scores first goal") || name.includes("first goal")) {
+  if (
+    name.includes("scores first goal") ||
+    name.includes("first goal") ||
+    name.includes("scores first") ||
+    name === "no goal in the match" ||
+    name === "no goal"
+  ) {
     return "first_goal"
   }
 
@@ -71,6 +77,10 @@ export function determineOptionGroup(
     return "fouls_leader"
   }
 
+  if (name.includes("red card") || name.includes("red cards")) {
+    return "red_card"
+  }
+
   if (
     name.includes("yellow card") ||
     name.includes("yellow cards") ||
@@ -82,6 +92,10 @@ export function determineOptionGroup(
 
   if (name.includes("corner") || name.includes("corners")) {
     return "corners"
+  }
+
+  if (name.includes("goals") || name.includes("goal")) {
+    return "goals"
   }
 
   return `unique_${optionName.replace(/\s+/g, "_").toLowerCase()}`
@@ -152,12 +166,14 @@ export class PvpService {
       })
 
       // 2. Create Parent Market
+      const lockTime = dto.lockTime ? new Date(dto.lockTime) : new Date(dto.deadline)
       parentMarket = await this.marketModel.create({
         postId: post._id,
         authorId: new Types.ObjectId(adminId),
         question: dto.question.trim(),
         category: "pvp",
         deadline: new Date(dto.deadline),
+        lockTime,
         resolutionSource: dto.resolutionSource.trim(),
         yesCondition: teamA,
         noCondition: teamB,
@@ -198,9 +214,11 @@ export class PvpService {
       const groups: Record<string, string[]> = {}
       for (let i = 0; i < dto.options.length; i++) {
         const optionName = dto.options[i]
-        let optionGroup =
-          cleanGroupsMap[optionName] ||
-          determineOptionGroup(optionName, teamA, teamB)
+        let optionGroup = determineOptionGroup(optionName, teamA, teamB)
+        if (optionGroup.startsWith("unique_")) {
+          // If our deterministic check did not find a standard group, fall back to AI categorization
+          optionGroup = cleanGroupsMap[optionName] || optionGroup
+        }
         if (optionGroup === "match_winner" || optionGroup === "moneyline") {
           optionGroup = "major"
         }
@@ -212,7 +230,8 @@ export class PvpService {
 
       // We will loop over each option group to create one child market per group!
       for (const [optionGroup, groupOptions] of Object.entries(groups)) {
-        const outcomeCount = groupOptions.length
+        const outcomeCount =
+          groupOptions.length === 1 ? 2 : groupOptions.length
 
         // Formulate question and optionName
         let questionSuffix = ""
@@ -249,7 +268,10 @@ export class PvpService {
         }
 
         // Generate clean outcomes (e.g. for Major, draw or win team names)
-        const outcomes = groupOptions.map((opt) => opt.trim())
+        const outcomes =
+          groupOptions.length === 1
+            ? [groupOptions[0].trim(), "NO"]
+            : groupOptions.map((opt) => opt.trim())
 
         const childMarketId = new Types.ObjectId()
         childMarketIds.push(childMarketId)
@@ -261,6 +283,7 @@ export class PvpService {
           question: `${dto.question.trim()} - ${questionSuffix}`,
           category: "pvp",
           deadline: new Date(dto.deadline),
+          lockTime,
           resolutionSource: dto.resolutionSource.trim(),
           yesCondition: outcomes[0] || "YES",
           noCondition: outcomes[1] || "NO",
@@ -378,14 +401,41 @@ export class PvpService {
     }
   }
 
+  async lockPvpEvent(adminId: string, parentMarketId: string) {
+    const admin = await this.userModel.findById(adminId)
+    if (!admin || admin.role !== "admin") {
+      throw new ForbiddenException("Only admins can lock PvP events.")
+    }
+
+    const parent = await this.marketModel.findById(parentMarketId)
+    if (!parent || parent.marketType !== "parent" || parent.category !== "pvp") {
+      throw new NotFoundException("PvP Event not found.")
+    }
+
+    parent.status = "closed"
+    await parent.save()
+
+    const childMarkets = await this.marketModel.find({
+      parentMarketId: parent._id,
+      marketType: "child",
+    })
+
+    for (const child of childMarkets) {
+      child.status = "closed"
+      await child.save()
+    }
+
+    this.logger.log(`Admin ${adminId} successfully locked PvP Event: ${parentMarketId}`)
+
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {})
+    return { success: true }
+  }
+
   async getActiveEvents() {
-    const now = new Date()
-    // Find parent markets of category "pvp" which haven't expired or resolved yet
     const parents = await this.marketModel
       .find({
         category: "pvp",
         marketType: "parent",
-        deadline: { $gt: now },
         status: { $ne: "resolved" },
       })
       .sort({ deadline: 1 })
@@ -412,6 +462,8 @@ export class PvpService {
         id: parent._id.toString(),
         question: parent.question,
         deadline: parent.deadline,
+        lockTime: parent.lockTime,
+        status: parent.status,
         createdAt: parent.createdAt,
         resolutionSource: parent.resolutionSource,
         yesCondition: parent.yesCondition,
@@ -508,6 +560,8 @@ export class PvpService {
         id: parent._id.toString(),
         question: parent.question,
         deadline: parent.deadline,
+        lockTime: parent.lockTime,
+        status: parent.status,
         createdAt: parent.createdAt,
         resolutionSource: parent.resolutionSource,
         yesCondition: parent.yesCondition,
@@ -546,9 +600,10 @@ export class PvpService {
       throw new NotFoundException("PvP Event not found.")
     }
 
-    if (new Date() >= parent.deadline) {
+    const lockTimeLimit = parent.lockTime || parent.deadline
+    if (new Date() >= lockTimeLimit) {
       throw new BadRequestException(
-        "Event deadline has passed. Predictions are locked.",
+        "Event lock time has passed. Predictions are locked.",
       )
     }
 
@@ -1197,6 +1252,8 @@ export class PvpService {
             id: parent._id.toString(),
             question: parent.question,
             deadline: parent.deadline,
+            lockTime: parent.lockTime,
+            status: parent.status,
             options: children.map((c) => ({
               id: c._id.toString(),
               optionName: c.optionName || c.question,
