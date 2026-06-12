@@ -76,7 +76,7 @@ export default function RightPanel() {
                   key={item.id}
                 >
                   <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ash">
-                    Trending in {market?.category || "Markets"}
+                    Trending in {market?.category?.toLowerCase() === "pvp" ? "PvP" : market?.category || "Markets"}
                   </span>
                   <p className="line-clamp-2 text-sm font-semibold leading-snug tracking-[-0.18px] text-charcoal-primary">
                     {market?.question}

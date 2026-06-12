@@ -175,13 +175,7 @@ export default function MarketCard({
           </div>
         </div>
 
-        {status !== "qualified" && status !== "tradable" && (
-          <span
-            className={`verity-pill w-fit shrink-0 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusTone}`}
-          >
-            {status.replaceAll("_", " ")}
-          </span>
-        )}
+
       </div>
 
       {postContent && postContent !== question && (
@@ -192,7 +186,7 @@ export default function MarketCard({
 
       <div className="mb-2 flex flex-wrap gap-2">
         <span className="rounded-[6px] bg-parchment-card px-2.5 py-1 text-[12px] font-medium tracking-[-0.14px] text-graphite shadow-subtle">
-          {category}
+          {category?.toLowerCase() === "pvp" ? "PvP" : category}
         </span>
       </div>
 

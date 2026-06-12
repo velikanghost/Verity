@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Edit3, Share } from "lucide-react"
+import { Edit3, Share, MoreHorizontal, LogOut, Sun, Moon } from "lucide-react"
+import { useTheme } from "next-themes"
+import { useAuth } from "@/components/providers/AuthModals"
 import ProfileActivityTabs, {
   type ProfileActivityTab,
 } from "@/components/social/ProfileActivityTabs"
@@ -19,23 +21,30 @@ export default function ProfileEditor() {
   const router = useRouter()
   const { profile } = useWalletProfile()
   const { items } = useFeed()
-  const [activeTab, setActiveTab] = useState<ProfileActivityTab>("predictions")
+  const [activeTab, setActiveTab] = useState<ProfileActivityTab>("markets")
   const [peopleModal, setPeopleModal] = useState<
     "followers" | "following" | null
   >(null)
   const isConnected = Boolean(profile)
 
+  const { logout } = useAuth()
+  const { setTheme, resolvedTheme } = useTheme()
+  const [optionsOpen, setOptionsOpen] = useState(false)
+  const isDark = resolvedTheme === "dark"
+
   const { data: tabItems = [], isLoading: isActivityLoading } =
     useProfileActivityQuery(
       profile?.id || "",
-      activeTab === "markets" ? "markets" : activeTab === "activity" ? "comments" : "posts",
+      activeTab === "markets"
+        ? "markets"
+        : activeTab === "activity"
+          ? "comments"
+          : "posts",
       profile?.id,
     )
 
   const { data: positions = [], isLoading: isPositionsLoading } =
-    useUserPortfolioQuery(
-      activeTab === "predictions" ? (profile?.id || "") : "",
-    )
+    useUserPortfolioQuery(activeTab === "predictions" ? profile?.id || "" : "")
 
   const isTabLoading =
     activeTab === "markets"
@@ -69,7 +78,7 @@ export default function ProfileEditor() {
             <ProfileAvatar profile={profile} />
             <div className="mb-2 flex gap-2">
               <button
-                className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-subtle hover:bg-stone-surface sm:inline-flex"
+                className="clickable verity-pill hidden h-10 items-center justify-center gap-2 bg-parchment-card px-4 text-sm font-semibold tracking-[-0.18px] text-charcoal-primary shadow-subtle hover:bg-stone-surface sm:inline-flex ring-4 ring-surface-solid"
                 onClick={() => {
                   if (typeof window !== "undefined") {
                     void navigator.clipboard?.writeText(window.location.href)
@@ -80,12 +89,66 @@ export default function ProfileEditor() {
                 Share profile <Share className="h-4 w-4" />
               </button>
               <button
-                className="clickable verity-pill flex h-10 items-center justify-center gap-2 bg-inverse px-4 text-sm font-semibold tracking-[-0.18px] text-inverse-text hover:opacity-90"
+                className="clickable verity-pill flex h-10 items-center justify-center gap-2 bg-inverse px-4 text-sm font-semibold tracking-[-0.18px] text-inverse-text hover:opacity-90 ring-4 ring-surface-solid"
                 onClick={() => router.push("/profile/edit")}
                 type="button"
               >
-                Edit profile <Edit3 className="h-4 w-4" />
+                Edit profile <Edit3 className="hidden sm:block h-4 w-4" />
               </button>
+
+              <div className="relative">
+                <button
+                  className="clickable verity-pill flex h-10 w-10 items-center justify-center bg-parchment-card text-charcoal-primary shadow-subtle hover:bg-stone-surface ring-4 ring-surface-solid"
+                  onClick={() => setOptionsOpen(!optionsOpen)}
+                  type="button"
+                  aria-label="Options"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+
+                {optionsOpen && (
+                  <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-48 rounded-[12px] border border-border bg-surface-solid p-1.5 shadow-sm">
+                    <button
+                      className="flex w-full items-center justify-between rounded-[8px] px-3 py-2 text-left text-xs font-semibold text-charcoal-primary hover:bg-stone-surface transition-colors cursor-pointer"
+                      onClick={() => {
+                        setTheme(isDark ? "light" : "dark")
+                        setOptionsOpen(false)
+                      }}
+                      type="button"
+                    >
+                      <span className="flex items-center gap-2">
+                        {isDark ? (
+                          <>
+                            <Sun className="h-4 w-4 text-ash" /> Light Mode
+                          </>
+                        ) : (
+                          <>
+                            <Moon className="h-4 w-4 text-ash" /> Dark Mode
+                          </>
+                        )}
+                      </span>
+                    </button>
+
+                    {isConnected && (
+                      <>
+                        <div className="my-1 h-px bg-border/60" />
+                        <button
+                          className="flex w-full items-center gap-2 rounded-[8px] px-3 py-2 text-left text-xs font-semibold text-coral-red hover:bg-red-500/10 transition-colors cursor-pointer"
+                          onClick={() => {
+                            logout()
+                            setOptionsOpen(false)
+                            router.push("/")
+                          }}
+                          type="button"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Log Out
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -192,8 +255,8 @@ function ProfileTabs({
   onChange: (tab: ProfileActivityTab) => void
 }) {
   const tabs: Array<{ id: ProfileActivityTab; label: string }> = [
-    { id: "predictions", label: "Predictions" },
     { id: "markets", label: "Markets" },
+    { id: "predictions", label: "Predictions" },
     { id: "activity", label: "Activity" },
   ]
 

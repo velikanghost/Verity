@@ -74,8 +74,14 @@ function MarketsContent() {
   const [selectedPvpEventId, setSelectedPvpEventId] = useState<string | null>(null)
   const [hasManuallySelected, setHasManuallySelected] = useState<boolean>(false)
 
-  // Sync selected event to the most recent one if user hasn't manually selected one
+  // Sync selected event to query param or the most recent one
   useEffect(() => {
+    const queryId = searchParams.get("id")
+    if (queryId && pvpEvents.some((e: any) => e.id === queryId)) {
+      setSelectedPvpEventId(queryId)
+      return
+    }
+
     if (pvpEvents && pvpEvents.length > 0) {
       if (!hasManuallySelected) {
         setSelectedPvpEventId(pvpEvents[0].id)
@@ -83,7 +89,7 @@ function MarketsContent() {
     } else {
       setSelectedPvpEventId(null)
     }
-  }, [pvpEvents, hasManuallySelected])
+  }, [pvpEvents, hasManuallySelected, searchParams])
 
   const handleSelectPvpEvent = (id: string | null) => {
     setHasManuallySelected(true)

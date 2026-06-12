@@ -16,8 +16,12 @@ import {
   type Profile,
   type MarketPosition,
 } from "@/lib/verity"
+import { useRouter } from "next/navigation"
 import {
   ArrowUpRight,
+  Swords,
+  Timer,
+  ChevronRight,
 } from "lucide-react"
 
 export type ProfileActivityTab =
@@ -324,8 +328,54 @@ function ActivityItem({
   onOpenMarket: (market: MarketPost) => void
   onOpenPost?: (post: FeedPost) => void
 }) {
+  const router = useRouter()
   if (item.market) {
     const market = item.market
+    const isPvp = market.category?.toLowerCase() === "pvp"
+
+    if (isPvp) {
+      return (
+        <article
+          onClick={() => {
+            const pId = market.parentMarketId || market.parent_market_id || market.id
+            router.push(`/markets?tab=pvp-arena&id=${pId}`)
+          }}
+          className="verity-card p-5 border border-indigo-200 dark:border-indigo-950 bg-indigo-50/20 hover:border-indigo-400 dark:hover:border-indigo-800 transition-all cursor-pointer group relative flex flex-col justify-between"
+        >
+          <div className="absolute top-4 right-4 flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider shadow-subtle">
+            <Swords className="h-3 w-3" />
+            PvP Matchup
+          </div>
+
+          <div>
+            <span className="font-mono text-[10px] font-bold text-ash uppercase tracking-wider">
+              World Cup Arena
+            </span>
+            <h3 className="text-xl font-bold tracking-tight text-charcoal-primary dark:text-white mt-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              {market.question}
+            </h3>
+            <p className="text-xs text-graphite dark:text-zinc-400 mt-2 leading-relaxed font-sans">
+              Predict all propositions for the match. Battle head-to-head
+              for Arena XP, boosts, and bragging rights.
+            </p>
+          </div>
+
+          <div className="mt-6 flex items-center justify-between border-t border-dashed border-indigo-100 dark:border-indigo-950/60 pt-3">
+            <div className="flex items-center gap-2 font-mono text-[10px] text-ash">
+              <Timer className="h-3.5 w-3.5" />
+              <span>
+                Closes: {new Date(market.deadline).toLocaleDateString()}
+              </span>
+            </div>
+            <span className="flex items-center gap-1 font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400 font-sans">
+              Predict Now
+              <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+            </span>
+          </div>
+        </article>
+      )
+    }
+
     const totalUsdc =
       Number(market.usdc_yes_amount) + Number(market.usdc_no_amount)
     const yesPercent =

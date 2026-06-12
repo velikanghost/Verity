@@ -192,7 +192,6 @@ export default function StandardMarketsFeed({
           const noPercent = 100 - yesPercent
           const isTradable = market.status === "tradable"
           const creatorLabel = displayHandle(item.author)
-          const phase = getPhaseTag(market.status)
 
           const isPvp = market.category?.toLowerCase() === "pvp"
 
@@ -254,15 +253,8 @@ export default function StandardMarketsFeed({
                 <div className="flex items-center justify-between gap-3 mb-2 font-mono text-[10px]">
                   <div className="flex items-center gap-1.5">
                     <span className="px-2 py-0.5 rounded-full bg-parchment-card text-charcoal-primary shadow-subtle uppercase tracking-wider font-semibold">
-                      {market.category}
+                      {market.category?.toLowerCase() === "pvp" ? "PvP" : market.category}
                     </span>
-                    {market.status !== "qualified" && market.status !== "tradable" && (
-                      <span
-                        className={`px-2 py-0.5 rounded-full border text-[9px] uppercase tracking-wider font-bold ${phase.color}`}
-                      >
-                        {phase.label}
-                      </span>
-                    )}
                   </div>
                   <span className="text-ash uppercase">by {creatorLabel}</span>
                 </div>

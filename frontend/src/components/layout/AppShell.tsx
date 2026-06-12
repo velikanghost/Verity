@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/Sidebar"
 import RightPanel from "@/components/layout/RightPanel"
 import MobileNav from "@/components/layout/MobileNav"
 import MobileLeaderboardButton from "@/components/layout/MobileLeaderboardButton"
+import MobileHeader from "@/components/layout/MobileHeader"
 import { useSocket } from "@/hooks/useSocket"
 import { useWalletProfile } from "@/hooks/useWalletProfile"
 import { useEffect } from "react"
@@ -35,6 +36,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <main
           className={`min-w-0 flex-1 ${isFullWidthPage ? "max-w-[1000px]" : "max-w-[672px]"} pb-24 sm:pb-0`}
         >
+          <MobileHeader />
           {children}
         </main>
 

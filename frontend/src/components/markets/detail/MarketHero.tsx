@@ -37,24 +37,13 @@ export default function MarketHero({
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-xs text-ash">
             <span className="rounded-[6px] bg-parchment-card px-2.5 py-1 text-graphite shadow-subtle">
-              {category}
+              {category?.toLowerCase() === "pvp" ? "PvP" : category}
             </span>
             <span>by {creator}</span>
             <span>{"\u00B7"}</span>
             <span>{time}</span>
           </div>
         </div>
-        {market.status !== "qualified" && market.status !== "tradable" && (
-          <span
-            className={`verity-pill relative px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] ${
-              market.status === "voided"
-                ? "bg-stone-surface text-ash"
-                : "bg-meadow-green/12 text-meadow-green"
-            }`}
-          >
-            {market.status.replaceAll("_", " ")}
-          </span>
-        )}
       </div>
 
       <div className="relative mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-dashed border-stone-surface pt-3 font-mono text-xs text-ash items-center">
