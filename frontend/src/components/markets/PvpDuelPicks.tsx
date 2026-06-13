@@ -1,4 +1,5 @@
 import PvpClaimBanner from "./PvpClaimBanner"
+import { cleanOutcomeName } from "./PvpTicketBuilder"
 
 interface PvpDuelPicksProps {
   pvpStatus: any
@@ -12,6 +13,34 @@ export default function PvpDuelPicks({
   onClaim,
 }: PvpDuelPicksProps) {
   const picks = pvpStatus.ticket?.picks || []
+
+  const question = pvpStatus.event?.question || ""
+  const parsedTeams = (() => {
+    if (!question) return { teamA: "Team A", teamB: "Team B" }
+    const vsMatch = question.match(/(.+?)\s+vs\.?\s+(.+)/i)
+    if (vsMatch) return { teamA: vsMatch[1].trim(), teamB: vsMatch[2].trim() }
+    const dashMatch = question.match(/(.+?)\s+-\s+(.+)/)
+    if (dashMatch)
+      return { teamA: dashMatch[1].trim(), teamB: dashMatch[2].trim() }
+    return { teamA: "Team A", teamB: "Team B" }
+  })()
+
+  const formatPickSelection = (selection: string | null, opt: any) => {
+    if (!selection) return ""
+    const group = opt?.optionGroup || ""
+    if (group === "red_card" || group === "red_cards") {
+      if (selection === "YES") return "Red card shown"
+      if (selection === "NO") return "No red card"
+    }
+    const rawVal =
+      selection === "YES"
+        ? opt?.yesCondition || "YES"
+        : selection === "NO"
+          ? opt?.noCondition || "NO"
+          : selection
+
+    return cleanOutcomeName(rawVal, parsedTeams.teamA, parsedTeams.teamB)
+  }
 
   return (
     <div className="verity-card p-5">
@@ -73,11 +102,7 @@ export default function PvpDuelPicks({
                     You
                   </span>
                   <span className="text-xs font-semibold text-charcoal-primary dark:text-zinc-200 truncate max-w-full">
-                    {pick.selection === "YES"
-                      ? childOpt?.yesCondition || "YES"
-                      : pick.selection === "NO"
-                        ? childOpt?.noCondition || "NO"
-                        : pick.selection}
+                    {formatPickSelection(pick.selection, childOpt)}
                   </span>
                 </div>
 
@@ -92,11 +117,7 @@ export default function PvpDuelPicks({
                     </span>
                   ) : (
                     <span className="text-xs font-semibold text-charcoal-primary dark:text-zinc-200 truncate max-w-full">
-                      {oppPick?.selection === "YES"
-                        ? childOpt?.yesCondition || "YES"
-                        : oppPick?.selection === "NO"
-                          ? childOpt?.noCondition || "NO"
-                          : oppPick?.selection}
+                      {formatPickSelection(oppPick?.selection, childOpt)}
                     </span>
                   )}
                 </div>
@@ -109,11 +130,7 @@ export default function PvpDuelPicks({
                       Outcome
                     </span>
                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 truncate max-w-full">
-                      {pick.resolvedOutcome === "YES"
-                        ? childOpt?.yesCondition || "YES"
-                        : pick.resolvedOutcome === "NO"
-                          ? childOpt?.noCondition || "NO"
-                          : pick.resolvedOutcome}
+                      {formatPickSelection(pick.resolvedOutcome, childOpt)}
                     </span>
                   </div>
                 )}

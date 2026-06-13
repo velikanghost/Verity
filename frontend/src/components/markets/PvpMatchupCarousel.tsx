@@ -191,7 +191,7 @@ export default function PvpMatchupCarousel({
                 onClick={() => setSelectedPvpEventId(evt.id)}
                 className={`relative flex-none w-68 h-40 p-4 rounded-2xl border transition-all cursor-pointer select-none flex flex-col justify-between ${
                   isSelected
-                    ? "bg-[#121212] border-[#121212] text-white shadow-lg scale-[1.01]"
+                    ? "bg-[#121212] border-[#121212] dark:bg-white dark:border-white text-white dark:text-zinc-950 shadow-lg scale-[1.01]"
                     : "bg-white dark:bg-zinc-900/40 border-border dark:border-zinc-800 hover:border-indigo-500 hover:scale-[1.005]"
                 } ${isClosed && !isSelected ? "opacity-75" : ""}`}
               >
@@ -260,7 +260,7 @@ export default function PvpMatchupCarousel({
 
                 {/* Selected Check Badge Badge */}
                 {isSelected && (
-                  <div className="absolute -top-1.5 -right-1.5 bg-[#FF3E00] text-white h-5 w-5 rounded-full flex items-center justify-center shadow-md ring-2 ring-white dark:ring-[#121212]">
+                  <div className="absolute -top-1.5 -right-1.5 bg-[#FF3E00] text-white h-5 w-5 rounded-full flex items-center justify-center shadow-md ring-2 ring-white dark:ring-white">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"

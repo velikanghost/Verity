@@ -26,6 +26,10 @@ export const cleanOutcomeName = (
     return "Draw"
   }
 
+  if (lowerName === "no goal in the match" || lowerName === "no goal") {
+    return "No Goal"
+  }
+
   if (lowerName.includes("has more corners")) {
     if (lowerName.includes(lowerA)) return teamA
     if (lowerName.includes(lowerB)) return teamB
@@ -201,7 +205,7 @@ export default function PvpTicketBuilder({
                     (o: any) => o.id === optId,
                   )
                   const isMultiOpt = opt?.outcomeCount && opt.outcomeCount > 2
-                  const displaySelection = isMultiOpt
+                  let displaySelection = isMultiOpt
                     ? cleanOutcomeName(
                         selection,
                         parsedTeams.teamA,
@@ -218,6 +222,14 @@ export default function PvpTicketBuilder({
                           parsedTeams.teamA,
                           parsedTeams.teamB,
                         )
+                  if (
+                    opt &&
+                    (opt.optionGroup === "red_card" ||
+                      opt.optionGroup === "red_cards")
+                  ) {
+                    displaySelection =
+                      selection === "YES" ? "Red card shown" : "No red card"
+                  }
                   return (
                     <span
                       key={optId}
@@ -314,32 +326,6 @@ export default function PvpTicketBuilder({
           />
         </div>
       )}
-
-      {/* 3. Floating Submit Bar */}
-      {selectionCount > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl bg-[#121212] dark:bg-zinc-950 text-white p-3.5 px-4 rounded-2xl flex items-center justify-between shadow-2xl border border-zinc-850 dark:border-zinc-800/80 animate-in slide-in-from-bottom duration-300">
-          <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-full bg-zinc-800 dark:bg-zinc-900 border border-zinc-700/30 flex items-center justify-center text-xs font-bold font-mono text-[#FF4D00]">
-              {selectionCount}
-            </div>
-            <span className="text-xs font-bold text-zinc-200 font-sans tracking-wide">
-              All set — queue for matchup
-            </span>
-          </div>
-          <button
-            onClick={onSubmitTicket}
-            disabled={isSubmitting || selectionCount < 3}
-            className="px-5 py-2 bg-[#FF3E00] hover:bg-[#E03500] text-white font-bold uppercase tracking-wider text-[10px] rounded-lg transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting
-              ? "Submitting..."
-              : selectionCount < 3
-                ? `Select ${3 - selectionCount} more`
-                : "Submit ticket"}
-            <ChevronRight className="h-3.5 w-3.5 stroke-[3]" />
-          </button>
-        </div>
-      )}
     </div>
   )
 }
@@ -393,7 +379,8 @@ function CategoryCard({
           selection.toLowerCase().includes("draw") ||
           selection.toLowerCase().includes("no goal") ||
           selection.toLowerCase().includes("equal")
-        selectedOptionColor = isDrawOption ? "amber" : "emerald"
+        const isMatchWinner = groupKey === "match_winner" || groupKey === "major"
+        selectedOptionColor = isDrawOption && !isMatchWinner ? "amber" : "emerald"
       }
     } else {
       selectedOptionColor = "emerald"
@@ -469,8 +456,8 @@ function MultiWayOutcomes({
           displayName.toLowerCase().includes("no goal") ||
           displayName.toLowerCase().includes("equal")
         const btnColor = isSelected
-          ? "bg-[#121212] dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold shadow-md relative"
-          : "bg-[#FAF9F6] dark:bg-zinc-900/40 hover:bg-[#F3F1EC] dark:hover:bg-zinc-800/50 text-charcoal-primary dark:text-zinc-300 font-medium"
+          ? "bg-[#121212] dark:bg-white text-white dark:text-zinc-950 font-bold shadow-md relative"
+          : "bg-[#FAF9F6] dark:bg-zinc-900/40 hover:bg-[#F3F1EC] dark:hover:bg-zinc-850/50 text-charcoal-primary dark:text-zinc-300 font-medium"
 
         return (
           <button
@@ -537,16 +524,22 @@ function BinaryOutcomes({
   const totalPool = yesPool + noPool
   const yesProb = totalPool > 0 ? (yesPool / totalPool) * 100 : 50
   const noProb = 100 - yesProb
-  const yesLabel = cleanOutcomeName(
+  
+  let yesLabel = cleanOutcomeName(
     opt.yesCondition || "Yes",
     parsedTeams.teamA,
     parsedTeams.teamB,
   )
-  const noLabel = cleanOutcomeName(
+  let noLabel = cleanOutcomeName(
     opt.noCondition || "No",
     parsedTeams.teamA,
     parsedTeams.teamB,
   )
+
+  if (opt.optionGroup === "red_card" || opt.optionGroup === "red_cards") {
+    yesLabel = "Red card shown"
+    noLabel = "No red card"
+  }
 
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -556,7 +549,7 @@ function BinaryOutcomes({
         disabled={isSubmitting}
         className={`flex flex-col items-center justify-center gap-1 p-3.5 rounded-xl cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed relative ${
           pvpSelections[opt.id] === "YES"
-            ? "bg-[#121212] dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold shadow-md"
+            ? "bg-[#121212] dark:bg-white text-white dark:text-zinc-950 font-bold shadow-md"
             : "bg-[#FAF9F6] dark:bg-zinc-900/40 hover:bg-[#F3F1EC] dark:hover:bg-zinc-800/50 text-charcoal-primary dark:text-zinc-300 font-medium"
         }`}
       >
@@ -591,7 +584,7 @@ function BinaryOutcomes({
         disabled={isSubmitting}
         className={`flex flex-col items-center justify-center gap-1 p-3.5 rounded-xl cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed relative ${
           pvpSelections[opt.id] === "NO"
-            ? "bg-[#121212] dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold shadow-md"
+            ? "bg-[#121212] dark:bg-white text-white dark:text-zinc-950 font-bold shadow-md"
             : "bg-[#FAF9F6] dark:bg-zinc-900/40 hover:bg-[#F3F1EC] dark:hover:bg-zinc-800/50 text-charcoal-primary dark:text-zinc-300 font-medium"
         }`}
       >
