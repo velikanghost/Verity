@@ -500,7 +500,7 @@ export default function PvpArenaTab({
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider font-mono">
                       🔒 Predictions Closed
                     </span>
-                    <h3 className="text-2xl font-black font-family leading-tight text-charcoal-primary dark:text-white">
+                    <h3 className="text-2xl font-black font-sans leading-tight text-charcoal-primary dark:text-white">
                       Whistle's blown on {parsedTeams.teamA} vs{" "}
                       {parsedTeams.teamB}
                     </h3>
