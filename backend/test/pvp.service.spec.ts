@@ -27,6 +27,7 @@ describe("PvpService", () => {
 
   beforeEach(async () => {
     const mockModel = {
+      find: jest.fn(),
       findOne: jest.fn(),
       findOneAndUpdate: jest.fn(),
       findById: jest.fn(),
@@ -292,6 +293,43 @@ describe("PvpService", () => {
       // User 2 (win) got 5/5, score = 5, child markets = 5.
       // Win XP = 100 + 20 (perfect bonus) = 120.
       expect(mockUser2.arenaXp).toBe(220) // 100 + 120
+    })
+  })
+
+  describe("resolvePvpMatchesForMarket binary mapping", () => {
+    it("should resolve YES selection as correct if winner outcome is the yesCondition text", async () => {
+      const childMarketId = new Types.ObjectId()
+      const mockChildMarket = {
+        _id: childMarketId,
+        outcomeCount: 2,
+        outcomes: ["Team A keeps a clean sheet", "NO"],
+        status: "open",
+      }
+
+      const mockTicket = {
+        _id: new Types.ObjectId(),
+        status: "matched",
+        picks: [
+          {
+            marketId: childMarketId,
+            selection: "YES",
+            isCorrect: null,
+          },
+        ],
+        save: jest.fn().mockResolvedValue(null),
+        markModified: jest.fn(),
+      }
+
+      pvpTicketModel.find.mockResolvedValue([mockTicket])
+      marketModel.findById.mockResolvedValue(mockChildMarket)
+
+      await service.resolvePvpMatchesForMarket(
+        childMarketId.toString(),
+        "Team A keeps a clean sheet",
+      )
+
+      expect(mockTicket.picks[0].isCorrect).toBe(true)
+      expect(mockTicket.save).toHaveBeenCalled()
     })
   })
 })

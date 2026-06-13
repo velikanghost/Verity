@@ -885,26 +885,39 @@ export class PvpService {
       let updated = false
       for (const pick of ticket.picks) {
         if (pick.marketId.toString() === marketId) {
-          const isStringMatch =
-            pick.selection.toLowerCase().trim() ===
-            winningOutcome.toLowerCase().trim()
+          const normalizedSelection = pick.selection.toUpperCase().trim()
+          const normalizedWinner = winningOutcome.toUpperCase().trim()
+          let isCorrect = false
 
-          let isIndexMatch = false
-          if (market && market.outcomes && market.outcomes.length > 0) {
-            const selIdx = market.outcomes.findIndex(
-              (o) =>
-                o.toLowerCase().trim() === pick.selection.toLowerCase().trim(),
-            )
-            const winIdx = market.outcomes.findIndex(
-              (o) =>
-                o.toLowerCase().trim() === winningOutcome.toLowerCase().trim(),
-            )
-            if (selIdx >= 0 && winIdx >= 0 && selIdx === winIdx) {
-              isIndexMatch = true
+          if (market && market.outcomeCount === 2) {
+            const yesText = (market.outcomes[0] || "YES").toUpperCase().trim()
+            const noText = (market.outcomes[1] || "NO").toUpperCase().trim()
+
+            if (normalizedSelection === "YES") {
+              isCorrect = normalizedWinner === "YES" || normalizedWinner === yesText
+            } else if (normalizedSelection === "NO") {
+              isCorrect = normalizedWinner === "NO" || normalizedWinner === noText
             }
+          } else {
+            const isStringMatch = normalizedSelection === normalizedWinner
+            let isIndexMatch = false
+            if (market && market.outcomes && market.outcomes.length > 0) {
+              const selIdx = market.outcomes.findIndex(
+                (o) =>
+                  o.toLowerCase().trim() === pick.selection.toLowerCase().trim(),
+              )
+              const winIdx = market.outcomes.findIndex(
+                (o) =>
+                  o.toLowerCase().trim() === winningOutcome.toLowerCase().trim(),
+              )
+              if (selIdx >= 0 && winIdx >= 0 && selIdx === winIdx) {
+                isIndexMatch = true
+              }
+            }
+            isCorrect = isStringMatch || isIndexMatch
           }
 
-          pick.isCorrect = isStringMatch || isIndexMatch
+          pick.isCorrect = isCorrect
           updated = true
 
           // Delete losing position immediately so they don't clutter the active ticket list
@@ -1687,14 +1700,44 @@ export class PvpService {
     for (const ticket of tickets) {
       let updated = false
       for (const pick of ticket.picks) {
-        if (pick.isCorrect === null) {
+        if (pick.isCorrect === null || pick.isCorrect === false) {
           const market = await this.marketModel.findById(pick.marketId)
           if (
             market &&
             market.status === "resolved" &&
             market.resolvedOutcome
           ) {
-            pick.isCorrect = pick.selection === market.resolvedOutcome
+            const normalizedSelection = pick.selection.toUpperCase().trim()
+            const normalizedWinner = market.resolvedOutcome.toUpperCase().trim()
+            let isCorrect = false
+
+            if (market.outcomeCount === 2) {
+              const yesText = (market.outcomes[0] || "YES").toUpperCase().trim()
+              const noText = (market.outcomes[1] || "NO").toUpperCase().trim()
+
+              if (normalizedSelection === "YES") {
+                isCorrect = normalizedWinner === "YES" || normalizedWinner === yesText
+              } else if (normalizedSelection === "NO") {
+                isCorrect = normalizedWinner === "NO" || normalizedWinner === noText
+              }
+            } else {
+              const isStringMatch = normalizedSelection === normalizedWinner
+              let isIndexMatch = false
+              if (market.outcomes && market.outcomes.length > 0) {
+                const selIdx = market.outcomes.findIndex(
+                  (o) => o.toLowerCase().trim() === pick.selection.toLowerCase().trim()
+                )
+                const winIdx = market.outcomes.findIndex(
+                  (o) => o.toLowerCase().trim() === market.resolvedOutcome!.toLowerCase().trim()
+                )
+                if (selIdx >= 0 && winIdx >= 0 && selIdx === winIdx) {
+                  isIndexMatch = true
+                }
+              }
+              isCorrect = isStringMatch || isIndexMatch
+            }
+
+            pick.isCorrect = isCorrect
             updated = true
             this.logger.log(
               `Self-healing pick resolution for market ${pick.marketId.toString()} on ticket ${ticket._id.toString()} -> isCorrect: ${pick.isCorrect}`,
