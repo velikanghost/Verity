@@ -62,7 +62,7 @@ export default function PvpSidebarStats({
           </span>
         </div>
         <div className="flex h-11 items-center rounded-xl bg-[#FAF9F6] dark:bg-zinc-900/40 px-3.5 border border-stone-200/10 dark:border-zinc-850/10 transition-colors">
-          <span className="w-full text-xs text-charcoal-primary dark:text-zinc-350 truncate select-all font-mono">
+          <span className="w-full text-xs text-black dark:text-white font-bold truncate select-all font-mono">
             {referralsData?.referralLink
               ? `${window.location.origin.replace(/^https?:\/\//, "")}/?ref=${referralsData.referralLink}`
               : "Loading link..."}
