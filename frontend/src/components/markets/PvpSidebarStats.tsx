@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Star, Check, Copy } from "lucide-react"
 import { toast } from "@/lib/toast"
 
 interface PvpSidebarStatsProps {

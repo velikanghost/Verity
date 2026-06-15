@@ -400,9 +400,9 @@ export default function PvpArenaTab({
         true, // Defer closing confirmation modal
       )
 
-      // 4. Register trades on backend
+      // 4. Register trades on backend & Submit the ticket to queue in parallel
       const loadingToastId = toast.loading(
-        "Finalizing on-chain trades on Verity...",
+        "Finalizing trades & queueing for PvP...",
       )
       const tradePromises = picks.map((pick) => {
         return executeMarketTrade({
@@ -415,16 +415,13 @@ export default function PvpArenaTab({
           txHash: hash,
         })
       })
-      await Promise.all(tradePromises)
-
-      // 5. Submit the ticket to queue
-      toast.loading("Queueing for PvP match...", { id: loadingToastId })
-      await submitTicketMutation.mutateAsync({
+      const ticketPromise = submitTicketMutation.mutateAsync({
         parentMarketId: selectedPvpEvent.id,
         picks,
       })
+      await Promise.all([...tradePromises, ticketPromise])
 
-      // 6. Wait for status refresh to load the waiting screen state
+      // 5. Wait for status refresh to load the waiting screen state
       toast.loading("Loading matchup status...", { id: loadingToastId })
       await refetchPvpStatus()
 
