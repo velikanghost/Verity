@@ -33,28 +33,10 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException("Missing bearer token.")
     }
 
+    let decoded: any
     try {
       const jwtSecret = process.env.JWT_SECRET || ""
-      const decoded = jwt.verify(token, jwtSecret) as any
-
-      if (!decoded || !decoded.id) {
-        throw new UnauthorizedException("Invalid token payload.")
-      }
-
-      // Look up user by ID
-      const user = await this.userModel.findById(decoded.id)
-
-      if (!user) {
-        throw new UnauthorizedException("User not registered.")
-      }
-
-      request.user = {
-        id: user.id || (user as any)._id?.toString(),
-        email: user.email || undefined,
-        walletAddress: user.walletAddress || undefined,
-      }
-
-      return true
+      decoded = jwt.verify(token, jwtSecret) as any
     } catch (error) {
       throw new UnauthorizedException(
         error instanceof Error
@@ -62,5 +44,25 @@ export class JwtAuthGuard implements CanActivate {
           : "Invalid or expired session token.",
       )
     }
+
+    if (!decoded || !decoded.id) {
+      throw new UnauthorizedException("Invalid token payload.")
+    }
+
+    // Look up user by ID
+    // If the database fails (e.g. timeout, network drop), it will throw a 500 error instead of 401
+    const user = await this.userModel.findById(decoded.id)
+
+    if (!user) {
+      throw new UnauthorizedException("User not registered.")
+    }
+
+    request.user = {
+      id: user.id || (user as any)._id?.toString(),
+      email: user.email || undefined,
+      walletAddress: user.walletAddress || undefined,
+    }
+
+    return true
   }
 }

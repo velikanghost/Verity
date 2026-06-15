@@ -1460,6 +1460,21 @@ export class PvpService {
             const winningOutcome = child.resolvedOutcome
             const isMulti = child.outcomeCount && child.outcomeCount > 2
 
+            let normalizedWinningOutcome = winningOutcome
+            if (!isMulti && winningOutcome && outcomes.length >= 2) {
+              if (
+                winningOutcome.toUpperCase() === outcomes[0].toUpperCase() ||
+                winningOutcome.toUpperCase() === "YES"
+              ) {
+                normalizedWinningOutcome = "YES"
+              } else if (
+                winningOutcome.toUpperCase() === outcomes[1].toUpperCase() ||
+                winningOutcome.toUpperCase() === "NO"
+              ) {
+                normalizedWinningOutcome = "NO"
+              }
+            }
+
             for (let idx = 0; idx < outcomes.length; idx++) {
               const outcome = outcomes[idx]
               const normalizedSide = isMulti
@@ -1469,7 +1484,7 @@ export class PvpService {
                   : "NO"
 
               const balance = onChain[outcome] ?? 0
-              const isLosing = isResolved && winningOutcome !== normalizedSide
+              const isLosing = isResolved && normalizedWinningOutcome !== normalizedSide
 
               // Find if we already have this position in DB matching normalizedSide
               const dbPos = existingPositions.find(

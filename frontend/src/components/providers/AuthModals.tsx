@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
-import { apiRequest } from "@/store/apiClient"
+import { apiRequest, ApiError } from "@/store/apiClient"
 import type { Profile } from "@/lib/verity"
 import {
   X,
@@ -31,8 +31,11 @@ export function useProfileQuery() {
       try {
         return await apiRequest<Profile>("/auth/me")
       } catch (err) {
-        localStorage.removeItem("verity_auth_token")
-        return null
+        if (err instanceof ApiError && err.status === 401) {
+          localStorage.removeItem("verity_auth_token")
+          return null
+        }
+        throw err
       }
     },
     staleTime: 60 * 1000,

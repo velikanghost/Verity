@@ -10,7 +10,7 @@ import {
   useExecuteMarketTradeMutation,
 } from "@/store/verity/verityQueries"
 import { toast } from "@/lib/toast"
-import { Lock, ArrowRight } from "lucide-react"
+import { Lock, ArrowRight, Loader2, Swords } from "lucide-react"
 import PvpMatchupCarousel, {
   getCountryFlag,
   parseEventTeams,
@@ -58,8 +58,6 @@ export default function PvpArenaTab({
   const submitTicketMutation = useSubmitPvpTicketMutation()
   const { mutateAsync: executeMarketTrade } = useExecuteMarketTradeMutation()
 
-
-
   // ─── Local state ────────────────────────────────────────────
   const [mounted, setMounted] = useState<boolean>(false)
   const [claimedMarketIds, setClaimedMarketIds] = useState<Set<string>>(
@@ -69,6 +67,7 @@ export default function PvpArenaTab({
   const [betAmountPerSelection, setBetAmountPerSelection] = useState<number>(5)
   const [pvpSelections, setPvpSelections] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+  const [isRegisteringQueue, setIsRegisteringQueue] = useState<boolean>(false)
   const [showTooltip, setShowTooltip] = useState<boolean>(false)
   const [liquidityMarketId, setLiquidityMarketId] = useState<string | null>(
     null,
@@ -397,13 +396,17 @@ export default function PvpArenaTab({
         `Purchase ${picks.length}-selection PvP ticket for ${totalAmount} USDC`,
         totalAmount,
         undefined,
-        true, // Defer closing confirmation modal
+        false, // Defer closing confirmation modal
       )
 
-      // 4. Register trades on backend
-      const loadingToastId = toast.loading(
-        "Finalizing on-chain trades on Verity...",
-      )
+      // 4. Close confirmation modal and show immediate feedback
+      closeTxConfirm()
+      setIsRegisteringQueue(true)
+      setIsSubmitting(false)
+      setShowBuilderOverride(false)
+      setPvpSelections({})
+
+      // 5. Register trades and submit ticket to queue in background
       const tradePromises = picks.map((pick) => {
         return executeMarketTrade({
           marketId: pick.marketId,
@@ -415,33 +418,36 @@ export default function PvpArenaTab({
           txHash: hash,
         })
       })
-      await Promise.all(tradePromises)
-
-      // 5. Submit the ticket to queue
-      toast.loading("Queueing for PvP match...", { id: loadingToastId })
-      await submitTicketMutation.mutateAsync({
+      const ticketPromise = submitTicketMutation.mutateAsync({
         parentMarketId: selectedPvpEvent.id,
         picks,
       })
 
-      // 6. Wait for status refresh to load the waiting screen state
-      toast.loading("Loading matchup status...", { id: loadingToastId })
-      await refetchPvpStatus()
-
-      toast.dismiss(loadingToastId)
-      closeTxConfirm() // Close modal after everything finishes successfully
-
-      toast.success(
-        "Successfully purchased picks & submitted ticket! Queued for opponent...",
-      )
-      setShowBuilderOverride(false)
+      // Run database sync asynchronously in the background
+      Promise.all([...tradePromises, ticketPromise])
+        .then(async () => {
+          await refetchPvpStatus()
+          toast.success(
+            "Successfully purchased picks & submitted ticket! Queued for opponent...",
+          )
+        })
+        .catch((err: any) => {
+          console.error(
+            "Failed to register trade or ticket in background:",
+            err,
+          )
+          toast.error("Failed to queue. Please refresh the page to try again.")
+        })
+        .finally(() => {
+          setIsRegisteringQueue(false)
+        })
     } catch (err: any) {
       closeTxConfirm() // Close modal on error
+      toast.error("Failed to purchase tickets.")
       toast.dismiss(toastId)
       if (!err.message?.includes("rejected")) {
-        toast.error(err.message || "Failed to purchase tickets and queue.")
+        toast.error("Failed to purchase tickets.")
       }
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -474,6 +480,24 @@ export default function PvpArenaTab({
           optionCount={selectedPvpEvent?.options?.length || 5}
           hideCarouselHeader={true}
         />
+      ) : isRegisteringQueue ? (
+        <div className="verity-card p-8 md:p-10 flex flex-col items-center justify-center text-center gap-6 relative overflow-hidden bg-linear-to-b from-indigo-50/40 to-stone-100/30 dark:from-indigo-950/10 dark:to-zinc-900/10 border border-indigo-200/40 dark:border-indigo-900/20 shadow-sm min-h-[300px]">
+          {/* Pulsing indigo loading ring */}
+          <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200/50 dark:border-indigo-900/50 shadow-inner">
+            <Loader2 className="h-7 w-7 text-indigo-600 dark:text-indigo-400 animate-spin absolute" />
+            <Swords className="h-5 w-5 text-indigo-500 relative z-10" />
+          </div>
+
+          <div className="space-y-2 max-w-sm">
+            <h3 className="text-xl font-black font-sans leading-tight text-charcoal-primary dark:text-white">
+              Entering the Arena...
+            </h3>
+            <p className="text-xs text-ash leading-relaxed font-sans">
+              We are finalising your ticket registration and queueing you for an
+              opponent.
+            </p>
+          </div>
+        </div>
       ) : (
         <>
           {/* Active Duel View */}

@@ -16,6 +16,24 @@ export const cleanOutcomeName = (
   const lowerB = teamB.toLowerCase().trim()
 
   if (
+    lowerName === "both teams to score - yes" ||
+    lowerName === "both teams to score-yes" ||
+    lowerName === "btts - yes" ||
+    lowerName === "btts-yes"
+  ) {
+    return "YES"
+  }
+
+  if (
+    lowerName === "both teams to score - no" ||
+    lowerName === "both teams to score-no" ||
+    lowerName === "btts - no" ||
+    lowerName === "btts-no"
+  ) {
+    return "NO"
+  }
+
+  if (
     lowerName === "match ends in a draw" ||
     lowerName === "match ends with equal corners" ||
     lowerName === "match ends with equal yellow cards" ||

@@ -602,16 +602,41 @@ export class MarketsService implements OnModuleInit {
           outcomes,
         )
 
-        for (const outcome of outcomes) {
+        const outcomeCount = market?.outcomeCount ?? 2
+        const isMulti = outcomeCount > 2
+
+        let normalizedWinningOutcome = winningOutcome
+        if (!isMulti && winningOutcome && outcomes.length >= 2) {
+          if (
+            winningOutcome.toUpperCase() === outcomes[0].toUpperCase() ||
+            winningOutcome.toUpperCase() === "YES"
+          ) {
+            normalizedWinningOutcome = "YES"
+          } else if (
+            winningOutcome.toUpperCase() === outcomes[1].toUpperCase() ||
+            winningOutcome.toUpperCase() === "NO"
+          ) {
+            normalizedWinningOutcome = "NO"
+          }
+        }
+
+        for (let idx = 0; idx < outcomes.length; idx++) {
+          const outcome = outcomes[idx]
+          const normalizedSide = isMulti
+            ? outcome
+            : idx === 0
+              ? "YES"
+              : "NO"
+
           const balance = onChain[outcome] ?? 0
-          const isLosing = isResolved && winningOutcome !== outcome
+          const isLosing = isResolved && normalizedWinningOutcome !== normalizedSide
 
           if (!isLosing && balance > 0) {
             await this.marketPositionModel.updateOne(
               {
                 marketId: new Types.ObjectId(marketId),
                 userId: new Types.ObjectId(profileId),
-                side: outcome,
+                side: normalizedSide,
               },
               {
                 $set: {
@@ -629,7 +654,7 @@ export class MarketsService implements OnModuleInit {
             await this.marketPositionModel.deleteOne({
               marketId: new Types.ObjectId(marketId),
               userId: new Types.ObjectId(profileId),
-              side: outcome,
+              side: normalizedSide,
             })
           }
         }
