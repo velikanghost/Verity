@@ -200,6 +200,19 @@ export default function PvpMatchupCarousel({
     })
     const limitedClosed = closed.slice(-5)
 
+    // Ensure the selected matchup is always included in the carousel list even if it is an older closed matchup
+    if (selectedPvpEventId) {
+      const isSelectedClosed = closed.find((e) => e.id === selectedPvpEventId)
+      if (isSelectedClosed && !limitedClosed.some((e) => e.id === selectedPvpEventId)) {
+        limitedClosed.push(isSelectedClosed)
+        limitedClosed.sort((a, b) => {
+          const timeA = new Date(a.lockTime || a.deadline || 0).getTime()
+          const timeB = new Date(b.lockTime || b.deadline || 0).getTime()
+          return timeA - timeB
+        })
+      }
+    }
+
     // Sort live ascending
     live.sort((a, b) => {
       const timeA = new Date(a.lockTime || a.deadline || 0).getTime()
@@ -208,7 +221,7 @@ export default function PvpMatchupCarousel({
     })
 
     return [...limitedClosed, ...live]
-  }, [pvpEvents, searchQuery])
+  }, [pvpEvents, searchQuery, selectedPvpEventId])
 
   return (
     <div className="flex flex-col gap-4">

@@ -907,14 +907,17 @@ export class PvpService {
       await existing.save()
     }
 
-    // Consume an XP boost if remaining > 0.
+    // Consume an XP boost atomically if remaining > 0.
     let doubleBoostActive = false
-    if (user.doubleBoostRemaining > 0) {
-      user.doubleBoostRemaining -= 1
-      await user.save()
+    const updateResult = await this.userModel.findOneAndUpdate(
+      { _id: user._id, doubleBoostRemaining: { $gt: 0 } },
+      { $inc: { doubleBoostRemaining: -1 } },
+      { new: true },
+    )
+    if (updateResult) {
       doubleBoostActive = true
       this.logger.log(
-        `User ${userId} consumed an XP boost. remaining: ${user.doubleBoostRemaining}`,
+        `User ${userId} consumed an XP boost. remaining: ${updateResult.doubleBoostRemaining}`,
       )
     }
 

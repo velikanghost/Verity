@@ -8,14 +8,14 @@ import { arcUsdcAddress, FPMM_ADDRESS, publicClient } from "@/lib/arc"
 import {
   useSubmitPvpTicketMutation,
   useExecuteMarketTradeMutation,
-  useUserPortfolioQuery,
 } from "@/store/verity/verityQueries"
 import { toast } from "@/lib/toast"
-import { Lock, ArrowRight, Trophy } from "lucide-react"
+import { Lock, ArrowRight } from "lucide-react"
 import PvpMatchupCarousel, {
   getCountryFlag,
   parseEventTeams,
 } from "./PvpMatchupCarousel"
+import PvpClaimBanner from "./PvpClaimBanner"
 
 // Sub-components
 import PvpArenaSkeleton from "./PvpArenaSkeleton"
@@ -58,35 +58,13 @@ export default function PvpArenaTab({
   const submitTicketMutation = useSubmitPvpTicketMutation()
   const { mutateAsync: executeMarketTrade } = useExecuteMarketTradeMutation()
 
-  const { data: userPortfolio, refetch: refetchPortfolio } =
-    useUserPortfolioQuery(profile?.id || "")
 
-  const [claimedMarketIds, setClaimedMarketIds] = useState<Set<string>>(
-    new Set(),
-  )
-
-  const allClaimablePositions = useMemo(() => {
-    if (!userPortfolio) return []
-    return userPortfolio.filter(
-      (pos: any) =>
-        pos.category === "pvp" &&
-        pos.status === "resolved" &&
-        (pos.shares ?? 0) > 0 &&
-        pos.side?.toUpperCase().trim() ===
-          pos.resolved_outcome?.toUpperCase().trim() &&
-        !claimedMarketIds.has(pos.market_id),
-    )
-  }, [userPortfolio, claimedMarketIds])
-
-  const globalWinningsAmount = useMemo(() => {
-    return allClaimablePositions.reduce(
-      (acc: number, pos: any) => acc + (pos.shares ?? 0),
-      0,
-    )
-  }, [allClaimablePositions])
 
   // ─── Local state ────────────────────────────────────────────
   const [mounted, setMounted] = useState<boolean>(false)
+  const [claimedMarketIds, setClaimedMarketIds] = useState<Set<string>>(
+    new Set(),
+  )
   const [showBuilderOverride, setShowBuilderOverride] = useState<boolean>(false)
   const [betAmountPerSelection, setBetAmountPerSelection] = useState<number>(5)
   const [pvpSelections, setPvpSelections] = useState<Record<string, string>>({})
@@ -261,12 +239,11 @@ export default function PvpArenaTab({
           return next
         })
         void refetchPvpStatus()
-        void refetchPortfolio()
       } catch (err) {
         console.error("Failed to claim all winnings", err)
       }
     },
-    [redeemMultipleWinnings, refetchPvpStatus, refetchPortfolio],
+    [redeemMultipleWinnings, refetchPvpStatus],
   )
 
   async function handleSubmitPvpTicket() {
@@ -275,6 +252,15 @@ export default function PvpArenaTab({
       return
     }
     if (!selectedPvpEvent) return
+
+    const lockTimeLimit = new Date(
+      selectedPvpEvent.lockTime || selectedPvpEvent.deadline,
+    )
+    const txBufferMs = 30000 // 30 seconds buffer for transaction processing
+    if (new Date().getTime() + txBufferMs >= lockTimeLimit.getTime()) {
+      toast.error("This matchup is too close to kickoff or has already started")
+      return
+    }
 
     const picks = Object.keys(pvpSelections).map((marketId) => {
       const selection = pvpSelections[marketId]
@@ -483,45 +469,6 @@ export default function PvpArenaTab({
         />
       )}
 
-      {/* Global Claim Banner */}
-      {allClaimablePositions.length > 0 && (
-        <div className="p-4.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/15 border border-emerald-500/20 dark:border-emerald-500/10 flex flex-col md:flex-row items-center justify-between gap-4 text-left shadow-sm shadow-emerald-500/5 transition-all">
-          <div className="flex items-center gap-3.5 w-full md:w-auto">
-            <div className="relative flex items-center justify-center w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 shrink-0 border border-emerald-200/50 dark:border-emerald-900/30 shadow-2xs">
-              <Trophy className="h-5 w-5 animate-pulse" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-400 font-sans leading-snug">
-                You have unclaimed winnings!
-              </h4>
-              <p className="text-xs text-stone-500 dark:text-zinc-400 mt-1.5 font-medium font-sans">
-                Claim{" "}
-                <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
-                  {globalWinningsAmount.toFixed(2)} USDC
-                </span>{" "}
-                from{" "}
-                <span className="font-semibold text-stone-700 dark:text-zinc-300">
-                  {allClaimablePositions.length}
-                </span>{" "}
-                winning{" "}
-                {allClaimablePositions.length === 1 ? "position" : "positions"}.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() =>
-              handleClaim(
-                allClaimablePositions.map((pos) => pos.market_id),
-                globalWinningsAmount,
-              )
-            }
-            className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/15 shrink-0 font-sans cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
-          >
-            <span>Claim All Winnings</span>
-          </button>
-        </div>
-      )}
-
       {isPvpStatusPending ? (
         <PvpArenaSkeleton
           optionCount={selectedPvpEvent?.options?.length || 5}
@@ -538,6 +485,12 @@ export default function PvpArenaTab({
                 runningScoreUser={runningScoreUser}
                 runningScoreOpponent={runningScoreOpponent}
                 profile={profile}
+              />
+              <PvpClaimBanner
+                picks={pvpStatus.ticket?.picks}
+                claimedMarketIds={claimedMarketIds}
+                onClaim={handleClaim}
+                showEmoji={true}
               />
               <PvpDuelPicks pvpStatus={pvpStatus} />
             </div>

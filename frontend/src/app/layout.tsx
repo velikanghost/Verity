@@ -74,7 +74,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen overflow-y-scroll bg-background text-foreground">
+      <body
+        className="min-h-screen overflow-y-scroll bg-background text-foreground"
+        suppressHydrationWarning
+      >
         <AppProviders>
           <AppShell>{children}</AppShell>
         </AppProviders>

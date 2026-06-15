@@ -83,6 +83,12 @@ function MarketsContent() {
     const queryId = searchParams.get("id")
     if (queryId && pvpEvents.some((e: any) => e.id === queryId)) {
       setSelectedPvpEventId(queryId)
+      setHasManuallySelected(true)
+
+      // Clear id from URL
+      const params = new URLSearchParams(window.location.search)
+      params.delete("id")
+      router.replace(`/markets?${params.toString()}`)
       return
     }
 
@@ -93,7 +99,7 @@ function MarketsContent() {
     } else {
       setSelectedPvpEventId(null)
     }
-  }, [pvpEvents, hasManuallySelected, searchParams])
+  }, [pvpEvents, hasManuallySelected, searchParams, router])
 
   const handleSelectPvpEvent = (id: string | null) => {
     setHasManuallySelected(true)

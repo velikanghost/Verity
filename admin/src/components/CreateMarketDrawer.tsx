@@ -47,7 +47,7 @@ interface CreateMarketDrawerProps {
 const CORNER_LINES = [6.5, 7.5, 8.5, 9.5, 10.5]
 const GOAL_LINES = [0.5, 1.5, 2.5, 3.5, 4.5]
 const CARD_LINES = [2.5, 3.5, 4.5, 5.5, 6.5]
-const OFFSIDE_LINES = [2.5, 3.5, 4.5, 5.5, 6.5]
+const OFFSIDE_LINES = [0.5, 1.5, 2.5, 3.5, 4.5]
 
 function parseTeams(question: string): { teamA: string; teamB: string } {
   const vsMatch = question.match(/(.+?)\s+vs\.?\s+(.+)/i)

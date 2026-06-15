@@ -35,7 +35,6 @@ export default function SidebarProfile() {
         onClick={login}
         type="button"
       >
-        <Wallet className="h-4 w-4" />
         <span className="hidden xl:inline">Get Started</span>
       </button>
     )

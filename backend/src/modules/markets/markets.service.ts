@@ -107,7 +107,9 @@ export class MarketsService implements OnModuleInit {
         )
       }
     } catch (err) {
-      this.logger.error(`Failed to migrate legacy markets status: ${err.message}`)
+      this.logger.error(
+        `Failed to migrate legacy markets status: ${err.message}`,
+      )
     }
   }
 
@@ -589,9 +591,10 @@ export class MarketsService implements OnModuleInit {
         const isResolved =
           market && (market.status === "resolved" || market.resolvedOutcome)
         const winningOutcome = market?.resolvedOutcome
-        const outcomes = market && market.outcomes && market.outcomes.length > 0
-          ? market.outcomes
-          : ["YES", "NO"]
+        const outcomes =
+          market && market.outcomes && market.outcomes.length > 0
+            ? market.outcomes
+            : ["YES", "NO"]
 
         const onChain = await this.blockchainService.getUserOnChainBalances(
           marketId,
@@ -673,7 +676,9 @@ export class MarketsService implements OnModuleInit {
 
     const lockTimeLimit = market.lockTime || market.deadline
     if (new Date() >= lockTimeLimit) {
-      throw new BadRequestException("Trading deadline/lock time has passed for this market.")
+      throw new BadRequestException(
+        "Trading deadline/lock time has passed for this market.",
+      )
     }
 
     // Verify txHash if provided
@@ -791,23 +796,30 @@ export class MarketsService implements OnModuleInit {
       const outcomeCount = market.outcomeCount ?? 2
       if (outcomeCount > 2) {
         try {
-          const rawBalances = await this.blockchainService.readOutcomeBalances(marketId)
+          const rawBalances =
+            await this.blockchainService.readOutcomeBalances(marketId)
           const outcomeBalances = rawBalances.map((b) => Number(b) / 1e6)
           updateData.outcomeBalances = outcomeBalances
 
           // Calculate outcome prices: p_j = (1/x_j) / sum(1/x_i)
           const hasZero = outcomeBalances.some((b) => b === 0)
           if (hasZero) {
-            updateData.outcomePrices = new Array(outcomeCount).fill(1 / outcomeCount)
+            updateData.outcomePrices = new Array(outcomeCount).fill(
+              1 / outcomeCount,
+            )
           } else {
-            const invSum = outcomeBalances.reduce((sum, b) => sum + (1 / b), 0)
-            updateData.outcomePrices = outcomeBalances.map((b) => (1 / b) / invSum)
+            const invSum = outcomeBalances.reduce((sum, b) => sum + 1 / b, 0)
+            updateData.outcomePrices = outcomeBalances.map(
+              (b) => 1 / b / invSum,
+            )
           }
-          
+
           updateData.usdcYesAmount = outcomeBalances[0] || 0
           updateData.usdcNoAmount = outcomeBalances[1] || 0
         } catch (e) {
-          this.logger.warn(`Failed to read multi-outcome balances for ${marketId}: ${e.message}`)
+          this.logger.warn(
+            `Failed to read multi-outcome balances for ${marketId}: ${e.message}`,
+          )
           const yesBal = Number(balances.yesBalance) / 1e6
           const noBal = Number(balances.noBalance) / 1e6
           updateData.outcomeBalances = [yesBal, noBal]
@@ -864,12 +876,17 @@ export class MarketsService implements OnModuleInit {
         winningIndex = 0 // fallback
       }
     } else {
-      winningIndex = (winningOutcome === "YES" || winningOutcome.toLowerCase() === "yes") ? 0 : 1
+      winningIndex =
+        winningOutcome === "YES" || winningOutcome.toLowerCase() === "yes"
+          ? 0
+          : 1
     }
 
     if (finalTxHash) {
       // Verify transaction receipt if provided
-      await this.blockchainService.getTransactionReceipt(finalTxHash as `0x${string}`)
+      await this.blockchainService.getTransactionReceipt(
+        finalTxHash as `0x${string}`,
+      )
     } else {
       // No txHash provided: Backend executes the transaction on-chain on behalf of the admin!
       if (market.marketType !== "parent") {
@@ -895,10 +912,14 @@ export class MarketsService implements OnModuleInit {
             }
           }
           if (finalTxHash) {
-            this.logger.log(`On-chain resolution executed by backend for market ${marketId}: tx ${finalTxHash}`)
+            this.logger.log(
+              `On-chain resolution executed by backend for market ${marketId}: tx ${finalTxHash}`,
+            )
           }
         } catch (error) {
-          this.logger.warn(`Failed to execute on-chain resolution directly: ${error.message}. Proceeding with database-only resolution.`)
+          this.logger.warn(
+            `Failed to execute on-chain resolution directly: ${error.message}. Proceeding with database-only resolution.`,
+          )
         }
       }
     }
@@ -939,7 +960,8 @@ export class MarketsService implements OnModuleInit {
         if (child.outcomeCount > 2) {
           // Multi-outcome child market
           const winningIndex = child.outcomes.findIndex(
-            (o) => o.toLowerCase().trim() === winningOutcome.toLowerCase().trim(),
+            (o) =>
+              o.toLowerCase().trim() === winningOutcome.toLowerCase().trim(),
           )
           if (winningIndex >= 0) {
             child.status = "resolved"
@@ -982,8 +1004,12 @@ export class MarketsService implements OnModuleInit {
           }
         } else {
           // Binary child market
-          const isYesMatch = child.outcomes[0]?.toLowerCase().trim() === winningOutcome.toLowerCase().trim()
-          const isNoMatch = child.outcomes[1]?.toLowerCase().trim() === winningOutcome.toLowerCase().trim()
+          const isYesMatch =
+            child.outcomes[0]?.toLowerCase().trim() ===
+            winningOutcome.toLowerCase().trim()
+          const isNoMatch =
+            child.outcomes[1]?.toLowerCase().trim() ===
+            winningOutcome.toLowerCase().trim()
 
           if (isYesMatch || isNoMatch) {
             const childResolvedOutcome = isYesMatch ? "YES" : "NO"
@@ -1080,7 +1106,10 @@ export class MarketsService implements OnModuleInit {
     return this.postsService.serializeMarket(market)
   }
 
-  async disputeMarket(marketId: string, adminAddress: string): Promise<MarketResponse> {
+  async disputeMarket(
+    marketId: string,
+    adminAddress: string,
+  ): Promise<MarketResponse> {
     const market = await this.marketModel.findById(marketId)
     if (!market) {
       throw new NotFoundException("Market not found.")
@@ -1089,7 +1118,9 @@ export class MarketsService implements OnModuleInit {
     try {
       // Execute on-chain dispute
       const txHash = await this.blockchainService.disputeResolution(marketId)
-      await this.blockchainService.getTransactionReceipt(txHash as `0x${string}`)
+      await this.blockchainService.getTransactionReceipt(
+        txHash as `0x${string}`,
+      )
 
       // Update DB
       market.disputed = true
@@ -1097,10 +1128,16 @@ export class MarketsService implements OnModuleInit {
       market.status = "resolving"
       await market.save()
 
-      this.logger.log(`Market ${marketId} disputed on-chain by admin. tx: ${txHash}`)
+      this.logger.log(
+        `Market ${marketId} disputed on-chain by admin. tx: ${txHash}`,
+      )
     } catch (error) {
-      this.logger.error(`Failed to dispute market ${marketId}: ${error.message}`)
-      throw new BadRequestException(`Failed to dispute market on-chain: ${error.message}`)
+      this.logger.error(
+        `Failed to dispute market ${marketId}: ${error.message}`,
+      )
+      throw new BadRequestException(
+        `Failed to dispute market on-chain: ${error.message}`,
+      )
     }
 
     // Emit Socket events
