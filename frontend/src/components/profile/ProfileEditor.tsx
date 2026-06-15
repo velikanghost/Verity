@@ -35,28 +35,6 @@ export default function ProfileEditor() {
   const [optionsOpen, setOptionsOpen] = useState(false)
   const isDark = resolvedTheme === "dark"
 
-  if (!isConnected) {
-    return (
-      <div className="verity-card p-8 mt-6 text-center flex flex-col items-center justify-center border border-border bg-surface-solid py-12">
-        <h3 className="text-lg font-semibold text-charcoal-primary">
-          Access Your Profile
-        </h3>
-        <p className="mt-2 text-sm text-ash max-w-sm">
-          Log in or sign up to view and customize your profile, copy referral
-          links, and track your stats.
-        </p>
-        <div className="mt-6 w-full max-w-[240px]">
-          <button
-            onClick={login}
-            className="verity-pill flex h-11 w-full items-center justify-center gap-2 bg-inverse px-4 text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90 cursor-pointer"
-          >
-            Get Started
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   const { data: tabItems = [], isLoading: isActivityLoading } =
     useProfileActivityQuery(
       profile?.id || "",
@@ -92,6 +70,28 @@ export default function ProfileEditor() {
     if (profile) users.set(profile.id, profile)
     return Array.from(users.values())
   }, [items, profile])
+
+  if (!isConnected) {
+    return (
+      <div className="verity-card p-8 mt-6 text-center flex flex-col items-center justify-center border border-border bg-surface-solid py-12">
+        <h3 className="text-lg font-semibold text-charcoal-primary">
+          Access Your Profile
+        </h3>
+        <p className="mt-2 text-sm text-ash max-w-sm">
+          Log in or sign up to view and customize your profile, copy referral
+          links, and track your stats.
+        </p>
+        <div className="mt-6 w-full max-w-[240px]">
+          <button
+            onClick={login}
+            className="verity-pill flex h-11 w-full items-center justify-center gap-2 bg-inverse px-4 text-sm font-semibold tracking-[-0.18px] text-inverse-text transition-opacity hover:opacity-90 cursor-pointer"
+          >
+            Get Started
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-3 py-3 sm:py-4">
