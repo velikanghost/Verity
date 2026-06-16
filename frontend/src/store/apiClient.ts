@@ -1,3 +1,12 @@
+export class ApiError extends Error {
+  status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+  }
+}
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 
@@ -30,8 +39,9 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}))
-    throw new Error(
+    throw new ApiError(
       body?.message || `Request failed with status ${response.status}`,
+      response.status,
     )
   }
 

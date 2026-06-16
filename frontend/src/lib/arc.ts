@@ -2,7 +2,7 @@ import { defineChain, http, createPublicClient } from "viem"
 import type { Address } from "viem"
 
 const chainId = Number(process.env.NEXT_PUBLIC_ARC_TESTNET_CHAIN_ID || "")
-const rpcUrl = process.env.NEXT_PUBLIC_ARC_TESTNET_RPC_URL || ""
+const rpcUrl = process.env.NEXT_PUBLIC_ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network"
 const usdcAddress = process.env.NEXT_PUBLIC_ARC_TESTNET_USDC_ADDRESS || ""
 
 export const arcTestnet = defineChain({

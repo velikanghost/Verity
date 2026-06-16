@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useAuth } from "@/components/providers/AuthModals"
 import { Wallet, CircleHelp } from "lucide-react"
+import ThemeToggle from "./ThemeToggle"
 
 export default function MobileHeader() {
   const { authenticated, loading, login } = useAuth()
@@ -26,6 +27,7 @@ export default function MobileHeader() {
         >
           <CircleHelp className="h-4 w-4" />
         </Link>
+        <ThemeToggle />
 
         {loading ? (
           <div className="h-8 w-8 animate-pulse rounded-full bg-stone-surface" />
