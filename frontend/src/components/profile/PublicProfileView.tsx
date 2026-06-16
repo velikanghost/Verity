@@ -50,7 +50,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
     )
 
   const { data: positions = [], isLoading: isPositionsLoading } =
-    useUserPortfolioQuery(activeTab === "predictions" ? profile?.id || "" : "")
+    useUserPortfolioQuery(profile?.id || "")
 
   const isTabLoading =
     activeTab === "markets"
@@ -74,11 +74,13 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
     if (profile) users.set(profile.id, profile)
     return Array.from(users.values())
   }, [items, profile, viewerProfile])
+
+  const resolvedPositions = positions.filter(pos => pos.status === "resolved" && pos.resolved_outcome !== null)
+  const wonPositions = resolvedPositions.filter(pos => pos.resolved_outcome === pos.side)
+  
   const accuracy =
-    profile?.freeVotesTotal && profile.freeVotesTotal > 0
-      ? Math.round(
-          ((profile.freeVotesCorrect || 0) / profile.freeVotesTotal) * 100,
-        )
+    resolvedPositions.length > 0
+      ? Math.round((wonPositions.length / resolvedPositions.length) * 100)
       : 0
 
   if (isProfileLoading) {
