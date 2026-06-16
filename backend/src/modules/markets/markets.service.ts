@@ -641,6 +641,7 @@ export class MarketsService implements OnModuleInit {
               {
                 $set: {
                   shares: balance,
+                  isArchived: false,
                 },
                 $setOnInsert: {
                   avgPrice: 0.5,
@@ -651,11 +652,19 @@ export class MarketsService implements OnModuleInit {
               { upsert: true },
             )
           } else {
-            await this.marketPositionModel.deleteOne({
-              marketId: new Types.ObjectId(marketId),
-              userId: new Types.ObjectId(profileId),
-              side: normalizedSide,
-            })
+            await this.marketPositionModel.updateOne(
+              {
+                marketId: new Types.ObjectId(marketId),
+                userId: new Types.ObjectId(profileId),
+                side: normalizedSide,
+              },
+              {
+                $set: {
+                  shares: 0,
+                  isArchived: true,
+                },
+              }
+            )
           }
         }
       } catch (err) {
@@ -667,7 +676,7 @@ export class MarketsService implements OnModuleInit {
       .find({
         marketId: new Types.ObjectId(marketId),
         userId: new Types.ObjectId(profileId),
-        shares: { $gt: 0 },
+        $or: [{ shares: { $gt: 0 } }, { isArchived: true }],
       })
       .sort({ updatedAt: -1 })
 
@@ -746,6 +755,7 @@ export class MarketsService implements OnModuleInit {
         position.shares += shares
         position.investedUsdc += amountUsdc
         position.avgPrice = position.investedUsdc / (position.shares || 1)
+        position.isArchived = false
         await position.save()
       } else {
         await this.marketPositionModel.create({
@@ -776,10 +786,9 @@ export class MarketsService implements OnModuleInit {
       )
 
       if (position.shares === 0) {
-        await this.marketPositionModel.deleteOne({ _id: position._id })
-      } else {
-        await position.save()
+        position.isArchived = true
       }
+      await position.save()
     }
 
     // Sync market balances and prices from chain
@@ -1251,7 +1260,7 @@ export class MarketsService implements OnModuleInit {
     const positions = await this.marketPositionModel
       .find({
         userId: new Types.ObjectId(userId),
-        shares: { $gt: 0 },
+        $or: [{ shares: { $gt: 0 } }, { isArchived: true }],
       })
       .populate("marketId")
       .sort({ updatedAt: -1 })
