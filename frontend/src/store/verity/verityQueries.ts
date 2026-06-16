@@ -157,6 +157,13 @@ export function useUserTradesQuery(userId: string) {
   })
 }
 
+export function useTopPredictorsQuery() {
+  return useQuery({
+    queryKey: ["top-predictors"] as const,
+    queryFn: () => apiRequest<Profile[]>("/users/top-predictors"),
+  })
+}
+
 export function useCreateNormalPostMutation() {
   const qc = useQueryClient()
   return useMutation({
