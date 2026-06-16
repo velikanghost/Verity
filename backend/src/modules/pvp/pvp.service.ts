@@ -1058,9 +1058,9 @@ export class PvpService {
   }
 
   async resolvePvpMatchesForMarket(marketId: string, winningOutcome: string) {
-    // Find all matched tickets containing this child market
+    // Find all matched or resolved tickets containing this child market
     const tickets = await this.pvpTicketModel.find({
-      status: "matched",
+      status: { $in: ["matched", "resolved"] },
       "picks.marketId": new Types.ObjectId(marketId),
     })
 

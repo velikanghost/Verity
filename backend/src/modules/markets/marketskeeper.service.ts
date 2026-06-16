@@ -352,14 +352,26 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
           } else {
             // Proposal already exists -> check if disputed or finalized
             if (proposal.finalized) {
-              // Already finalized on-chain -> sync with DB if needed
-              if (market.status !== "resolved") {
-                const onChainState =
-                  await this.blockchainService.readOnChainMarketState(
-                    marketIdStr,
+              // Read on-chain state to get ground truth winning index
+              const onChainState =
+                await this.blockchainService.readOnChainMarketState(
+                  marketIdStr,
+                )
+              const winIdx = Number(onChainState.winningOutcomeIndex)
+
+              // Check if we need to sync: either DB is not resolved, OR winning index differs
+              const needsSync =
+                market.status !== "resolved" ||
+                market.winningOutcomeIndex !== winIdx
+
+              if (needsSync) {
+                if (market.status === "resolved") {
+                  this.logger.warn(
+                    `Discrepancy detected for market ${marketIdStr}! DB has index ${market.winningOutcomeIndex}, but contract ground truth is ${winIdx}. Overriding DB to sync with contract...`,
                   )
+                }
+
                 market.status = "resolved"
-                const winIdx = onChainState.winningOutcomeIndex
                 market.winningOutcomeIndex = winIdx
                 if (market.outcomeCount && market.outcomeCount > 2) {
                   market.resolvedOutcome = market.outcomes[winIdx] as any
@@ -373,7 +385,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
                   market.resolvedOutcome as string,
                 )
                 this.logger.log(
-                  `Synced finalized market ${marketIdStr} in database.`,
+                  `Synced finalized market ${marketIdStr} in database with on-chain ground truth (winning index: ${winIdx}).`,
                 )
 
                 // Emit Socket events
