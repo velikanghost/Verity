@@ -15,6 +15,7 @@ import { BlockchainService } from "../src/modules/blockchain/blockchain.service"
 import { LiquidityService } from "../src/modules/liquidity/liquidity.service"
 import { AgentService } from "../src/modules/agent/agent.service"
 import { BadRequestException } from "@nestjs/common"
+import { ConfigService } from "@nestjs/config"
 
 import { Types } from "mongoose"
 import { calculatePvpResultXp } from "../src/modules/pvp/pvp-scoring"
@@ -73,6 +74,15 @@ describe("PvpService", () => {
           provide: AgentService,
           useValue: {
             categorizeOptions: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === "NEW_USER_CUTOFF_DATE") return "2026-06-16T00:00:00.000Z"
+              return null
+            }),
           },
         },
       ],
@@ -401,6 +411,140 @@ describe("PvpService", () => {
       expect(result).toEqual(mockPvpMatch)
       expect(ticket.status).toBe("matched")
       expect(candidate.status).toBe("matched")
+    })
+  })
+
+  describe("welcome boosts logic", () => {
+    it("should calculate correct XP using custom welcome boost multipliers", () => {
+      // 2x boost: (win (100) + no perfect bonus (0)) * 2 = 200 XP
+      expect(calculatePvpResultXp("win", 3, 5, true, 2.0)).toBe(200)
+
+      // 1.5x boost: (win (100) + perfect bonus (20)) * 1.5 = 180 XP
+      expect(calculatePvpResultXp("win", 5, 5, true, 1.5)).toBe(180)
+    })
+
+    it("should assign 2.0x boost for a new user's first game", async () => {
+      const mockUser = {
+        _id: new Types.ObjectId(),
+        createdAt: new Date("2026-06-17T00:00:00.000Z"), // after cutoff
+        doubleBoostRemaining: 0,
+      }
+      const mockParentMarket = {
+        _id: new Types.ObjectId(),
+        marketType: "parent",
+        category: "pvp",
+        deadline: new Date(Date.now() + 1000 * 60 * 60),
+      }
+
+      const child1Id = new Types.ObjectId()
+      const child2Id = new Types.ObjectId()
+      const child3Id = new Types.ObjectId()
+
+      userModel.findById.mockImplementation(() => Promise.resolve(mockUser))
+      marketModel.findById.mockImplementation(() => Promise.resolve(mockParentMarket))
+      marketModel.find.mockResolvedValue([
+        { _id: child1Id, optionGroup: "group-1" },
+        { _id: child2Id, optionGroup: "group-2" },
+        { _id: child3Id, optionGroup: "group-3" },
+      ])
+      pvpTicketModel.countDocuments.mockImplementation((query: any) => {
+        if (query && query.userId) {
+          return Promise.resolve(0)
+        }
+        return Promise.resolve(3)
+      })
+      pvpTicketModel.findOne.mockResolvedValue(null)
+
+      const mockTicket = {
+        _id: new Types.ObjectId(),
+        userId: mockUser._id,
+        parentMarketId: mockParentMarket._id,
+        picks: [],
+        status: "queued",
+        doubleBoostActive: true,
+        xpBoostMultiplier: 2.0,
+      }
+      pvpTicketModel.create.mockResolvedValue(mockTicket)
+      jest.spyOn(service, "matchmake").mockResolvedValue(null)
+
+      const result = await service.submitTicket(mockUser._id.toString(), {
+        parentMarketId: mockParentMarket._id.toString(),
+        picks: [
+          { marketId: child1Id.toString(), selection: "YES" },
+          { marketId: child2Id.toString(), selection: "NO" },
+          { marketId: child3Id.toString(), selection: "YES" },
+        ],
+      })
+
+      expect(result.doubleBoostActive).toBe(true)
+      expect(pvpTicketModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          xpBoostMultiplier: 2.0,
+          doubleBoostActive: true,
+        }),
+      )
+    })
+
+    it("should assign 1.5x boost for a new user's second game", async () => {
+      const mockUser = {
+        _id: new Types.ObjectId(),
+        createdAt: new Date("2026-06-17T00:00:00.000Z"), // after cutoff
+        doubleBoostRemaining: 0,
+      }
+      const mockParentMarket = {
+        _id: new Types.ObjectId(),
+        marketType: "parent",
+        category: "pvp",
+        deadline: new Date(Date.now() + 1000 * 60 * 60),
+      }
+
+      const child1Id = new Types.ObjectId()
+      const child2Id = new Types.ObjectId()
+      const child3Id = new Types.ObjectId()
+
+      userModel.findById.mockImplementation(() => Promise.resolve(mockUser))
+      marketModel.findById.mockImplementation(() => Promise.resolve(mockParentMarket))
+      marketModel.find.mockResolvedValue([
+        { _id: child1Id, optionGroup: "group-1" },
+        { _id: child2Id, optionGroup: "group-2" },
+        { _id: child3Id, optionGroup: "group-3" },
+      ])
+      pvpTicketModel.countDocuments.mockImplementation((query: any) => {
+        if (query && query.userId) {
+          return Promise.resolve(1)
+        }
+        return Promise.resolve(3)
+      })
+      pvpTicketModel.findOne.mockResolvedValue(null)
+
+      const mockTicket = {
+        _id: new Types.ObjectId(),
+        userId: mockUser._id,
+        parentMarketId: mockParentMarket._id,
+        picks: [],
+        status: "queued",
+        doubleBoostActive: true,
+        xpBoostMultiplier: 1.5,
+      }
+      pvpTicketModel.create.mockResolvedValue(mockTicket)
+      jest.spyOn(service, "matchmake").mockResolvedValue(null)
+
+      const result = await service.submitTicket(mockUser._id.toString(), {
+        parentMarketId: mockParentMarket._id.toString(),
+        picks: [
+          { marketId: child1Id.toString(), selection: "YES" },
+          { marketId: child2Id.toString(), selection: "NO" },
+          { marketId: child3Id.toString(), selection: "YES" },
+        ],
+      })
+
+      expect(result.doubleBoostActive).toBe(true)
+      expect(pvpTicketModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          xpBoostMultiplier: 1.5,
+          doubleBoostActive: true,
+        }),
+      )
     })
   })
 })

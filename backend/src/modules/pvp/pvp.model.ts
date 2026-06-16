@@ -50,6 +50,9 @@ export class PvpTicket {
   @Prop({ type: Boolean, default: false })
   doubleBoostActive: boolean
 
+  @Prop({ type: Number, default: 1 })
+  xpBoostMultiplier: number
+
   createdAt?: Date
   updatedAt?: Date
 }

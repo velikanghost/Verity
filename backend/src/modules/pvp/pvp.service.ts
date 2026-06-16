@@ -31,6 +31,7 @@ import { LiquidityService } from "../liquidity/liquidity.service"
 import { calculatePvpResultXp, calculatePvpScore } from "./pvp-scoring"
 import type { PvpResult } from "./pvp-scoring"
 import { AgentService } from "../agent/agent.service"
+import { ConfigService } from "@nestjs/config"
 
 export const BOT_PROFILES = [
   { username: "alex_g", displayName: "Alex Green" },
@@ -52,7 +53,7 @@ export const BOT_PROFILES = [
   { username: "hayden_p", displayName: "Hayden Pratt" },
   { username: "dylan_y", displayName: "Dylan Yates" },
   { username: "parker_n", displayName: "Parker Nash" },
-  { username: "logan_x", displayName: "Logan Cruz" }
+  { username: "logan_x", displayName: "Logan Cruz" },
 ]
 
 export function determineOptionGroup(
@@ -169,6 +170,7 @@ export class PvpService {
     private readonly blockchainService: BlockchainService,
     private readonly liquidityService: LiquidityService,
     private readonly agentService: AgentService,
+    private readonly configService: ConfigService,
   ) {}
 
   async createPvpEvent(adminId: string, dto: CreatePvpEventDto) {
@@ -516,7 +518,8 @@ export class PvpService {
     })
 
     for (const ticket of queuedTickets) {
-      const profile = BOT_PROFILES[Math.floor(Math.random() * BOT_PROFILES.length)]
+      const profile =
+        BOT_PROFILES[Math.floor(Math.random() * BOT_PROFILES.length)]
 
       let botUser = await this.userModel.findOne({ username: profile.username })
       if (!botUser) {
@@ -615,7 +618,9 @@ export class PvpService {
       // Cascade resolved states for already resolved child markets
       for (const child of childMarkets) {
         if (child.status === "resolved" || child.resolvedOutcome) {
-          const outcome = child.resolvedOutcome || (child.winningOutcomeIndex === 0 ? "YES" : "NO")
+          const outcome =
+            child.resolvedOutcome ||
+            (child.winningOutcomeIndex === 0 ? "YES" : "NO")
           await this.resolvePvpMatchesForMarket(child._id.toString(), outcome)
         }
       }
@@ -907,18 +912,45 @@ export class PvpService {
       await existing.save()
     }
 
-    // Consume an XP boost atomically if remaining > 0.
+    // Check if new user welcome boosts apply
+    const cutoffStr = this.configService.get<string>("NEW_USER_CUTOFF_DATE")
+    const cutoffDate = cutoffStr ? new Date(cutoffStr) : null
+    const isNewUser =
+      cutoffDate && user.createdAt && new Date(user.createdAt) >= cutoffDate
+
+    let xpBoostMultiplier = 1.0
     let doubleBoostActive = false
-    const updateResult = await this.userModel.findOneAndUpdate(
-      { _id: user._id, doubleBoostRemaining: { $gt: 0 } },
-      { $inc: { doubleBoostRemaining: -1 } },
-      { new: true },
-    )
-    if (updateResult) {
-      doubleBoostActive = true
-      this.logger.log(
-        `User ${userId} consumed an XP boost. remaining: ${updateResult.doubleBoostRemaining}`,
+
+    if (isNewUser) {
+      const ticketCount = await this.pvpTicketModel.countDocuments({
+        userId: user._id,
+        status: { $ne: "cancelled" },
+      })
+      if (ticketCount === 0) {
+        xpBoostMultiplier = 2.0
+        doubleBoostActive = true
+        this.logger.log(`User ${userId} qualifies for Welcome Boost 1 (2.0x XP).`)
+      } else if (ticketCount === 1) {
+        xpBoostMultiplier = 1.5
+        doubleBoostActive = true
+        this.logger.log(`User ${userId} qualifies for Welcome Boost 2 (1.5x XP).`)
+      }
+    }
+
+    // If welcome boosts were not applied, try to consume standard referral boost
+    if (!doubleBoostActive) {
+      const updateResult = await this.userModel.findOneAndUpdate(
+        { _id: user._id, doubleBoostRemaining: { $gt: 0 } },
+        { $inc: { doubleBoostRemaining: -1 } },
+        { new: true },
       )
+      if (updateResult) {
+        doubleBoostActive = true
+        xpBoostMultiplier = 1.2
+        this.logger.log(
+          `User ${userId} consumed an XP boost. remaining: ${updateResult.doubleBoostRemaining}`,
+        )
+      }
     }
 
     // Create the ticket
@@ -932,6 +964,7 @@ export class PvpService {
       })),
       status: "queued",
       doubleBoostActive,
+      xpBoostMultiplier,
     })
 
     // Perform matchmaking
@@ -1198,18 +1231,20 @@ export class PvpService {
       marketType: "child",
     })
 
-    // 5. Award Result XP, a +20 perfect bonus (if they predicted all child markets correctly), and an optional 1.2x boost.
+    // 5. Award Result XP, a +20 perfect bonus (if they predicted all child markets correctly), and an optional boost.
     const xp1 = calculatePvpResultXp(
       result1,
       score1,
       childMarketCount,
       ticket1.doubleBoostActive,
+      ticket1.xpBoostMultiplier,
     )
     const xp2 = calculatePvpResultXp(
       result2,
       score2,
       childMarketCount,
       ticket2.doubleBoostActive,
+      ticket2.xpBoostMultiplier,
     )
 
     const isBot1 = BOT_PROFILES.some((p) => p.username === user1.username)
@@ -1484,7 +1519,8 @@ export class PvpService {
                   : "NO"
 
               const balance = onChain[outcome] ?? 0
-              const isLosing = isResolved && normalizedWinningOutcome !== normalizedSide
+              const isLosing =
+                isResolved && normalizedWinningOutcome !== normalizedSide
 
               // Find if we already have this position in DB matching normalizedSide
               const dbPos = existingPositions.find(
@@ -1560,6 +1596,7 @@ export class PvpService {
         score: ticket.score,
         xpEarned: ticket.xpEarned,
         doubleBoostActive: ticket.doubleBoostActive,
+        xpBoostMultiplier: ticket.xpBoostMultiplier ?? 1.0,
         picks: ticket.picks.map((p) => {
           const matchChild = children.find(
             (c) => c._id.toString() === p.marketId.toString(),
@@ -1676,13 +1713,14 @@ export class PvpService {
       if (targetUser && targetUser.isOnboarded) {
         currentUserXp = targetUser.arenaXp ?? 0
         // Compute user XP Rank
-        currentUserXpRank = await this.userModel.countDocuments({
-          isOnboarded: true,
-          $or: [
-            { arenaXp: { $gt: currentUserXp } },
-            { arenaXp: currentUserXp, _id: { $lt: targetUser._id } },
-          ],
-        }) + 1
+        currentUserXpRank =
+          (await this.userModel.countDocuments({
+            isOnboarded: true,
+            $or: [
+              { arenaXp: { $gt: currentUserXp } },
+              { arenaXp: currentUserXp, _id: { $lt: targetUser._id } },
+            ],
+          })) + 1
 
         // Compute user Referrals count
         currentUserReferral = await this.userModel.countDocuments({
@@ -1742,10 +1780,43 @@ export class PvpService {
       })
       .sort({ arenaXp: -1 })
 
+    // Check welcome boosts eligibility
+    const cutoffStr = this.configService.get<string>("NEW_USER_CUTOFF_DATE")
+    const cutoffDate = cutoffStr ? new Date(cutoffStr) : null
+    const isNewUser =
+      cutoffDate && user.createdAt && new Date(user.createdAt) >= cutoffDate
+
+    let nextGameMultiplier = 1.0
+    let ticketsCount = 0
+    let isEligible = false
+
+    if (isNewUser) {
+      ticketsCount = await this.pvpTicketModel.countDocuments({
+        userId: user._id,
+        status: { $ne: "cancelled" },
+      })
+      if (ticketsCount === 0) {
+        isEligible = true
+        nextGameMultiplier = 2.0
+      } else if (ticketsCount === 1) {
+        isEligible = true
+        nextGameMultiplier = 1.5
+      }
+    }
+
+    if (nextGameMultiplier === 1.0 && (user.doubleBoostRemaining ?? 0) > 0) {
+      nextGameMultiplier = 1.2
+    }
+
     return {
       referralLink: user.username,
       doubleBoostRemaining: user.doubleBoostRemaining ?? 0,
       hasWonFirstPvpDuel: user.hasWonFirstPvpDuel ?? false,
+      welcomeBoosts: {
+        isEligible,
+        nextGameMultiplier,
+        ticketsCount,
+      },
       referees: referees.map((r) => ({
         id: r._id.toString(),
         username: r.username,
@@ -2002,18 +2073,26 @@ export class PvpService {
 
     // 1. Users count
     const totalUsers = await this.userModel.countDocuments()
-    const botsCount = await this.userModel.countDocuments({ username: { $in: botUsernames } })
+    const botsCount = await this.userModel.countDocuments({
+      username: { $in: botUsernames },
+    })
     const realUsersCount = Math.max(0, totalUsers - botsCount)
 
     // 2. PvP User Stats
-    const tickets = await this.pvpTicketModel.find({}, { userId: 1, status: 1 }).lean()
+    const tickets = await this.pvpTicketModel
+      .find({}, { userId: 1, status: 1 })
+      .lean()
     const ticketUserIds = [...new Set(tickets.map((t) => t.userId.toString()))]
-    const ticketUsers = await this.userModel.find({ _id: { $in: ticketUserIds } }, { username: 1 }).lean()
-    
+    const ticketUsers = await this.userModel
+      .find({ _id: { $in: ticketUserIds } }, { username: 1 })
+      .lean()
+
     const botUserIdsSet = new Set(
-      ticketUsers.filter((u) => botUsernames.includes(u.username)).map((u) => u._id.toString())
+      ticketUsers
+        .filter((u) => botUsernames.includes(u.username))
+        .map((u) => u._id.toString()),
     )
-    
+
     let realUsersSubmittedCount = 0
     let botUsersSubmittedCount = 0
     let realUsersPlayedCount = 0
@@ -2050,8 +2129,12 @@ export class PvpService {
     const totalPvpMatches = await this.pvpMatchModel.countDocuments()
 
     // 4. Sum USDC volume and fees from MarketTrades
-    const trades = await this.marketTradeModel.find({}, { amountUsdc: 1, feeUsdc: 1, marketId: 1 }).lean()
-    const marketsList = await this.marketModel.find({}, { category: 1, creationFeeTxHash: 1, marketCreationFeeUsdc: 1 }).lean()
+    const trades = await this.marketTradeModel
+      .find({}, { amountUsdc: 1, feeUsdc: 1, marketId: 1 })
+      .lean()
+    const marketsList = await this.marketModel
+      .find({}, { category: 1, creationFeeTxHash: 1, marketCreationFeeUsdc: 1 })
+      .lean()
     const marketMap = new Map(marketsList.map((m) => [m._id.toString(), m]))
 
     let totalVolume = 0
@@ -2118,4 +2201,3 @@ export class PvpService {
     }
   }
 }
-

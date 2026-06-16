@@ -675,6 +675,11 @@ export function useReferralsQuery() {
         referralLink: string
         doubleBoostRemaining: number
         hasWonFirstPvpDuel: boolean
+        welcomeBoosts?: {
+          isEligible: boolean
+          nextGameMultiplier: number
+          ticketsCount: number
+        }
         referees: any[]
       }>("/pvp/referrals"),
   })

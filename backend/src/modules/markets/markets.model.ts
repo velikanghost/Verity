@@ -218,6 +218,8 @@ MarketSchema.index(
   { creationFeeTxHash: 1 },
   { partialFilterExpression: { creationFeeTxHash: { $type: "string" } } },
 )
+MarketSchema.index({ category: 1, marketType: 1, status: 1, deadline: 1 })
+MarketSchema.index({ parentMarketId: 1, marketType: 1 })
 
 @Schema({ timestamps: true, versionKey: false })
 export class Vote {
@@ -369,3 +371,4 @@ export class MarketTrade {
 }
 
 export const MarketTradeSchema = SchemaFactory.createForClass(MarketTrade)
+MarketTradeSchema.index({ marketId: 1, createdAt: -1 })
