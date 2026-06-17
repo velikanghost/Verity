@@ -928,7 +928,23 @@ export class PvpService {
       }
     }
 
-    // If welcome boosts were not applied, try to consume standard referral boost
+    // If welcome boosts were not applied, try to consume Bronze 1.5x boost
+    if (!doubleBoostActive) {
+      if (user.arenaXp >= 30 && user.arenaXp <= 499 && !user.hasUsedBronzeBoost) {
+        const updateResult = await this.userModel.findOneAndUpdate(
+          { _id: user._id, hasUsedBronzeBoost: false },
+          { $set: { hasUsedBronzeBoost: true } },
+          { new: true },
+        )
+        if (updateResult) {
+          doubleBoostActive = true
+          xpBoostMultiplier = 1.5
+          this.logger.log(`User ${userId} consumed one-time Bronze 1.5x boost.`)
+        }
+      }
+    }
+
+    // If welcome and bronze boosts were not applied, try to consume standard referral boost
     if (!doubleBoostActive) {
       const updateResult = await this.userModel.findOneAndUpdate(
         { _id: user._id, doubleBoostRemaining: { $gt: 0 } },
@@ -1853,8 +1869,13 @@ export class PvpService {
       }
     }
 
-    if (nextGameMultiplier === 1.0 && (user.doubleBoostRemaining ?? 0) > 0) {
-      nextGameMultiplier = 1.2
+    if (nextGameMultiplier === 1.0) {
+      const isBronze = user.arenaXp >= 30 && user.arenaXp <= 499
+      if (isBronze && !user.hasUsedBronzeBoost) {
+        nextGameMultiplier = 1.5
+      } else if ((user.doubleBoostRemaining ?? 0) > 0) {
+        nextGameMultiplier = 1.2
+      }
     }
 
     return {

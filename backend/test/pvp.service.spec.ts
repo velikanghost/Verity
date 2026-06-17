@@ -559,6 +559,76 @@ describe("PvpService", () => {
     })
   })
 
+  describe("Bronze 1.5x boost logic", () => {
+    it("should assign 1.5x boost for a Bronze level user who hasn't used it", async () => {
+      const mockUser = {
+        _id: new Types.ObjectId(),
+        createdAt: new Date("2020-01-01"),
+        doubleBoostRemaining: 0,
+        arenaXp: 100,
+        hasUsedBronzeBoost: false,
+      }
+      const mockParentMarket = {
+        _id: new Types.ObjectId(),
+        marketType: "parent",
+        category: "pvp",
+        deadline: new Date(Date.now() + 1000 * 60 * 60),
+      }
+
+      const child1Id = new Types.ObjectId()
+      const child2Id = new Types.ObjectId()
+      const child3Id = new Types.ObjectId()
+
+      userModel.findById.mockImplementation((id: any) => {
+        if (id && id.toString() === mockUser._id.toString()) {
+          return Promise.resolve(mockUser)
+        }
+        return Promise.resolve(mockParentMarket)
+      })
+      userModel.findOneAndUpdate.mockResolvedValue(mockUser)
+      marketModel.find.mockResolvedValue([
+        { _id: child1Id, optionGroup: "group-1" },
+        { _id: child2Id, optionGroup: "group-2" },
+        { _id: child3Id, optionGroup: "group-3" },
+      ])
+      pvpTicketModel.findOne.mockResolvedValue(null)
+
+      const mockTicket = {
+        _id: new Types.ObjectId(),
+        userId: mockUser._id,
+        parentMarketId: mockParentMarket._id,
+        picks: [],
+        status: "queued",
+        doubleBoostActive: true,
+        xpBoostMultiplier: 1.5,
+      }
+      pvpTicketModel.create.mockResolvedValue(mockTicket)
+      jest.spyOn(service as any, "matchmake").mockResolvedValue(null)
+
+      const result = await service.submitTicket(mockUser._id.toString(), {
+        parentMarketId: mockParentMarket._id.toString(),
+        picks: [
+          { marketId: child1Id.toString(), selection: "YES" },
+          { marketId: child2Id.toString(), selection: "NO" },
+          { marketId: child3Id.toString(), selection: "YES" },
+        ],
+      })
+
+      expect(result.doubleBoostActive).toBe(true)
+      expect(pvpTicketModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          xpBoostMultiplier: 1.5,
+          doubleBoostActive: true,
+        }),
+      )
+      expect(userModel.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ _id: mockUser._id, hasUsedBronzeBoost: false }),
+        expect.objectContaining({ $set: { hasUsedBronzeBoost: true } }),
+        expect.any(Object),
+      )
+    })
+  })
+
   describe("awardReferrerFirstWinBoosts", () => {
     it("should retroactively apply boosts to active tickets and add remainder to doubleBoostRemaining", async () => {
       const mockReferredPlayer = {

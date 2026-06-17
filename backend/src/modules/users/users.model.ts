@@ -71,6 +71,9 @@ export class User {
   @Prop({ type: Boolean, default: false })
   hasWonFirstPvpDuel: boolean
 
+  @Prop({ type: Boolean, default: false })
+  hasUsedBronzeBoost: boolean
+
   @Prop({ type: Number, default: 0 })
   pvpTicketsSubmittedCount: number
 
