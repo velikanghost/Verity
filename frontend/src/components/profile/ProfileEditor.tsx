@@ -244,6 +244,9 @@ export default function ProfileEditor() {
                 {marketItems.length} markets
               </span>
               <span className="font-mono text-xs text-ash">
+                {positions.length} predictions
+              </span>
+              <span className="font-mono text-xs text-ash">
                 {accuracy}% accuracy
               </span>
               {isConnected && profile && (

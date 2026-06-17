@@ -26,7 +26,7 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
   const router = useRouter()
   const { profile: viewerProfile } = useWalletProfile()
   const { items, loading, error } = useFeed()
-  const [activeTab, setActiveTab] = useState<ProfileActivityTab>("predictions")
+  const [activeTab, setActiveTab] = useState<ProfileActivityTab>("markets")
   const [peopleModal, setPeopleModal] = useState<
     "followers" | "following" | null
   >(null)
@@ -187,6 +187,9 @@ export default function PublicProfileView({ userId }: PublicProfileViewProps) {
                 {marketItems.length} markets
               </span>
               <span className="font-mono text-xs text-ash">
+                {positions.length} predictions
+              </span>
+              <span className="font-mono text-xs text-ash">
                 {accuracy}% accuracy
               </span>
               <span className="font-mono text-xs text-ash font-semibold dark:text-indigo-400">
@@ -247,8 +250,8 @@ function ProfileTabs({
   onChange: (tab: ProfileActivityTab) => void
 }) {
   const tabs: Array<{ id: ProfileActivityTab; label: string }> = [
-    { id: "predictions", label: "Predictions" },
     { id: "markets", label: "Markets" },
+    { id: "predictions", label: "Predictions" },
     { id: "activity", label: "Activity" },
   ]
 
