@@ -2,7 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  NotImplementedException,
+  // NotImplementedException,
   Inject,
   forwardRef,
   BadRequestException,
@@ -11,7 +11,7 @@ import {
   OnModuleInit,
 } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
-import { Model, Types, SortOrder } from "mongoose"
+import { Model, Types, /*SortOrder*/ } from "mongoose"
 import {
   Market,
   MarketDocument,
@@ -131,7 +131,7 @@ export class MarketsService implements OnModuleInit {
     private readonly notificationsService: NotificationsService,
     private readonly pvpService: PvpService,
     private readonly liquidityService: LiquidityService,
-  ) {}
+  ) { }
 
   private todayKey(date = new Date()): string {
     return date.toISOString().slice(0, 10)
@@ -443,8 +443,8 @@ export class MarketsService implements OnModuleInit {
     const allChildMarkets =
       parentMarketIds.length > 0
         ? await this.marketModel.find({
-            parentMarketId: { $in: parentMarketIds },
-          })
+          parentMarketId: { $in: parentMarketIds },
+        })
         : []
 
     const childMarketsMap = new Map<string, MarketDocument[]>()
@@ -622,14 +622,11 @@ export class MarketsService implements OnModuleInit {
 
         for (let idx = 0; idx < outcomes.length; idx++) {
           const outcome = outcomes[idx]
-          const normalizedSide = isMulti
-            ? outcome
-            : idx === 0
-              ? "YES"
-              : "NO"
+          const normalizedSide = isMulti ? outcome : idx === 0 ? "YES" : "NO"
 
           const balance = onChain[outcome] ?? 0
-          const isLosing = isResolved && normalizedWinningOutcome !== normalizedSide
+          const isLosing =
+            isResolved && normalizedWinningOutcome !== normalizedSide
 
           if (!isLosing && balance > 0) {
             await this.marketPositionModel.updateOne(
@@ -641,6 +638,7 @@ export class MarketsService implements OnModuleInit {
               {
                 $set: {
                   shares: balance,
+                  isArchived: false,
                 },
                 $setOnInsert: {
                   avgPrice: 0.5,
@@ -651,11 +649,19 @@ export class MarketsService implements OnModuleInit {
               { upsert: true },
             )
           } else {
-            await this.marketPositionModel.deleteOne({
-              marketId: new Types.ObjectId(marketId),
-              userId: new Types.ObjectId(profileId),
-              side: normalizedSide,
-            })
+            await this.marketPositionModel.updateOne(
+              {
+                marketId: new Types.ObjectId(marketId),
+                userId: new Types.ObjectId(profileId),
+                side: normalizedSide,
+              },
+              {
+                $set: {
+                  shares: 0,
+                  isArchived: true,
+                },
+              },
+            )
           }
         }
       } catch (err) {
@@ -667,7 +673,7 @@ export class MarketsService implements OnModuleInit {
       .find({
         marketId: new Types.ObjectId(marketId),
         userId: new Types.ObjectId(profileId),
-        shares: { $gt: 0 },
+        $or: [{ shares: { $gt: 0 } }, { isArchived: true }],
       })
       .sort({ updatedAt: -1 })
 
@@ -746,6 +752,7 @@ export class MarketsService implements OnModuleInit {
         position.shares += shares
         position.investedUsdc += amountUsdc
         position.avgPrice = position.investedUsdc / (position.shares || 1)
+        position.isArchived = false
         await position.save()
       } else {
         await this.marketPositionModel.create({
@@ -776,10 +783,9 @@ export class MarketsService implements OnModuleInit {
       )
 
       if (position.shares === 0) {
-        await this.marketPositionModel.deleteOne({ _id: position._id })
-      } else {
-        await position.save()
+        position.isArchived = true
       }
+      await position.save()
     }
 
     // Sync market balances and prices from chain
@@ -889,7 +895,7 @@ export class MarketsService implements OnModuleInit {
 
     const outcomeCount = market.outcomeCount ?? 2
     let winningIndex = -1
-    
+
     // Attempt to match by index from the outcomes list first (for both binary and multi-outcome)
     if (market.outcomes && market.outcomes.length > 0) {
       winningIndex = market.outcomes.findIndex(
@@ -1251,12 +1257,108 @@ export class MarketsService implements OnModuleInit {
     const positions = await this.marketPositionModel
       .find({
         userId: new Types.ObjectId(userId),
-        shares: { $gt: 0 },
+        $or: [{ shares: { $gt: 0 } }, { isArchived: true }],
       })
       .populate("marketId")
       .sort({ updatedAt: -1 })
 
     return positions.map((p) => this.serializePosition(p))
+  }
+
+  async getTopPredictors(limit = 10): Promise<any[]> {
+    const pipeline: any[] = [
+      {
+        $lookup: {
+          from: "markets",
+          localField: "marketId",
+          foreignField: "_id",
+          as: "market",
+        },
+      },
+      { $unwind: "$market" },
+      {
+        $match: {
+          "market.status": "resolved",
+          "market.resolvedOutcome": { $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$userId",
+          totalPredictions: { $sum: 1 },
+          wonPredictions: {
+            $sum: {
+              $cond: [{ $eq: ["$side", "$market.resolvedOutcome"] }, 1, 0],
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          accuracy: {
+            $cond: [
+              { $gt: ["$totalPredictions", 0] },
+              {
+                $multiply: [
+                  { $divide: ["$wonPredictions", "$totalPredictions"] },
+                  100,
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $sort: {
+          accuracy: -1,
+          totalPredictions: -1,
+        },
+      },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+    ]
+
+    const result = await this.marketPositionModel.aggregate(pipeline)
+
+    return result.map((r) => {
+      const user = r.user
+      return {
+        id: user._id.toString(),
+        wallet_address: user.walletAddress,
+        walletAddress: user.walletAddress,
+        username: user.username,
+        display_name: user.displayName,
+        displayName: user.displayName,
+        avatar_url: user.avatarUrl,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        followersCount: user.followersCount,
+        followingCount: user.followingCount,
+        signalPoints: user.signalPoints,
+        arenaXp: user.arenaXp,
+        doubleBoostRemaining: user.doubleBoostRemaining,
+        hasWonFirstPvpDuel: user.hasWonFirstPvpDuel,
+        pvpMatchesWonCount: user.pvpMatchesWonCount,
+        pvpMatchesLostCount: user.pvpMatchesLostCount,
+        pvpMatchesDrawnCount: user.pvpMatchesDrawnCount,
+        created_at: user.createdAt?.toISOString(),
+        createdAt: user.createdAt?.toISOString(),
+        updatedAt: user.updatedAt?.toISOString(),
+        isOnboarded: user.isOnboarded,
+        referredById: user.referredById?.toString(),
+        accuracy: Math.round(r.accuracy),
+        totalPredictions: r.totalPredictions,
+      }
+    })
   }
 
   async fetchAllUserTrades(userId: string): Promise<MarketTradeResponse[]> {

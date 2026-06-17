@@ -20,9 +20,14 @@ export function calculatePvpResultXp(
   score: number,
   totalChildMarkets: number,
   boostActive: boolean,
+  boostMultiplier?: number,
 ): number {
   const perfectBonus = score === totalChildMarkets ? PERFECT_SCORE_BONUS_XP : 0
   const resultXp = RESULT_XP[result] + perfectBonus
 
-  return Math.round(resultXp * (boostActive ? XP_BOOST_MULTIPLIER : 1))
+  const multiplier = boostMultiplier !== undefined && boostMultiplier > 0
+    ? boostMultiplier
+    : (boostActive ? XP_BOOST_MULTIPLIER : 1)
+
+  return Math.round(resultXp * multiplier)
 }

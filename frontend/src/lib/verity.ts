@@ -166,6 +166,7 @@ export interface MarketPosition {
   status?: string
   resolved_outcome?: string | null
   category?: string | null
+  isArchived?: boolean
 }
 
 export interface MarketTrade {

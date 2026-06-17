@@ -3,12 +3,10 @@
 import { useState } from "react"
 import { History, X, Swords, Award } from "lucide-react"
 import { parseEventTeams } from "./PvpMatchupCarousel"
+import { usePvpMatchHistoryQuery } from "@/store/verity/verityQueries"
 
-interface DuelHistoryProps {
-  matchHistory: any[]
-}
-
-export default function DuelHistory({ matchHistory }: DuelHistoryProps) {
+export default function DuelHistory() {
+  const { data: matchHistory = [] } = usePvpMatchHistoryQuery()
   const [selectedMatch, setSelectedMatch] = useState<any | null>(null)
 
   return (

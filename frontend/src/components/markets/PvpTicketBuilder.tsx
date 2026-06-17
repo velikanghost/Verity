@@ -75,6 +75,7 @@ export const cleanOutcomeName = (
     .replace(/\s+wins\s+the\s+match/i, "")
     .replace(/\s+wins/i, "")
     .replace(/\s+scores\s+first\s+goal/i, "")
+    .replace(/\s+scores\s+first/i, "")
     .replace(/\s+leads\s+at\s+halftime/i, "")
     .replace(/\s+keeps\s+a\s+clean\s+sheet/i, "")
     .replace(/\s+commits\s+more\s+fouls/i, "")
@@ -302,15 +303,27 @@ export default function PvpTicketBuilder({
           {/* XP boost indicator and submit button */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-t border-border dark:border-zinc-800 pt-4 mt-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-ash">
-                Boosts Remaining:{" "}
-                <strong className="text-charcoal-primary dark:text-white">
-                  {referralsData?.doubleBoostRemaining ?? 0}
-                </strong>
-                {referralsData &&
-                  referralsData.doubleBoostRemaining > 0 &&
-                  " (Auto-active 1.2x XP)"}
-              </span>
+              {referralsData?.welcomeBoosts?.isEligible &&
+              referralsData.welcomeBoosts.nextGameMultiplier > 1.2 ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/40 text-[11px] font-bold text-indigo-700 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/40">
+                  Welcome Boost Active:{" "}
+                  {referralsData.welcomeBoosts.nextGameMultiplier}x XP for your{" "}
+                  {referralsData.welcomeBoosts.ticketsCount === 0
+                    ? "1st"
+                    : "2nd"}{" "}
+                  game!
+                </span>
+              ) : (
+                <span className="text-xs font-mono text-ash">
+                  Boosts Remaining:{" "}
+                  <strong className="text-charcoal-primary dark:text-white">
+                    {referralsData?.doubleBoostRemaining ?? 0}
+                  </strong>
+                  {referralsData &&
+                    referralsData.doubleBoostRemaining > 0 &&
+                    " (Auto-active 1.2x XP)"}
+                </span>
+              )}
             </div>
 
             <button

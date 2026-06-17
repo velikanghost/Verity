@@ -9,9 +9,7 @@ import {
   useMyActivePvpTicketsQuery,
   usePvpStatusQuery,
   useReferralsQuery,
-  usePvpMatchHistoryQuery,
 } from "@/store/verity/verityQueries"
-import { Swords, TrendingUp } from "lucide-react"
 
 // Extracted subcomponents
 import StandardMarketsFeed from "@/components/markets/StandardMarketsFeed"
@@ -122,7 +120,6 @@ function MarketsContent() {
     isLoading: pvpStatusLoading,
   } = usePvpStatusQuery(selectedPvpEventId)
   const { data: referralsData } = useReferralsQuery()
-  const { data: matchHistory = [] } = usePvpMatchHistoryQuery()
 
   return (
     <div className="w-full max-w-[1240px] mx-auto py-6 font-sans">
@@ -189,7 +186,7 @@ function MarketsContent() {
           {/* Right Sidebar: Profile stats & Duel History */}
           <div className="flex flex-col gap-4">
             <PvpSidebarStats profile={profile} referralsData={referralsData} />
-            <DuelHistory matchHistory={matchHistory} />
+            <DuelHistory />
           </div>
         </div>
       )}

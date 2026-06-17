@@ -50,6 +50,9 @@ export class PvpTicket {
   @Prop({ type: Boolean, default: false })
   doubleBoostActive: boolean
 
+  @Prop({ type: Number, default: 1 })
+  xpBoostMultiplier: number
+
   createdAt?: Date
   updatedAt?: Date
 }
@@ -98,3 +101,6 @@ export class PvpMatch {
 export const PvpMatchSchema = SchemaFactory.createForClass(PvpMatch)
 PvpMatchSchema.index({ user1Id: 1, status: 1 })
 PvpMatchSchema.index({ user2Id: 1, status: 1 })
+// Compound indexes for match history queries (filter by userId + status, sort by resolvedAt)
+PvpMatchSchema.index({ user1Id: 1, status: 1, resolvedAt: -1 })
+PvpMatchSchema.index({ user2Id: 1, status: 1, resolvedAt: -1 })

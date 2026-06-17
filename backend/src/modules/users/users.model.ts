@@ -71,6 +71,9 @@ export class User {
   @Prop({ type: Boolean, default: false })
   hasWonFirstPvpDuel: boolean
 
+  @Prop({ type: Boolean, default: false })
+  hasUsedBronzeBoost: boolean
+
   @Prop({ type: Number, default: 0 })
   pvpTicketsSubmittedCount: number
 
@@ -100,6 +103,10 @@ UserSchema.index(
   { email: 1 },
   { unique: true, partialFilterExpression: { email: { $type: "string" } } },
 )
+// Compound index for PvP leaderboard queries (sort by arenaXp descending, filter by isOnboarded)
+UserSchema.index({ isOnboarded: 1, arenaXp: -1 })
+// Compound index for referee list sorting by XP
+UserSchema.index({ referredById: 1, arenaXp: -1 })
 
 @Schema({ timestamps: true, versionKey: false })
 export class Follow {
