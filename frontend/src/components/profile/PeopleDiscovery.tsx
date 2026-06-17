@@ -3,23 +3,15 @@
 import Link from "next/link"
 import { Users } from "lucide-react"
 import FollowButton from "@/components/profile/FollowButton"
-import { useFeed } from "@/hooks/useFeed"
+import { useTopPredictorsQuery } from "@/store/verity/verityQueries"
 import { displayHandle, displayName, type Profile } from "@/lib/verity"
 
 export default function PeopleDiscovery() {
-  const { items, loading } = useFeed()
-  const people = Array.from(
-    new Map(items.map((item) => [item.author.id, item.author])).values(),
-  )
-    .map((person) => {
-      const accuracy =
-        person.freeVotesTotal && person.freeVotesTotal > 0
-          ? Math.round(((person.freeVotesCorrect || 0) / person.freeVotesTotal) * 100)
-          : 0
-      return { person, accuracy }
-    })
-    .sort((a, b) => b.accuracy - a.accuracy)
-    .slice(0, 4)
+  const { data: topPredictors = [], isLoading: isPredictorsLoading } = useTopPredictorsQuery()
+  const people = topPredictors.slice(0, 4).map(person => ({
+    person,
+    accuracy: (person as any).accuracy || 0
+  }))
 
   return (
     <section className="verity-card overflow-hidden">
@@ -30,7 +22,7 @@ export default function PeopleDiscovery() {
         </h2>
       </div>
 
-      {loading ? (
+      {isPredictorsLoading ? (
         <div className="grid gap-0 sm:grid-cols-2 animate-pulse">
           {[1, 2, 3, 4].map((i) => (
             <div

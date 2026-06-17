@@ -47,7 +47,15 @@ export default function ProfileEditor() {
     )
 
   const { data: positions = [], isLoading: isPositionsLoading } =
-    useUserPortfolioQuery(activeTab === "predictions" ? profile?.id || "" : "")
+    useUserPortfolioQuery(profile?.id || "")
+
+  const resolvedPositions = positions.filter(pos => pos.status === "resolved" && pos.resolved_outcome !== null)
+  const wonPositions = resolvedPositions.filter(pos => pos.resolved_outcome === pos.side)
+  
+  const accuracy =
+    resolvedPositions.length > 0
+      ? Math.round((wonPositions.length / resolvedPositions.length) * 100)
+      : 0
 
   const isTabLoading =
     activeTab === "markets"
@@ -234,6 +242,9 @@ export default function ProfileEditor() {
               </button>
               <span className="font-mono text-xs text-ash">
                 {marketItems.length} markets
+              </span>
+              <span className="font-mono text-xs text-ash">
+                {accuracy}% accuracy
               </span>
               {isConnected && profile && (
                 <span className="font-mono text-xs text-ash font-semibold dark:text-indigo-400">

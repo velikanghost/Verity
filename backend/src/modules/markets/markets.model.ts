@@ -310,6 +310,9 @@ export class MarketPosition {
   @Prop({ type: Number, default: 0 })
   realizedPnl: number
 
+  @Prop({ type: Boolean, default: false })
+  isArchived: boolean
+
   createdAt?: Date
   updatedAt?: Date
 }

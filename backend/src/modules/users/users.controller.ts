@@ -128,6 +128,16 @@ export class UsersController {
     return { following }
   }
 
+  @Get("top-predictors")
+  @ApiOperation({ summary: "Get top predictors ranked by accuracy" })
+  @ApiResponse({
+    status: 200,
+    description: "Top predictors retrieved successfully.",
+  })
+  async getTopPredictors() {
+    return this.marketsService.getTopPredictors(10)
+  }
+
   @Get(":idOrUsername")
   @ApiOperation({ summary: "Get user profile by ID or username" })
   @ApiParam({ name: "idOrUsername", description: "User ID or username" })

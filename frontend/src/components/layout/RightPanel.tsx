@@ -6,14 +6,14 @@ import { Search, TrendingUp, Trophy } from "lucide-react"
 import { useFeed } from "@/hooks/useFeed"
 import { useRightPanelSlot } from "@/hooks/useRightPanelSlot"
 import { displayHandle, displayName } from "@/lib/verity"
+import { useTopPredictorsQuery } from "@/store/verity/verityQueries"
 
 export default function RightPanel() {
   const { items, loading } = useFeed(undefined, true)
   const marketItems = items.filter((item) => item.market)
   const trending = marketItems.slice(0, 3)
-  const predictors = Array.from(
-    new Map(items.map((item) => [item.author.id, item.author])).values(),
-  ).slice(0, 3)
+  const { data: topPredictors = [], isLoading: isPredictorsLoading } = useTopPredictorsQuery()
+  const predictors = topPredictors.slice(0, 3)
   const slotContent = useRightPanelSlot()
 
   return (
@@ -112,7 +112,7 @@ export default function RightPanel() {
           </div>
 
           <div className="flex flex-col">
-            {loading ? (
+            {isPredictorsLoading ? (
               <div className="flex flex-col animate-pulse">
                 {[1, 2, 3].map((i) => (
                   <div
