@@ -244,7 +244,9 @@ function RelatedMarketsPanel({
               {item.market?.question}
             </p>
             <p className="mt-2 font-mono text-xs text-ash">
-              {item.market?.category?.toLowerCase() === "pvp" ? "PvP" : item.market?.category || "Market"}
+              {item.market?.category?.toLowerCase() === "pvp"
+                ? "PvP"
+                : item.market?.category || "Market"}
             </p>
           </button>
         ))

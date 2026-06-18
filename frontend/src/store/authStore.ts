@@ -4,8 +4,6 @@ import type { Profile } from "@/lib/verity"
 
 import { queryClient } from "@/lib/queryClient"
 
-
-
 export interface AuthStore {
   authModalStep: "idle" | "email" | "otp" | "onboarding" | "success"
   email: string
@@ -17,8 +15,6 @@ export interface AuthStore {
   authError: string
   copied: boolean
 
-
-
   setAuthModalStep: (
     step: "idle" | "email" | "otp" | "onboarding" | "success",
   ) => void
@@ -29,15 +25,12 @@ export interface AuthStore {
   setAuthError: (error: string) => void
   setCopied: (copied: boolean) => void
 
-
   login: () => void
   logout: () => void
-
 
   handleRequestOtp: (e: React.FormEvent) => Promise<void>
   handleVerifyOtp: (e: React.FormEvent) => Promise<void>
   handleSaveOnboarding: (e: React.FormEvent) => Promise<void>
-
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -50,8 +43,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isRequestingOtp: false,
   authError: "",
   copied: false,
-
-
 
   setAuthModalStep: (authModalStep) => {
     if (authModalStep === "idle" || authModalStep === "success") {
@@ -67,7 +58,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   setAuthError: (authError) => set({ authError }),
   setCopied: (copied) => set({ copied }),
 
-
   login: () => {
     set({ authModalStep: "email", authError: "", email: "", otpCode: "" })
   },
@@ -77,8 +67,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     queryClient.setQueryData(["profile"], null)
     queryClient.invalidateQueries()
   },
-
-
 
   handleRequestOtp: async (e) => {
     e.preventDefault()
@@ -189,6 +177,4 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({ isSubmittingOtp: false })
     }
   },
-
-
 }))

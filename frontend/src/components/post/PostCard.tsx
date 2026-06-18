@@ -115,46 +115,46 @@ export default function PostCard({
           {content}
         </p>
 
-      <div
-        className="flex max-w-full items-center justify-between border-t border-dashed border-stone-surface pt-2 text-ash sm:max-w-[360px]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button
-          aria-label="Comment"
-          className="clickable-icon group flex items-center gap-2 px-1 text-ash hover:text-foreground"
-          onClick={onComment}
-          type="button"
+        <div
+          className="flex max-w-full items-center justify-between border-t border-dashed border-stone-surface pt-2 text-ash sm:max-w-[360px]"
+          onClick={(event) => event.stopPropagation()}
         >
-          <span className="rounded-full p-2">
-            <MessageCircle className="h-4 w-4" />
-          </span>
-          <span className="text-xs">{comments}</span>
-        </button>
+          <button
+            aria-label="Comment"
+            className="clickable-icon group flex items-center gap-2 px-1 text-ash hover:text-foreground"
+            onClick={onComment}
+            type="button"
+          >
+            <span className="rounded-full p-2">
+              <MessageCircle className="h-4 w-4" />
+            </span>
+            <span className="text-xs">{comments}</span>
+          </button>
 
-        <button
-          aria-label="Like"
-          aria-pressed={liked}
-          className={`clickable-icon group flex items-center gap-2 px-1 hover:text-ember-orange ${liked ? "text-ember-orange" : "text-ash"}`}
-          onClick={onLike}
-          type="button"
-        >
-          <span className="rounded-full p-2">
-            <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
-          </span>
-          <span className="text-xs">{likes}</span>
-        </button>
+          <button
+            aria-label="Like"
+            aria-pressed={liked}
+            className={`clickable-icon group flex items-center gap-2 px-1 hover:text-ember-orange ${liked ? "text-ember-orange" : "text-ash"}`}
+            onClick={onLike}
+            type="button"
+          >
+            <span className="rounded-full p-2">
+              <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+            </span>
+            <span className="text-xs">{likes}</span>
+          </button>
 
-        <button
-          aria-label="Share"
-          className="clickable-icon group flex items-center gap-2 px-1 text-ash hover:text-foreground"
-          onClick={onShare}
-          type="button"
-        >
-          <span className="rounded-full p-2">
-            <Share className="h-4 w-4" />
-          </span>
-        </button>
-      </div>
+          <button
+            aria-label="Share"
+            className="clickable-icon group flex items-center gap-2 px-1 text-ash hover:text-foreground"
+            onClick={onShare}
+            type="button"
+          >
+            <span className="rounded-full p-2">
+              <Share className="h-4 w-4" />
+            </span>
+          </button>
+        </div>
       </div>
     </article>
   )

@@ -1,10 +1,4 @@
-import {
-  Trophy,
-  Target,
-  Flag,
-  Swords,
-  RectangleVertical,
-} from "lucide-react"
+import { Trophy, Target, Flag, Swords, RectangleVertical } from "lucide-react"
 
 /* ──────────────────────────────────────────────
    Category metadata helper

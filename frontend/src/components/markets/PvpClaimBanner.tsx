@@ -1,3 +1,4 @@
+import { Trophy } from "lucide-react"
 import { useMemo } from "react"
 
 interface PvpClaimBannerProps {
@@ -29,7 +30,8 @@ export default function PvpClaimBanner({
   )
 
   const totalWinnings = useMemo(
-    () => claimablePicks.reduce((acc: number, p: any) => acc + (p.shares ?? 0), 0),
+    () =>
+      claimablePicks.reduce((acc: number, p: any) => acc + (p.shares ?? 0), 0),
     [claimablePicks],
   )
 
@@ -53,26 +55,22 @@ export default function PvpClaimBanner({
     <div
       className={`p-4 rounded-xl bg-meadow-green/10 border border-meadow-green/20 flex flex-col md:flex-row items-center justify-between gap-3 text-left ${className}`}
     >
-      <div className="flex items-center gap-2">
-        {showEmoji && <span className="text-xl">🏆</span>}
+      <div className="flex items-center gap-3">
+        <span className="text-4xl">🏆</span>
         <div>
           <h4 className="text-sm font-bold text-meadow-green font-sans">
-            {showEmoji
-              ? "You have unclaimed winnings!"
-              : "You have unclaimed winnings from your last duel!"}
+            You have unclaimed winnings!
           </h4>
           <p className="text-xs text-ash mt-0.5 font-medium font-sans">
-            Claim {totalWinnings.toFixed(2)} USDC from {claimablePicks.length}{" "}
-            winning{" "}
-            {claimablePicks.length === 1 ? "proposition" : "propositions"}.
+            Claim {totalWinnings.toFixed(2)} USDC.
           </p>
         </div>
       </div>
       <button
         onClick={handleClaimAll}
-        className="px-4 py-2 rounded-[8px] bg-meadow-green hover:bg-meadow-green/90 text-white text-xs font-bold transition-all shadow-sm shrink-0 font-sans cursor-pointer"
+        className="px-4 py-2 rounded-[8px] bg-meadow-green hover:bg-meadow-green/90 text-white text-sm font-bold transition-all shadow-sm shrink-0 font-sans cursor-pointer"
       >
-        Claim All Winnings
+        Claim
       </button>
     </div>
   )

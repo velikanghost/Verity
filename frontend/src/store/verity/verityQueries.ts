@@ -625,7 +625,9 @@ export function usePvpStatusQuery(parentMarketId?: string | null) {
   return useQuery({
     queryKey: ["pvp-status", parentMarketId] as const,
     queryFn: () => {
-      const url = parentMarketId ? `/pvp/status?parentMarketId=${parentMarketId}` : "/pvp/status"
+      const url = parentMarketId
+        ? `/pvp/status?parentMarketId=${parentMarketId}`
+        : "/pvp/status"
       return apiRequest<any>(url)
     },
     enabled: Boolean(parentMarketId),
@@ -663,7 +665,9 @@ export function usePvpLeaderboardQuery(userId?: string) {
         currentUserXpRank: number | null
         currentUserReferral: number | null
         currentUserReferralRank: number | null
-      }>(`/pvp/leaderboards${userId ? `?userId=${encodeURIComponent(userId)}` : ""}`),
+      }>(
+        `/pvp/leaderboards${userId ? `?userId=${encodeURIComponent(userId)}` : ""}`,
+      ),
   })
 }
 
@@ -712,3 +716,22 @@ export function useCreatePvpEventMutation() {
   })
 }
 
+export function useClaimableWinningsQuery() {
+  return useQuery({
+    queryKey: ["pvp-claimable-winnings"] as const,
+    queryFn: () =>
+      apiRequest<{
+        claimableMarketIds: string[]
+        totalWinningsUsdc: number
+        claimablePicks: Array<{
+          marketId: string
+          parentMarketId: string
+          eventQuestion: string
+          optionName: string
+          selection: string
+          shares: number
+        }>
+      }>("/pvp/claimable-winnings"),
+    staleTime: 30000, // Cache for 30s to avoid excessive on-chain reads
+  })
+}

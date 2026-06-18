@@ -33,7 +33,6 @@ export interface Profile {
   pvpMatchesDrawnCount?: number
 }
 
-
 export interface MarketPost {
   id: string
   post_id: string
@@ -253,12 +252,23 @@ function clampMarketPrice(price: number) {
 }
 
 export function getMarketPrice(
-  market: Pick<MarketPost, "usdc_yes_amount" | "usdc_no_amount" | "outcomeCount" | "outcomes" | "outcomePrices">,
+  market: Pick<
+    MarketPost,
+    | "usdc_yes_amount"
+    | "usdc_no_amount"
+    | "outcomeCount"
+    | "outcomes"
+    | "outcomePrices"
+  >,
   side: VoteSide,
 ) {
   if (market.outcomeCount && market.outcomeCount > 2) {
     const idx = market.outcomes?.indexOf(side) ?? -1
-    if (idx >= 0 && market.outcomePrices && market.outcomePrices[idx] !== undefined) {
+    if (
+      idx >= 0 &&
+      market.outcomePrices &&
+      market.outcomePrices[idx] !== undefined
+    ) {
       return clampMarketPrice(market.outcomePrices[idx])
     }
     return 1 / market.outcomeCount

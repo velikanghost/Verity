@@ -30,7 +30,8 @@ export default function MobileNav() {
             item.href === "/"
               ? pathname === "/"
               : pathname === item.href.split("?")[0]
-          const isAuthRequired = item.href === "/profile" || item.href === "/portfolio"
+          const isAuthRequired =
+            item.href === "/profile" || item.href === "/portfolio"
           return (
             <Link
               className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-[10px] px-1 py-2 text-[10px] font-medium tracking-[-0.12px] ${

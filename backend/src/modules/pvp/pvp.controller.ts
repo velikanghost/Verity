@@ -105,6 +105,16 @@ export class PvpController {
     return this.pvpService.getMatchHistory(req.user.id)
   }
 
+  @Get("claimable-winnings")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Retrieve all unclaimed winning picks across all resolved PvP events for the authenticated user",
+  })
+  async getClaimableWinnings(@Request() req: any) {
+    return this.pvpService.getClaimableWinnings(req.user.id)
+  }
+
   @Get("admin-status")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

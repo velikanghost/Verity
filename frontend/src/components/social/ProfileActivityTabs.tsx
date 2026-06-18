@@ -17,7 +17,13 @@ import {
   type MarketPosition,
 } from "@/lib/verity"
 import { useRouter } from "next/navigation"
-import { ArrowUpRight, Swords, Timer, ChevronRight, ChevronLeft } from "lucide-react"
+import {
+  ArrowUpRight,
+  Swords,
+  Timer,
+  ChevronRight,
+  ChevronLeft,
+} from "lucide-react"
 
 export type ProfileActivityTab = "predictions" | "markets" | "activity"
 
@@ -40,7 +46,9 @@ export default function ProfileActivityTabs({
   onOpenPost,
   loading = false,
 }: ProfileActivityTabsProps) {
-  const [predictionFilter, setPredictionFilter] = useState<"all" | "unresolved" | "resolved" | "won" | "lost">("all")
+  const [predictionFilter, setPredictionFilter] = useState<
+    "all" | "unresolved" | "resolved" | "won" | "lost"
+  >("all")
   const [predictionPage, setPredictionPage] = useState(1)
   const PREDICTIONS_PER_PAGE = 5
 
@@ -52,149 +60,162 @@ export default function ProfileActivityTabs({
     const filteredPositions = positions.filter((pos) => {
       if (predictionFilter === "resolved") return pos.status === "resolved"
       if (predictionFilter === "unresolved") return pos.status !== "resolved"
-      if (predictionFilter === "won") return pos.status === "resolved" && pos.resolved_outcome === pos.side
-      if (predictionFilter === "lost") return pos.status === "resolved" && pos.resolved_outcome !== pos.side && pos.resolved_outcome !== null
+      if (predictionFilter === "won")
+        return pos.status === "resolved" && pos.resolved_outcome === pos.side
+      if (predictionFilter === "lost")
+        return (
+          pos.status === "resolved" &&
+          pos.resolved_outcome !== pos.side &&
+          pos.resolved_outcome !== null
+        )
       return true
     })
 
-    const totalPages = Math.ceil(filteredPositions.length / PREDICTIONS_PER_PAGE)
+    const totalPages = Math.ceil(
+      filteredPositions.length / PREDICTIONS_PER_PAGE,
+    )
     const paginatedPositions = filteredPositions.slice(
       (predictionPage - 1) * PREDICTIONS_PER_PAGE,
-      predictionPage * PREDICTIONS_PER_PAGE
+      predictionPage * PREDICTIONS_PER_PAGE,
     )
 
     return (
       <section className="flex flex-col gap-3">
         <div className="flex gap-2 flex-wrap">
-          {(["all", "unresolved", "resolved", "won", "lost"] as const).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => {
-                setPredictionFilter(filter)
-                setPredictionPage(1)
-              }}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                predictionFilter === filter
-                  ? "bg-black/10 dark:bg-white/10 text-charcoal-primary dark:text-white font-bold"
-                  : "bg-stone-surface dark:bg-stone-800/50 text-ash dark:text-stone-400 font-bold hover:text-charcoal-primary dark:hover:text-white"
-              }`}
-            >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </button>
-          ))}
+          {(["all", "unresolved", "resolved", "won", "lost"] as const).map(
+            (filter) => (
+              <button
+                key={filter}
+                onClick={() => {
+                  setPredictionFilter(filter)
+                  setPredictionPage(1)
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                  predictionFilter === filter
+                    ? "bg-black/10 dark:bg-white/10 text-charcoal-primary dark:text-white font-bold"
+                    : "bg-stone-surface dark:bg-stone-800/50 text-ash dark:text-stone-400 font-bold hover:text-charcoal-primary dark:hover:text-white"
+                }`}
+              >
+                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              </button>
+            ),
+          )}
         </div>
         {paginatedPositions.length > 0 ? (
           <>
             {paginatedPositions.map((pos) => {
               const isYes = pos.side === "YES"
-            const currentPrice =
-              pos.status === "resolved"
-                ? pos.resolved_outcome === pos.side
-                  ? 1.0
-                  : 0.0
-                : getMarketPrice(
-                    {
-                      usdc_yes_amount: pos.usdc_yes_amount ?? 0,
-                      usdc_no_amount: pos.usdc_no_amount ?? 0,
-                    },
-                    pos.side,
-                  )
-            const currentValue = pos.shares * currentPrice
-            const unrealizedPnL = currentValue - (pos.invested_usdc || 0)
+              const currentPrice =
+                pos.status === "resolved"
+                  ? pos.resolved_outcome === pos.side
+                    ? 1.0
+                    : 0.0
+                  : getMarketPrice(
+                      {
+                        usdc_yes_amount: pos.usdc_yes_amount ?? 0,
+                        usdc_no_amount: pos.usdc_no_amount ?? 0,
+                      },
+                      pos.side,
+                    )
+              const currentValue = pos.shares * currentPrice
+              const unrealizedPnL = currentValue - (pos.invested_usdc || 0)
 
-            const isPvp = pos.category?.toLowerCase() === "pvp"
-            const href = isPvp
-              ? "/markets?tab=pvp-arena"
-              : `/markets/${pos.market_id}`
+              const isPvp = pos.category?.toLowerCase() === "pvp"
+              const href = isPvp
+                ? "/markets?tab=pvp-arena"
+                : `/markets/${pos.market_id}`
 
-            return (
-              <div
-                key={pos.id}
-                className="flex flex-col gap-3 p-4 bg-stone-surface rounded-[12px] border border-border sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 flex-1">
-                  <span
-                    className={`verity-pill inline-flex items-center px-2 py-0.5 font-mono text-[9px] font-semibold ${
-                      isYes
-                        ? "bg-meadow-green/10 text-meadow-green"
-                        : "bg-ember-orange/10 text-ember-orange"
-                    }`}
-                  >
-                    {pos.side}
-                  </span>
-                  <h4
-                    className="mt-1.5 text-xs font-semibold leading-normal text-charcoal-primary truncate"
-                    title={pos.market_question || ""}
-                  >
-                    {pos.market_question ||
-                      `Market ID: ${pos.market_id.slice(0, 10)}`}
-                  </h4>
-                </div>
-                <div className="flex items-center gap-4 font-mono text-xs text-right shrink-0">
-                  <div>
-                    <span className="block text-[8px] text-ash uppercase">
-                      Shares
-                    </span>
-                    <span className="font-semibold text-charcoal-primary">
-                      {pos.shares.toFixed(2)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[8px] text-ash uppercase">
-                      Cost
-                    </span>
-                    <span className="font-semibold text-charcoal-primary">
-                      ${pos.invested_usdc.toFixed(2)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[8px] text-ash uppercase">
-                      P&L
-                    </span>
+              return (
+                <div
+                  key={pos.id}
+                  className="flex flex-col gap-3 p-4 bg-stone-surface rounded-[12px] border border-border sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 flex-1">
                     <span
-                      className={`font-semibold ${unrealizedPnL >= 0 ? "text-meadow-green" : "text-ember-orange"}`}
+                      className={`verity-pill inline-flex items-center px-2 py-0.5 font-mono text-[9px] font-semibold ${
+                        isYes
+                          ? "bg-meadow-green/10 text-meadow-green"
+                          : "bg-ember-orange/10 text-ember-orange"
+                      }`}
                     >
-                      {unrealizedPnL >= 0 ? "+" : ""}
-                      {unrealizedPnL.toFixed(2)}
+                      {pos.side}
                     </span>
+                    <h4
+                      className="mt-1.5 text-xs font-semibold leading-normal text-charcoal-primary truncate"
+                      title={pos.market_question || ""}
+                    >
+                      {pos.market_question ||
+                        `Market ID: ${pos.market_id.slice(0, 10)}`}
+                    </h4>
                   </div>
-                  <Link
-                    href={href}
-                    className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white border border-border hover:bg-stone-surface transition-colors cursor-pointer text-ash hover:text-charcoal-primary"
-                  >
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
+                  <div className="flex items-center gap-4 font-mono text-xs text-right shrink-0">
+                    <div>
+                      <span className="block text-[8px] text-ash uppercase">
+                        Shares
+                      </span>
+                      <span className="font-semibold text-charcoal-primary">
+                        {pos.shares.toFixed(2)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[8px] text-ash uppercase">
+                        Cost
+                      </span>
+                      <span className="font-semibold text-charcoal-primary">
+                        ${pos.invested_usdc.toFixed(2)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[8px] text-ash uppercase">
+                        P&L
+                      </span>
+                      <span
+                        className={`font-semibold ${unrealizedPnL >= 0 ? "text-meadow-green" : "text-ember-orange"}`}
+                      >
+                        {unrealizedPnL >= 0 ? "+" : ""}
+                        {unrealizedPnL.toFixed(2)}
+                      </span>
+                    </div>
+                    <Link
+                      href={href}
+                      className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white border border-border hover:bg-stone-surface transition-colors cursor-pointer text-ash hover:text-charcoal-primary"
+                    >
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 </div>
+              )
+            })}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                <button
+                  onClick={() => setPredictionPage((p) => Math.max(1, p - 1))}
+                  disabled={predictionPage === 1}
+                  aria-label="Previous page"
+                  className="p-2 rounded-lg border border-border bg-white dark:bg-stone-900 text-charcoal-primary dark:text-white shadow-sm disabled:opacity-50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <span className="text-sm font-semibold text-charcoal-primary dark:text-white">
+                  Page {predictionPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() =>
+                    setPredictionPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={predictionPage === totalPages}
+                  aria-label="Next page"
+                  className="p-2 rounded-lg border border-border bg-white dark:bg-stone-900 text-charcoal-primary dark:text-white shadow-sm disabled:opacity-50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
               </div>
-            )
-          })}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-              <button
-                onClick={() => setPredictionPage((p) => Math.max(1, p - 1))}
-                disabled={predictionPage === 1}
-                aria-label="Previous page"
-                className="p-2 rounded-lg border border-border bg-white dark:bg-stone-900 text-charcoal-primary dark:text-white shadow-sm disabled:opacity-50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <span className="text-sm font-semibold text-charcoal-primary dark:text-white">
-                Page {predictionPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPredictionPage((p) => Math.min(totalPages, p + 1))}
-                disabled={predictionPage === totalPages}
-                aria-label="Next page"
-                className="p-2 rounded-lg border border-border bg-white dark:bg-stone-900 text-charcoal-primary dark:text-white shadow-sm disabled:opacity-50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          )}
+            )}
           </>
         ) : (
           <div className="verity-card p-8 text-center text-sm tracking-[-0.18px] text-ash">
-            No {predictionFilter !== "all" ? predictionFilter : ""} predictions found.
+            No {predictionFilter !== "all" ? predictionFilter : ""} predictions
+            found.
           </div>
         )}
       </section>

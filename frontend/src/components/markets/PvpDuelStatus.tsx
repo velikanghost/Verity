@@ -44,7 +44,9 @@ function DuelAvatar({
 
   const blobBg = getAvatarColor(username)
   return (
-    <div className={`verity-blob h-10 w-10 shrink-0 ${blobBg} ring-2 ring-white dark:ring-zinc-900`}>
+    <div
+      className={`verity-blob h-10 w-10 shrink-0 ${blobBg} ring-2 ring-white dark:ring-zinc-900`}
+    >
       <span className="verity-blob-smile" />
     </div>
   )
@@ -106,7 +108,8 @@ export default function PvpDuelStatus({
         : "text-ash"
 
   const userAvatarUrl = profile?.avatar_url || profile?.avatarUrl
-  const opponentAvatarUrl = pvpStatus.opponent?.avatar_url || pvpStatus.opponent?.avatarUrl
+  const opponentAvatarUrl =
+    pvpStatus.opponent?.avatar_url || pvpStatus.opponent?.avatarUrl
 
   return (
     <div className="verity-card p-5 bg-white dark:bg-zinc-900/30 border border-border dark:border-zinc-800 flex flex-col gap-4">
@@ -158,7 +161,10 @@ export default function PvpDuelStatus({
               </strong>
             </span>
           </div>
-          <DuelAvatar avatarUrl={opponentAvatarUrl} username={pvpStatus.opponent?.username || "Opponent"} />
+          <DuelAvatar
+            avatarUrl={opponentAvatarUrl}
+            username={pvpStatus.opponent?.username || "Opponent"}
+          />
         </div>
       </div>
 

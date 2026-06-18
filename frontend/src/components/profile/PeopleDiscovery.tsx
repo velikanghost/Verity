@@ -7,10 +7,11 @@ import { useTopPredictorsQuery } from "@/store/verity/verityQueries"
 import { displayHandle, displayName, type Profile } from "@/lib/verity"
 
 export default function PeopleDiscovery() {
-  const { data: topPredictors = [], isLoading: isPredictorsLoading } = useTopPredictorsQuery()
-  const people = topPredictors.slice(0, 4).map(person => ({
+  const { data: topPredictors = [], isLoading: isPredictorsLoading } =
+    useTopPredictorsQuery()
+  const people = topPredictors.slice(0, 4).map((person) => ({
     person,
-    accuracy: (person as any).accuracy || 0
+    accuracy: (person as any).accuracy || 0,
   }))
 
   return (
@@ -55,7 +56,13 @@ export default function PeopleDiscovery() {
   )
 }
 
-function PersonCard({ person, accuracy }: { person: Profile; accuracy: number }) {
+function PersonCard({
+  person,
+  accuracy,
+}: {
+  person: Profile
+  accuracy: number
+}) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-dashed border-stone-surface p-4 transition-colors hover:bg-parchment-card sm:p-5 sm:odd:border-r">
       <Link

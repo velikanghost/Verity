@@ -3,9 +3,21 @@
 import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { Search, Swords, Timer, ChevronRight, MessageCircle, ArrowUp, ArrowDown, Share } from "lucide-react"
+import {
+  Search,
+  Swords,
+  Timer,
+  ChevronRight,
+  MessageCircle,
+  ArrowUp,
+  ArrowDown,
+  Share,
+} from "lucide-react"
 import { toast } from "@/lib/toast"
-import { useCastFreeVoteMutation, useDailyVotesQuery } from "@/store/verity/verityQueries"
+import {
+  useCastFreeVoteMutation,
+  useDailyVotesQuery,
+} from "@/store/verity/verityQueries"
 import { calculateYesPercent, displayHandle } from "@/lib/verity"
 
 function getPhaseTag(status: string) {
@@ -254,7 +266,9 @@ export default function StandardMarketsFeed({
                 <div className="flex items-center justify-between gap-3 mb-2 font-mono text-[10px]">
                   <div className="flex items-center gap-1.5">
                     <span className="px-2 py-0.5 rounded-full bg-parchment-card text-charcoal-primary shadow-subtle uppercase tracking-wider font-semibold">
-                      {market.category?.toLowerCase() === "pvp" ? "PvP" : market.category}
+                      {market.category?.toLowerCase() === "pvp"
+                        ? "PvP"
+                        : market.category}
                     </span>
                   </div>
                   <span className="text-ash uppercase">by {creatorLabel}</span>
@@ -350,25 +364,35 @@ export default function StandardMarketsFeed({
                     aria-label={`Upvote ${market.question}`}
                     aria-pressed={item.viewerVote === "YES"}
                     className={`clickable-icon group flex items-center gap-2 px-1 hover:text-meadow-green ${
-                      item.viewerVote === "YES" ? "text-meadow-green" : "text-ash"
+                      item.viewerVote === "YES"
+                        ? "text-meadow-green"
+                        : "text-ash"
                     }`}
-                    disabled={Boolean(item.viewerVote) || dailyVotesRemaining <= 0}
+                    disabled={
+                      Boolean(item.viewerVote) || dailyVotesRemaining <= 0
+                    }
                     onClick={() => handleFreeVote(market.id, "YES")}
                     type="button"
                   >
                     <span className="rounded-full p-2">
                       <ArrowUp className="h-4 w-4" />
                     </span>
-                    <span className="text-xs">{market.free_yes_votes ?? 0}</span>
+                    <span className="text-xs">
+                      {market.free_yes_votes ?? 0}
+                    </span>
                   </button>
 
                   <button
                     aria-label={`Downvote ${market.question}`}
                     aria-pressed={item.viewerVote === "NO"}
                     className={`clickable-icon group flex items-center gap-2 px-1 hover:text-ember-orange ${
-                      item.viewerVote === "NO" ? "text-ember-orange" : "text-ash"
+                      item.viewerVote === "NO"
+                        ? "text-ember-orange"
+                        : "text-ash"
                     }`}
-                    disabled={Boolean(item.viewerVote) || dailyVotesRemaining <= 0}
+                    disabled={
+                      Boolean(item.viewerVote) || dailyVotesRemaining <= 0
+                    }
                     onClick={() => handleFreeVote(market.id, "NO")}
                     type="button"
                   >
@@ -382,9 +406,9 @@ export default function StandardMarketsFeed({
                     aria-label={`Share ${market.question}`}
                     className="clickable-icon group flex items-center gap-2 px-1 text-ash hover:text-foreground"
                     onClick={() => {
-                      const url = `${window.location.origin}/markets/${market.id}`;
-                      navigator.clipboard.writeText(url);
-                      toast.success("Market link copied to clipboard!");
+                      const url = `${window.location.origin}/markets/${market.id}`
+                      navigator.clipboard.writeText(url)
+                      toast.success("Market link copied to clipboard!")
                     }}
                     type="button"
                   >

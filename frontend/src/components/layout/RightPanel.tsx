@@ -12,7 +12,8 @@ export default function RightPanel() {
   const { items, loading } = useFeed(undefined, true)
   const marketItems = items.filter((item) => item.market)
   const trending = marketItems.slice(0, 3)
-  const { data: topPredictors = [], isLoading: isPredictorsLoading } = useTopPredictorsQuery()
+  const { data: topPredictors = [], isLoading: isPredictorsLoading } =
+    useTopPredictorsQuery()
   const predictors = topPredictors.slice(0, 3)
   const slotContent = useRightPanelSlot()
 
@@ -76,7 +77,10 @@ export default function RightPanel() {
                   key={item.id}
                 >
                   <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ash">
-                    Trending in {market?.category?.toLowerCase() === "pvp" ? "PvP" : market?.category || "Markets"}
+                    Trending in{" "}
+                    {market?.category?.toLowerCase() === "pvp"
+                      ? "PvP"
+                      : market?.category || "Markets"}
                   </span>
                   <p className="line-clamp-2 text-sm font-semibold leading-snug tracking-[-0.18px] text-charcoal-primary">
                     {market?.question}

@@ -49,9 +49,13 @@ export default function ProfileEditor() {
   const { data: positions = [], isLoading: isPositionsLoading } =
     useUserPortfolioQuery(profile?.id || "")
 
-  const resolvedPositions = positions.filter(pos => pos.status === "resolved" && pos.resolved_outcome !== null)
-  const wonPositions = resolvedPositions.filter(pos => pos.resolved_outcome === pos.side)
-  
+  const resolvedPositions = positions.filter(
+    (pos) => pos.status === "resolved" && pos.resolved_outcome !== null,
+  )
+  const wonPositions = resolvedPositions.filter(
+    (pos) => pos.resolved_outcome === pos.side,
+  )
+
   const accuracy =
     resolvedPositions.length > 0
       ? Math.round((wonPositions.length / resolvedPositions.length) * 100)

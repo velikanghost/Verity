@@ -174,8 +174,6 @@ export default function MarketCard({
             <span className="font-mono">{time}</span>
           </div>
         </div>
-
-
       </div>
 
       {postContent && postContent !== question && (

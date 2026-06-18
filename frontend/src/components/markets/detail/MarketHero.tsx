@@ -58,7 +58,6 @@ export default function MarketHero({
           </strong>
         </span>
       </div>
-
     </section>
   )
 }

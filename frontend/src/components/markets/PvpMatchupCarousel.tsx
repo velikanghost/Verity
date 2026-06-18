@@ -203,7 +203,10 @@ export default function PvpMatchupCarousel({
     // Ensure the selected matchup is always included in the carousel list even if it is an older closed matchup
     if (selectedPvpEventId) {
       const isSelectedClosed = closed.find((e) => e.id === selectedPvpEventId)
-      if (isSelectedClosed && !limitedClosed.some((e) => e.id === selectedPvpEventId)) {
+      if (
+        isSelectedClosed &&
+        !limitedClosed.some((e) => e.id === selectedPvpEventId)
+      ) {
         limitedClosed.push(isSelectedClosed)
         limitedClosed.sort((a, b) => {
           const timeA = new Date(a.lockTime || a.deadline || 0).getTime()

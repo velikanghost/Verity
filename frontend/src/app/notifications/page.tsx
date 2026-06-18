@@ -150,11 +150,9 @@ export default function NotificationsPage() {
                     ) {
                       router.push(`/markets/${notification.targetId}`)
                     } else if (
-                      [
-                        "pvp_matched",
-                        "pvp_resolved",
-                        "pvp_boost",
-                      ].includes(notification.type?.toLowerCase())
+                      ["pvp_matched", "pvp_resolved", "pvp_boost"].includes(
+                        notification.type?.toLowerCase(),
+                      )
                     ) {
                       router.push(`/markets?tab=pvp-arena`)
                     } else {

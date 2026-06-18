@@ -4,9 +4,7 @@ interface PvpDuelPicksProps {
   pvpStatus: any
 }
 
-export default function PvpDuelPicks({
-  pvpStatus,
-}: PvpDuelPicksProps) {
+export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
   const picks = pvpStatus.ticket?.picks || []
 
   const question = pvpStatus.event?.question || ""
@@ -49,7 +47,6 @@ export default function PvpDuelPicks({
           </p>
         </div>
       </div>
-
 
       {/* Per-pick rows */}
       <div className="space-y-3">

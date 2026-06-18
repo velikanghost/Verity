@@ -1,6 +1,11 @@
 "use client"
 
-import { MarketPost, VoteSide, MarketPosition, getMarketPrice } from "@/lib/verity"
+import {
+  MarketPost,
+  VoteSide,
+  MarketPosition,
+  getMarketPrice,
+} from "@/lib/verity"
 
 interface PositionPanelProps {
   freeVote: VoteSide | null

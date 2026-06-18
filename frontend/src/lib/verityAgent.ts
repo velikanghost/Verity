@@ -50,8 +50,6 @@ export function reviewPredictionPost(input: MarketInput): VerityAgentReview {
     })
   }
 
-
-
   if (question && !hasNumber(`${question} ${yesCondition} ${noCondition}`)) {
     findings.push({
       severity: "blocker",

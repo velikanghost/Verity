@@ -618,7 +618,8 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
             disabled={
               Boolean(actionPending) ||
               activeMarket.status !== "tradable" ||
-              new Date() >= new Date(activeMarket.lockTime || activeMarket.deadline) ||
+              new Date() >=
+                new Date(activeMarket.lockTime || activeMarket.deadline) ||
               !validTradeAmount
             }
             estimatedShares={buyShares}
@@ -733,7 +734,10 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           <div className="h-5 w-40 bg-stone-200 dark:bg-zinc-700 rounded" />
           <div className="grid gap-3 sm:grid-cols-2 mt-2">
             {[1, 2].map((i) => (
-              <div key={i} className="border border-border dark:border-zinc-800 rounded-xl p-4 space-y-4">
+              <div
+                key={i}
+                className="border border-border dark:border-zinc-800 rounded-xl p-4 space-y-4"
+              >
                 <div className="flex items-center gap-3">
                   <div className="h-4.5 w-4.5 rounded-full bg-stone-200 dark:bg-zinc-700" />
                   <div className="h-4 w-32 bg-stone-200 dark:bg-zinc-700 rounded" />

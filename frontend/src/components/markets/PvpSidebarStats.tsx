@@ -1,7 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useMemo } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@/lib/toast"
+import { useClaimableWinningsQuery } from "@/store/verity/verityQueries"
+import { useMarketResolution } from "@/hooks/useMarketResolution"
+import { Loader2, Trophy } from "lucide-react"
 
 interface PvpSidebarStatsProps {
   profile: any
@@ -13,6 +17,37 @@ export default function PvpSidebarStats({
   referralsData,
 }: PvpSidebarStatsProps) {
   const [copiedCode, setCopiedCode] = useState(false)
+  const queryClient = useQueryClient()
+  const { redeemMultipleWinnings } = useMarketResolution()
+  const { data: claimableData } = useClaimableWinningsQuery()
+  const [isClaiming, setIsClaiming] = useState(false)
+
+  const handleClaimAll = useCallback(async () => {
+    if (!claimableData || claimableData.claimableMarketIds.length === 0) return
+
+    setIsClaiming(true)
+    try {
+      await redeemMultipleWinnings(
+        claimableData.claimableMarketIds,
+        claimableData.totalWinningsUsdc,
+      )
+      toast.success("Successfully claimed all winnings!")
+
+      // Invalidate relevant queries after successful claim
+      void queryClient.invalidateQueries({
+        queryKey: ["pvp-claimable-winnings"],
+      })
+      void queryClient.invalidateQueries({ queryKey: ["pvp-status"] })
+      void queryClient.invalidateQueries({
+        queryKey: ["pvp-my-active-tickets"],
+      })
+    } catch (err) {
+      console.error("Failed to claim all winnings:", err)
+      toast.error("Failed to claim winnings.")
+    } finally {
+      setIsClaiming(false)
+    }
+  }, [claimableData, redeemMultipleWinnings, queryClient])
 
   function handleCopyReferral() {
     if (!referralsData?.referralLink) return
@@ -22,6 +57,16 @@ export default function PvpSidebarStats({
     toast.success("Referral link copied!")
     setTimeout(() => setCopiedCode(false), 2000)
   }
+
+  const hasClaimable = useMemo(() => {
+    if (!claimableData || claimableData.totalWinningsUsdc <= 0) return false
+
+    // Group claimable picks by parentMarketId to count unique events/matchups
+    const uniqueEvents = new Set(
+      claimableData.claimablePicks?.map((p: any) => p.parentMarketId) || [],
+    )
+    return uniqueEvents.size > 2
+  }, [claimableData])
 
   return (
     <div className="verity-card p-5 bg-white dark:bg-zinc-900/30 flex flex-col gap-4">
@@ -41,6 +86,35 @@ export default function PvpSidebarStats({
           {profile?.arenaXp ?? 0}
         </strong>
       </div>
+
+      {/* Unclaimed Winnings Box */}
+      {hasClaimable && (
+        <div className="rounded-2xl bg-[#FAF9F6] dark:bg-zinc-900/40 p-4 shadow-inner text-center border border-stone-200/20 dark:border-zinc-850/10 flex flex-col items-center gap-2">
+          <span className="text-[10px] font-mono text-ash uppercase font-bold tracking-wider block">
+            Unclaimed Winnings
+          </span>
+          <strong className="text-3xl font-bold font-mono text-charcoal-primary dark:text-white block mt-1">
+            {claimableData?.totalWinningsUsdc.toFixed(2)}
+            <span className="text-sm font-sans text-ash font-medium">
+              {" "}
+              USDC
+            </span>
+          </strong>
+          <button
+            onClick={handleClaimAll}
+            disabled={isClaiming}
+            className="w-full mt-2 py-3 rounded-lg bg-charcoal-primary dark:bg-white text-white dark:text-zinc-950 hover:opacity-90 active:opacity-100 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 font-sans cursor-pointer"
+          >
+            {isClaiming ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </>
+            ) : (
+              <>Claim All</>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Record Details Row */}
       <div className="flex items-center justify-between text-xs font-sans border-b border-dashed border-border dark:border-zinc-800 pb-3 mt-1">

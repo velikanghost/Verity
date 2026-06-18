@@ -2117,6 +2117,167 @@ export class PvpService {
     return result
   }
 
+  async getClaimableWinnings(userId: string) {
+    const user = await this.userModel.findById(userId)
+    if (!user) throw new NotFoundException("User not found.")
+
+    // Limit to last 30 days for performance
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+    // Find all resolved tickets for this user within the time window
+    const resolvedTickets = await this.pvpTicketModel.find({
+      userId: new Types.ObjectId(userId),
+      status: "resolved",
+      updatedAt: { $gte: thirtyDaysAgo },
+    })
+
+    if (resolvedTickets.length === 0) {
+      return { claimableMarketIds: [], totalWinningsUsdc: 0, claimablePicks: [] }
+    }
+
+    // Collect all winning picks (isCorrect === true)
+    const winningPicks: {
+      marketId: Types.ObjectId
+      parentMarketId: Types.ObjectId
+      selection: string
+    }[] = []
+
+    for (const ticket of resolvedTickets) {
+      for (const pick of ticket.picks) {
+        if (pick.isCorrect === true) {
+          winningPicks.push({
+            marketId: pick.marketId,
+            parentMarketId: ticket.parentMarketId,
+            selection: pick.selection,
+          })
+        }
+      }
+    }
+
+    if (winningPicks.length === 0) {
+      return { claimableMarketIds: [], totalWinningsUsdc: 0, claimablePicks: [] }
+    }
+
+    // Deduplicate market IDs (user could have same child market across tickets, though unlikely)
+    const uniqueMarketIds = [
+      ...new Set(winningPicks.map((p) => p.marketId.toString())),
+    ]
+
+    // Fetch all relevant child markets and parent markets in parallel
+    const uniqueParentIds = [
+      ...new Set(winningPicks.map((p) => p.parentMarketId.toString())),
+    ]
+    const [childMarkets, parentMarkets] = await Promise.all([
+      this.marketModel.find({
+        _id: { $in: uniqueMarketIds.map((id) => new Types.ObjectId(id)) },
+      }),
+      this.marketModel.find({
+        _id: { $in: uniqueParentIds.map((id) => new Types.ObjectId(id)) },
+      }),
+    ])
+
+    const childMap = new Map<string, any>()
+    for (const child of childMarkets) {
+      childMap.set(child._id.toString(), child)
+    }
+
+    const parentMap = new Map<string, any>()
+    for (const parent of parentMarkets) {
+      parentMap.set(parent._id.toString(), parent)
+    }
+
+    // Verify on-chain balances to find truly claimable picks
+    if (!user.walletAddress) {
+      return { claimableMarketIds: [], totalWinningsUsdc: 0, claimablePicks: [] }
+    }
+
+    // Build batch queries for on-chain balance check
+    // We only need the winning outcome's balance for each market
+    const batchQueries: { marketId: string; outcomes: string[] }[] = []
+    for (const marketIdStr of uniqueMarketIds) {
+      const child = childMap.get(marketIdStr)
+      if (!child) continue
+
+      const outcomes =
+        child.outcomes && child.outcomes.length > 0
+          ? child.outcomes
+          : ["YES", "NO"]
+      batchQueries.push({ marketId: marketIdStr, outcomes })
+    }
+
+    let balancesMap: Record<string, Record<string, number>> = {}
+    try {
+      balancesMap = await this.blockchainService.getUserOnChainBalancesBatch(
+        batchQueries,
+        user.walletAddress,
+      )
+    } catch (err) {
+      this.logger.error(
+        `Failed to batch read on-chain balances for claimable winnings: ${err.message}`,
+      )
+      return { claimableMarketIds: [], totalWinningsUsdc: 0, claimablePicks: [] }
+    }
+
+    // Filter to only picks where the user still holds tokens on-chain
+    const claimablePicks: any[] = []
+    const claimableMarketIds: string[] = []
+    let totalWinningsUsdc = 0
+
+    for (const pick of winningPicks) {
+      const marketIdStr = pick.marketId.toString()
+      const child = childMap.get(marketIdStr)
+      if (!child) continue
+
+      const onChain = balancesMap[marketIdStr]
+      if (!onChain) continue
+
+      // Determine the normalized side for balance lookup
+      const isMulti = child.outcomeCount && child.outcomeCount > 2
+      let balance = 0
+
+      if (isMulti) {
+        balance = onChain[pick.selection] ?? 0
+      } else {
+        // For binary markets, map selection to outcome name for balance lookup
+        const outcomes =
+          child.outcomes && child.outcomes.length > 0
+            ? child.outcomes
+            : ["YES", "NO"]
+        if (pick.selection === "YES") {
+          balance = onChain[outcomes[0]] ?? 0
+        } else if (pick.selection === "NO") {
+          balance = onChain[outcomes[1]] ?? 0
+        } else {
+          balance = onChain[pick.selection] ?? 0
+        }
+      }
+
+      if (balance > 0) {
+        // Avoid duplicate market IDs in the final list
+        if (!claimableMarketIds.includes(marketIdStr)) {
+          claimableMarketIds.push(marketIdStr)
+        }
+
+        const parent = parentMap.get(pick.parentMarketId.toString())
+        claimablePicks.push({
+          marketId: marketIdStr,
+          parentMarketId: pick.parentMarketId.toString(),
+          eventQuestion: parent?.question || "PvP Event",
+          optionName: child.optionName || child.question || "Unknown",
+          selection: pick.selection,
+          shares: balance,
+        })
+        totalWinningsUsdc += balance
+      }
+    }
+
+    return {
+      claimableMarketIds,
+      totalWinningsUsdc,
+      claimablePicks,
+    }
+  }
+
   async getAdminStatus(adminId: string) {
     const admin = await this.userModel.findById(adminId)
     if (!admin || admin.role !== "admin") {
