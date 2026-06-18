@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@/lib/toast"
 import { useClaimableWinningsQuery } from "@/store/verity/verityQueries"
 import { useMarketResolution } from "@/hooks/useMarketResolution"
-import { Loader2, Trophy } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 interface PvpSidebarStatsProps {
   profile: any
@@ -31,7 +31,6 @@ export default function PvpSidebarStats({
         claimableData.claimableMarketIds,
         claimableData.totalWinningsUsdc,
       )
-      toast.success("Successfully claimed all winnings!")
 
       // Invalidate relevant queries after successful claim
       void queryClient.invalidateQueries({
