@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { HelpCircle, ChevronRight, Check } from "lucide-react"
+import { useUsdcBalance } from "@/hooks/useUsdcBalance"
 import ArenaCategory, { getCategoryMeta } from "./PvpArenaCategory"
 import { getCountryFlag } from "./PvpMatchupCarousel"
 
@@ -120,6 +121,7 @@ export default function PvpTicketBuilder({
   onAddLiquidity,
 }: PvpTicketBuilderProps) {
   const selectionCount = Object.keys(pvpSelections).length
+  const { rawBalance, formattedBalance } = useUsdcBalance()
 
   const totalVolume = useMemo(() => {
     if (!selectedPvpEvent?.options) return 0
@@ -256,41 +258,46 @@ export default function PvpTicketBuilder({
           )}
 
           {/* Bet amount settings */}
-          <div className="flex flex-col gap-3 bg-stone-100/50 dark:bg-zinc-900/30 p-4 rounded-xl border border-border/60 dark:border-zinc-800/40 mt-4 mb-2">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex flex-col gap-3.5 bg-stone-100/50 dark:bg-zinc-900/30 p-4 rounded-xl border border-border/60 dark:border-zinc-800/40 mt-4 mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
               <div className="space-y-0.5">
                 <span className="text-xs font-mono font-bold text-ash uppercase block">
                   Bet Amount per selection
                 </span>
-                <span className="text-[10px] text-ash">
+                <span className="text-[10px] text-ash block">
                   Each selected option will be purchased for this amount.
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min="1"
-                  max="1000"
-                  value={
-                    betAmountPerSelection === 0 ? "" : betAmountPerSelection
-                  }
-                  disabled={isSubmitting}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    if (val === "") {
-                      onSetBetAmount(0)
-                    } else {
-                      onSetBetAmount(Number(val))
-                    }
-                  }}
-                  className="w-20 h-9 px-2 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white focus-visible:ring-1 focus-visible:ring-indigo-500 text-right disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                <span className="text-xs font-mono font-bold text-charcoal-primary dark:text-zinc-400">
-                  USDC
+              <div className="flex flex-col gap-1 w-full sm:w-auto">
+                <span className="text-[10px] font-mono text-ash/80 sm:hidden block text-right">
+                  Balance: {formattedBalance} USDC
                 </span>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={
+                      betAmountPerSelection === 0 ? "" : betAmountPerSelection
+                    }
+                    disabled={isSubmitting}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === "") {
+                        onSetBetAmount(0)
+                      } else {
+                        onSetBetAmount(Number(val))
+                      }
+                    }}
+                    className="w-full sm:w-20 h-9 px-3 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <span className="text-xs font-mono font-bold text-charcoal-primary dark:text-zinc-400">
+                    USDC
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center justify-between border-t border-dashed border-border/60 dark:border-zinc-800/60 pt-2.5 mt-1">
+            <div className="flex items-center justify-between border-t border-dashed border-border/60 dark:border-zinc-800/60 pt-2.5 mt-0.5">
               <span className="text-xs font-mono text-ash font-bold uppercase">
                 Total Ticket Cost ({selectionCount} Selections)
               </span>
@@ -302,31 +309,26 @@ export default function PvpTicketBuilder({
 
           {/* XP boost indicator and submit button */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-t border-border dark:border-zinc-800 pt-4 mt-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               {referralsData?.welcomeBoosts?.isEligible &&
               referralsData.welcomeBoosts.nextGameMultiplier > 1.2 ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/40 text-[11px] font-bold text-indigo-700 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/40">
-                  Welcome Boost Active:{" "}
-                  {referralsData.welcomeBoosts.nextGameMultiplier}x XP for your{" "}
-                  {referralsData.welcomeBoosts.ticketsCount === 0
-                    ? "1st"
-                    : "2nd"}{" "}
-                  game!
+                <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm w-full sm:w-auto">
+                  ⚡ Welcome Boost: {referralsData.welcomeBoosts.nextGameMultiplier}x XP ({referralsData.welcomeBoosts.ticketsCount === 0 ? "1st" : "2nd"} game)
                 </span>
               ) : referralsData?.downtimeBoostRemaining &&
                 referralsData.downtimeBoostRemaining > 0 ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-[11px] font-bold text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40">
-                  Boost: 2x ({referralsData.downtimeBoostRemaining} remaining)
+                <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-500/10 dark:bg-amber-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm w-full sm:w-auto">
+                  ⚡ Boost: 2x ({referralsData.downtimeBoostRemaining} remaining)
                 </span>
               ) : (
-                <span className="text-xs font-mono text-ash">
-                  Boosts Remaining:{" "}
-                  <strong className="text-charcoal-primary dark:text-white">
+                <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-ash/80 text-center w-full sm:w-auto block">
+                  ⚡ Boosts Remaining:{" "}
+                  <strong className="text-charcoal-primary dark:text-white font-mono font-bold">
                     {referralsData?.doubleBoostRemaining ?? 0}
                   </strong>
                   {referralsData &&
                     referralsData.doubleBoostRemaining > 0 &&
-                    " (Auto-active 1.2x XP)"}
+                    " (Auto 1.2x XP)"}
                 </span>
               )}
             </div>

@@ -134,5 +134,13 @@ export class PvpController {
   async getAdminMetrics(@Request() req: any) {
     return this.pvpService.getAdminMetrics(req.user.id)
   }
+
+  @Get("public-metrics")
+  @ApiOperation({
+    summary: "Public: Get system database metrics and platform statistics",
+  })
+  async getPublicMetrics() {
+    return this.pvpService.getPublicMetrics()
+  }
 }
 

@@ -2349,111 +2349,151 @@ export class PvpService {
     }
   }
 
-  async getAdminMetrics(adminId: string) {
-    const admin = await this.userModel.findById(adminId)
-    if (!admin || admin.role !== "admin") {
-      throw new ForbiddenException("Only admins can fetch admin metrics.")
-    }
-
+  private async calculateSystemMetrics() {
     const botUsernames = BOT_PROFILES.map((b) => b.username)
 
     // 1. Users count
     const totalUsers = await this.userModel.countDocuments()
-    const botsCount = await this.userModel.countDocuments({
-      username: { $in: botUsernames },
-    })
+    
+    // Get bot user IDs first
+    const bots = await this.userModel
+      .find({ username: { $in: botUsernames } }, { _id: 1 })
+      .lean()
+    const botUserIds = new Set(bots.map((b) => b._id.toString()))
+    const botsCount = botUserIds.size
     const realUsersCount = Math.max(0, totalUsers - botsCount)
 
     // 2. PvP User Stats
-    const tickets = await this.pvpTicketModel
-      .find({}, { userId: 1, status: 1 })
-      .lean()
-    const ticketUserIds = [...new Set(tickets.map((t) => t.userId.toString()))]
-    const ticketUsers = await this.userModel
-      .find({ _id: { $in: ticketUserIds } }, { username: 1 })
-      .lean()
-
-    const botUserIdsSet = new Set(
-      ticketUsers
-        .filter((u) => botUsernames.includes(u.username))
-        .map((u) => u._id.toString()),
-    )
+    // Group tickets by userId and status using aggregation to avoid downloading thousands of documents
+    const ticketStatsList = await this.pvpTicketModel.aggregate([
+      { $match: { status: { $ne: "cancelled" } } },
+      {
+        $group: {
+          _id: "$userId",
+          hasPlayed: {
+            $max: {
+              $cond: [
+                { $in: ["$status", ["matched", "resolved"]] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      }
+    ])
 
     let realUsersSubmittedCount = 0
     let botUsersSubmittedCount = 0
     let realUsersPlayedCount = 0
     let botUsersPlayedCount = 0
 
-    const uniqueUsersWithTicketsAll = new Set<string>()
-    const uniqueUsersWithMatchedTickets = new Set<string>()
+    for (const stats of ticketStatsList) {
+      if (!stats._id) continue
+      const uIdStr = stats._id.toString()
+      const isBot = botUserIds.has(uIdStr)
 
-    for (const t of tickets) {
-      const uIdStr = t.userId.toString()
-      uniqueUsersWithTicketsAll.add(uIdStr)
-      if (["matched", "resolved"].includes(t.status)) {
-        uniqueUsersWithMatchedTickets.add(uIdStr)
-      }
-    }
-
-    for (const uid of uniqueUsersWithTicketsAll) {
-      if (botUserIdsSet.has(uid)) {
+      if (isBot) {
         botUsersSubmittedCount++
+        if (stats.hasPlayed === 1) {
+          botUsersPlayedCount++
+        }
       } else {
         realUsersSubmittedCount++
+        if (stats.hasPlayed === 1) {
+          realUsersPlayedCount++
+        }
       }
     }
 
-    for (const uid of uniqueUsersWithMatchedTickets) {
-      if (botUserIdsSet.has(uid)) {
-        botUsersPlayedCount++
-      } else {
-        realUsersPlayedCount++
-      }
-    }
+    const uniqueUsersWithTicketsAllSize = ticketStatsList.length
+    const uniqueUsersWithMatchedTicketsSize = ticketStatsList.filter(s => s.hasPlayed === 1).length
 
     // 3. Count PvP Matches
     const totalPvpMatches = await this.pvpMatchModel.countDocuments()
 
     // 4. Sum USDC volume and fees from MarketTrades
-    const trades = await this.marketTradeModel
-      .find({}, { amountUsdc: 1, feeUsdc: 1, marketId: 1 })
-      .lean()
-    const marketsList = await this.marketModel
-      .find({}, { category: 1, creationFeeTxHash: 1, marketCreationFeeUsdc: 1 })
-      .lean()
-    const marketMap = new Map(marketsList.map((m) => [m._id.toString(), m]))
-
-    let totalVolume = 0
-    let totalFees = 0
-    let pvpVolume = 0
-    let pvpFees = 0
-    let standardVolume = 0
-    let standardFees = 0
-
-    for (const trade of trades) {
-      const amount = Number(trade.amountUsdc || 0)
-      const fee = Number(trade.feeUsdc || 0)
-
-      totalVolume += amount
-      totalFees += fee
-
-      const mId = trade.marketId.toString()
-      const market = marketMap.get(mId)
-      if (market && market.category === "pvp") {
-        pvpVolume += amount
-        pvpFees += fee
-      } else {
-        standardVolume += amount
-        standardFees += fee
+    // We group by market category by looking up in markets collection
+    const tradeStatsList = await this.marketTradeModel.aggregate([
+      {
+        $lookup: {
+          from: "markets",
+          localField: "marketId",
+          foreignField: "_id",
+          as: "market"
+        }
+      },
+      {
+        $unwind: {
+          path: "$market",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          overallVolume: { $sum: "$amountUsdc" },
+          overallFees: { $sum: "$feeUsdc" },
+          pvpVolume: {
+            $sum: {
+              $cond: [
+                { $eq: ["$market.category", "pvp"] },
+                "$amountUsdc",
+                0
+              ]
+            }
+          },
+          pvpFees: {
+            $sum: {
+              $cond: [
+                { $eq: ["$market.category", "pvp"] },
+                "$feeUsdc",
+                0
+              ]
+            }
+          },
+          standardVolume: {
+            $sum: {
+              $cond: [
+                { $ne: ["$market.category", "pvp"] },
+                "$amountUsdc",
+                0
+              ]
+            }
+          },
+          standardFees: {
+            $sum: {
+              $cond: [
+                { $ne: ["$market.category", "pvp"] },
+                "$feeUsdc",
+                0
+              ]
+            }
+          }
+        }
       }
+    ])
+
+    const tradeStats = tradeStatsList[0] || {
+      overallVolume: 0,
+      overallFees: 0,
+      pvpVolume: 0,
+      pvpFees: 0,
+      standardVolume: 0,
+      standardFees: 0
     }
 
-    let creationFeesCollected = 0
-    for (const market of marketsList) {
-      if (market.creationFeeTxHash) {
-        creationFeesCollected += Number(market.marketCreationFeeUsdc || 0)
+    // 5. Creation fees collected
+    const creationFeeStatsList = await this.marketModel.aggregate([
+      { $match: { creationFeeTxHash: { $ne: null } } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$marketCreationFeeUsdc" }
+        }
       }
-    }
+    ])
+    const creationFeesCollected = creationFeeStatsList[0]?.total || 0
 
     return {
       users: {
@@ -2463,27 +2503,39 @@ export class PvpService {
       },
       pvpUsers: {
         submitted: {
-          total: uniqueUsersWithTicketsAll.size,
+          total: uniqueUsersWithTicketsAllSize,
           real: realUsersSubmittedCount,
           bots: botUsersSubmittedCount,
         },
         played: {
-          total: uniqueUsersWithMatchedTickets.size,
+          total: uniqueUsersWithMatchedTicketsSize,
           real: realUsersPlayedCount,
           bots: botUsersPlayedCount,
         },
       },
       pvpMatchesCount: totalPvpMatches,
       volumeAndFees: {
-        overallVolume: totalVolume,
-        overallFees: totalFees,
-        standardVolume,
-        standardFees,
-        pvpVolume,
-        pvpFees,
+        overallVolume: tradeStats.overallVolume,
+        overallFees: tradeStats.overallFees,
+        standardVolume: tradeStats.standardVolume,
+        standardFees: tradeStats.standardFees,
+        pvpVolume: tradeStats.pvpVolume,
+        pvpFees: tradeStats.pvpFees,
         creationFeesCollected,
-        combinedFees: totalFees + creationFeesCollected,
+        combinedFees: tradeStats.overallFees + creationFeesCollected,
       },
     }
+  }
+
+  async getAdminMetrics(adminId: string) {
+    const admin = await this.userModel.findById(adminId)
+    if (!admin || admin.role !== "admin") {
+      throw new ForbiddenException("Only admins can fetch admin metrics.")
+    }
+    return this.calculateSystemMetrics()
+  }
+
+  async getPublicMetrics() {
+    return this.calculateSystemMetrics()
   }
 }
