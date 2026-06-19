@@ -313,6 +313,11 @@ export default function PvpTicketBuilder({
                     : "2nd"}{" "}
                   game!
                 </span>
+              ) : referralsData?.downtimeBoostRemaining &&
+                referralsData.downtimeBoostRemaining > 0 ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-[11px] font-bold text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40">
+                  Boost: 2x ({referralsData.downtimeBoostRemaining} remaining)
+                </span>
               ) : (
                 <span className="text-xs font-mono text-ash">
                   Boosts Remaining:{" "}

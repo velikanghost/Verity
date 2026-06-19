@@ -68,6 +68,9 @@ export class User {
   @Prop({ type: Number, default: 0 })
   doubleBoostRemaining: number
 
+  @Prop({ type: Number, default: 0 })
+  downtimeBoostRemaining: number
+
   @Prop({ type: Boolean, default: false })
   hasWonFirstPvpDuel: boolean
 
