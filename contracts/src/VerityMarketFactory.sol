@@ -21,6 +21,7 @@ contract VerityMarketFactory {
     IPyth public immutable PYTH;
     address public admin;
     address public optimisticResolver;
+    uint256 public marketCreationFee;
 
     struct PreMarketDeposit {
         address lp;
@@ -30,7 +31,7 @@ contract VerityMarketFactory {
     struct MarketInfo {
         address creator;
         uint256 deadline; // Market trading deadline
-        uint256 fundingDeadline; // Deadline to reach MIN_POOL_BALANCE, else auto-void
+        uint256 fundingDeadline; // Deadline to reach minPoolBalance, else auto-void
         bool registered;
         bool funded; // Creator has deposited initial USDC
         bool resolved;
@@ -77,6 +78,7 @@ contract VerityMarketFactory {
     event MarketResolved(bytes32 indexed marketId, bool winningIsYes);
     event MarketVoided(bytes32 indexed marketId);
     event OptimisticResolverUpdated(address resolver);
+    event MarketCreationFeeUpdated(uint256 newFee);
 
     // ─── Errors ──────────────────────────────────────────────────────────
     error Unauthorized();
@@ -110,6 +112,7 @@ contract VerityMarketFactory {
         USDC = IERC20(_usdc);
         PYTH = IPyth(_pyth);
         admin = msg.sender;
+        marketCreationFee = 1e6; // Default to 1 USDC (6 decimals)
     }
 
     function transferAdmin(address _newAdmin) external onlyAdmin {
@@ -119,6 +122,11 @@ contract VerityMarketFactory {
     function setOptimisticResolver(address _resolver) external onlyAdmin {
         optimisticResolver = _resolver;
         emit OptimisticResolverUpdated(_resolver);
+    }
+
+    function setMarketCreationFee(uint256 _fee) external onlyAdmin {
+        marketCreationFee = _fee;
+        emit MarketCreationFeeUpdated(_fee);
     }
 
     // ─── Market Registration ─────────────────────────────────────────────
@@ -132,17 +140,18 @@ contract VerityMarketFactory {
     ) external {
         MarketInfo storage info = marketRegistry[marketId];
         if (info.creator != address(0)) revert MarketAlreadyRegistered();
-        if (creatorLpAmount < FPMM.CREATOR_MIN_LOCK())
+        if (creatorLpAmount < FPMM.creatorMinLock())
             revert InsufficientCreatorDeposit();
 
-        // 1 USDC creation fee
-        uint256 fee = 1e6;
+        uint256 fee = marketCreationFee;
 
-        // Pull 1 USDC fee + creator LP from creator
+        // Pull fee + creator LP from creator
         USDC.safeTransferFrom(msg.sender, address(this), fee + creatorLpAmount);
 
         // Send fee to FPMM's treasury
-        USDC.safeTransfer(FPMM.treasury(), fee);
+        if (fee > 0) {
+            USDC.safeTransfer(FPMM.treasury(), fee);
+        }
 
         preMarketDeposits[marketId][msg.sender] += creatorLpAmount;
 
@@ -163,17 +172,18 @@ contract VerityMarketFactory {
     ) external {
         MarketInfo storage info = marketRegistry[marketId];
         if (info.creator != address(0)) revert MarketAlreadyRegistered();
-        if (creatorLpAmount < FPMM.CREATOR_MIN_LOCK())
+        if (creatorLpAmount < FPMM.creatorMinLock())
             revert InsufficientCreatorDeposit();
 
-        // 1 USDC creation fee
-        uint256 fee = 1e6;
+        uint256 fee = marketCreationFee;
 
-        // Pull 1 USDC fee + creator LP from caller
+        // Pull fee + creator LP from caller
         USDC.safeTransferFrom(msg.sender, address(this), fee + creatorLpAmount);
 
         // Send fee to FPMM's treasury
-        USDC.safeTransfer(FPMM.treasury(), fee);
+        if (fee > 0) {
+            USDC.safeTransfer(FPMM.treasury(), fee);
+        }
 
         preMarketDeposits[marketId][beneficiary] += creatorLpAmount;
 
@@ -225,8 +235,8 @@ contract VerityMarketFactory {
 
         emit MarketRegistered(marketId, creator, deadline, fundingDeadline);
 
-        // Deploy pool if escrow balance >= MIN_POOL_BALANCE
-        if (escrowBalances[marketId] >= FPMM.MIN_POOL_BALANCE()) {
+        // Deploy pool if escrow balance >= minPoolBalance
+        if (escrowBalances[marketId] >= FPMM.minPoolBalance()) {
             info.funded = true;
             uint256 totalUsdc = escrowBalances[marketId];
             USDC.approve(address(FPMM), totalUsdc);
@@ -285,8 +295,8 @@ contract VerityMarketFactory {
             resolveAbove
         );
 
-        // Deploy pool if escrow balance >= MIN_POOL_BALANCE
-        if (escrowBalances[marketId] >= FPMM.MIN_POOL_BALANCE()) {
+        // Deploy pool if escrow balance >= minPoolBalance
+        if (escrowBalances[marketId] >= FPMM.minPoolBalance()) {
             info.funded = true;
             uint256 totalUsdc = escrowBalances[marketId];
             USDC.approve(address(FPMM), totalUsdc);
@@ -327,7 +337,7 @@ contract VerityMarketFactory {
         // Trigger pool creation if minimum threshold is met AND the market is registered
         if (
             info.registered &&
-            escrowBalances[marketId] >= FPMM.MIN_POOL_BALANCE()
+            escrowBalances[marketId] >= FPMM.minPoolBalance()
         ) {
             info.funded = true;
 
@@ -374,7 +384,7 @@ contract VerityMarketFactory {
         // Trigger pool creation if minimum threshold is met AND the market is registered
         if (
             info.registered &&
-            escrowBalances[marketId] >= FPMM.MIN_POOL_BALANCE()
+            escrowBalances[marketId] >= FPMM.minPoolBalance()
         ) {
             info.funded = true;
 

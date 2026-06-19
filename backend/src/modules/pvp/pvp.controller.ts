@@ -134,5 +134,26 @@ export class PvpController {
   async getAdminMetrics(@Request() req: any) {
     return this.pvpService.getAdminMetrics(req.user.id)
   }
+
+  @Get("contract-balances")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Admin-only: Get USDC balances held by FPMM and Factory contracts",
+  })
+  async getContractBalances(@Request() req: any) {
+    return this.pvpService.getContractBalances(req.user.id)
+  }
+
+  @Post("admin/claim-creator-liquidity")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Admin-only: Batch claim creator liquidity from all resolved PvP markets",
+  })
+  @ApiResponse({ status: 200, description: "Returns per-market claim results and summary" })
+  async batchClaimCreatorLiquidity(@Request() req: any) {
+    return this.pvpService.batchClaimCreatorLiquidity(req.user.id)
+  }
 }
 

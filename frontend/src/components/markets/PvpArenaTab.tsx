@@ -39,6 +39,8 @@ interface PvpArenaTabProps {
   referralsData: any
   selectedPvpEventId: string | null
   setSelectedPvpEventId: (id: string | null) => void
+  claimedMarketIds: Set<string>
+  setClaimedMarketIds: React.Dispatch<React.SetStateAction<Set<string>>>
 }
 
 export default function PvpArenaTab({
@@ -51,6 +53,8 @@ export default function PvpArenaTab({
   referralsData,
   selectedPvpEventId,
   setSelectedPvpEventId,
+  claimedMarketIds,
+  setClaimedMarketIds,
 }: PvpArenaTabProps) {
   const { user, executeTxBatch, closeTxConfirm } = useAuth()
   const { redeemMultipleWinnings } = useMarketResolution()
@@ -60,9 +64,6 @@ export default function PvpArenaTab({
 
   // ─── Local state ────────────────────────────────────────────
   const [mounted, setMounted] = useState<boolean>(false)
-  const [claimedMarketIds, setClaimedMarketIds] = useState<Set<string>>(
-    new Set(),
-  )
   const [showBuilderOverride, setShowBuilderOverride] = useState<boolean>(false)
   const [betAmountPerSelection, setBetAmountPerSelection] = useState<number>(5)
   const [pvpSelections, setPvpSelections] = useState<Record<string, string>>({})

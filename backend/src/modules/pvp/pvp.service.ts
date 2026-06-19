@@ -2294,6 +2294,132 @@ export class PvpService {
     }
   }
 
+  async getContractBalances(adminId: string) {
+    const admin = await this.userModel.findById(adminId)
+    if (!admin || admin.role !== "admin") {
+      throw new ForbiddenException("Only admins can fetch contract balances.")
+    }
+
+    const [fpmmBalance, factoryBalance, adminBalances] = await Promise.all([
+      this.blockchainService.getFpmmUsdcBalance(),
+      this.blockchainService.getFactoryUsdcBalance(),
+      this.blockchainService.getAdminBalances(),
+    ])
+
+    return {
+      fpmmUsdcBalance: fpmmBalance,
+      factoryUsdcBalance: factoryBalance,
+      adminUsdcBalance: adminBalances.usdcBalance,
+      adminAddress: adminBalances.address,
+    }
+  }
+
+  async batchClaimCreatorLiquidity(adminId: string) {
+    const admin = await this.userModel.findById(adminId)
+    if (!admin || admin.role !== "admin") {
+      throw new ForbiddenException("Only admins can claim creator liquidity.")
+    }
+
+    // Find all resolved PvP child markets
+    const resolvedMarkets = await this.marketModel.find({
+      category: "pvp",
+      marketType: "child",
+      status: "resolved",
+    })
+
+    const results: {
+      marketId: string
+      question: string
+      status: "claimed" | "already_claimed" | "not_resolved_onchain" | "failed"
+      txHash?: string
+      error?: string
+      creatorShares?: string
+      adminLpShares?: string
+    }[] = []
+
+    let totalClaimed = 0
+    let totalSkipped = 0
+    let totalFailed = 0
+
+    const adminAddress = this.blockchainService.getAdminAddress()
+
+    for (const market of resolvedMarkets) {
+      const marketId = market._id.toString()
+      try {
+        // Check if there is an unclaimed pre-market deposit on Factory for the admin
+        if (adminAddress) {
+          const unclaimedDeposit = await this.blockchainService.getPreMarketDeposit(marketId, adminAddress)
+          if (unclaimedDeposit > 0n) {
+            this.logger.log(`Claiming pre-market LP shares for market ${marketId} (${unclaimedDeposit.toString()} raw)`)
+            await this.blockchainService.claimPreMarketLpShares(marketId)
+          }
+        }
+
+        // Read on-chain pool state
+        const poolState = await this.blockchainService.getPoolState(marketId)
+
+        // Skip if no shares to claim
+        const totalClaimable = poolState.creatorShares + poolState.adminLpShares
+        if (totalClaimable === 0n) {
+          results.push({
+            marketId,
+            question: market.question,
+            status: "already_claimed",
+            creatorShares: "0",
+            adminLpShares: "0",
+          })
+          totalSkipped++
+          continue
+        }
+
+        // Skip if pool is not resolved on-chain
+        if (!poolState.resolved) {
+          results.push({
+            marketId,
+            question: market.question,
+            status: "not_resolved_onchain",
+            creatorShares: poolState.creatorShares.toString(),
+            adminLpShares: poolState.adminLpShares.toString(),
+          })
+          totalSkipped++
+          continue
+        }
+
+        // Claim creator liquidity
+        const txHash =
+          await this.blockchainService.adminClaimCreatorLiquidity(marketId)
+        results.push({
+          marketId,
+          question: market.question,
+          status: "claimed",
+          txHash,
+          creatorShares: poolState.creatorShares.toString(),
+          adminLpShares: poolState.adminLpShares.toString(),
+        })
+        totalClaimed++
+      } catch (error) {
+        results.push({
+          marketId,
+          question: market.question,
+          status: "failed",
+          error: error.message,
+        })
+        totalFailed++
+      }
+    }
+
+    return {
+      summary: {
+        totalMarkets: resolvedMarkets.length,
+        claimed: totalClaimed,
+        skipped: totalSkipped,
+        failed: totalFailed,
+      },
+      results,
+    }
+  }
+
+
   async getAdminMetrics(adminId: string) {
     const admin = await this.userModel.findById(adminId)
     if (!admin || admin.role !== "admin") {

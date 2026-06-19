@@ -966,6 +966,157 @@ export class BlockchainService implements OnModuleInit {
     return this.account?.address || ""
   }
 
+  async adminClaimCreatorLiquidity(marketId: string): Promise<string> {
+    if (!this.walletClient) {
+      throw new Error("Wallet client not initialized")
+    }
+
+    const formattedMarketId = this.formatMarketId(marketId)
+    try {
+      const txHash = await this.walletClient.writeContract({
+        address: this.fpmmAddress,
+        abi: this.fpmmAbi,
+        functionName: "claimCreatorLiquidity",
+        args: [formattedMarketId],
+        chain: arcTestnet,
+      })
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      if (receipt.status === "reverted") {
+        throw new Error("Transaction reverted on-chain: claimCreatorLiquidity")
+      }
+      return txHash
+    } catch (error) {
+      throw new Error(
+        `Failed to claim creator liquidity for market ${marketId}: ${error.message}`,
+      )
+    }
+  }
+
+  async getPreMarketDeposit(marketId: string, accountAddress: string): Promise<bigint> {
+    const formattedMarketId = this.formatMarketId(marketId)
+    const formattedAddress = this.formatAddress(accountAddress)
+    try {
+      const result = await this.publicClient.readContract({
+        address: this.factoryAddress,
+        abi: this.factoryAbi,
+        functionName: "preMarketDeposits",
+        args: [formattedMarketId, formattedAddress],
+      })
+      return result as bigint;
+    } catch (error) {
+      this.logger.error(`Failed to read preMarketDeposits for market ${marketId}: ${error.message}`)
+      return 0n
+    }
+  }
+
+  async claimPreMarketLpShares(marketId: string): Promise<string> {
+    if (!this.walletClient) {
+      throw new Error("Wallet client not initialized")
+    }
+
+    const formattedMarketId = this.formatMarketId(marketId)
+    try {
+      const txHash = await this.walletClient.writeContract({
+        address: this.fpmmAddress,
+        abi: this.fpmmAbi,
+        functionName: "claimPreMarketLpShares",
+        args: [formattedMarketId],
+        chain: arcTestnet,
+      })
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+      if (receipt.status === "reverted") {
+        throw new Error("Transaction reverted on-chain: claimPreMarketLpShares")
+      }
+      return txHash
+    } catch (error) {
+      throw new Error(
+        `Failed to claim pre-market LP shares for market ${marketId}: ${error.message}`,
+      )
+    }
+  }
+
+  async getFpmmUsdcBalance(): Promise<number> {
+    try {
+      const result = await this.publicClient.readContract({
+        address: this.usdcAddress,
+        abi: this.usdcAbi,
+        functionName: "balanceOf",
+        args: [this.fpmmAddress],
+      })
+      return Number(result as bigint) / 1e6
+    } catch (error) {
+      this.logger.error(`Failed to read FPMM USDC balance: ${error.message}`)
+      return 0
+    }
+  }
+
+  async getFactoryUsdcBalance(): Promise<number> {
+    try {
+      const result = await this.publicClient.readContract({
+        address: this.usdcAddress,
+        abi: this.usdcAbi,
+        functionName: "balanceOf",
+        args: [this.factoryAddress],
+      })
+      return Number(result as bigint) / 1e6
+    } catch (error) {
+      this.logger.error(`Failed to read Factory USDC balance: ${error.message}`)
+      return 0
+    }
+  }
+
+  async getPoolState(marketId: string): Promise<{
+    creatorShares: bigint
+    totalLpShares: bigint
+    creatorAddress: string
+    active: boolean
+    resolved: boolean
+    adminLpShares: bigint
+  }> {
+    const formattedMarketId = this.formatMarketId(marketId)
+    try {
+      const poolResult = await this.publicClient.readContract({
+        address: this.fpmmAddress,
+        abi: this.fpmmAbi,
+        functionName: "pools",
+        args: [formattedMarketId],
+      })
+
+      // pools returns: (yesBalance, noBalance, totalLpShares, creatorShares, creator, collectedFeesLp, collectedFeesTreasury, totalDeposited, active, resolved)
+      const pool = poolResult as any[]
+      const creatorAddress = pool[4] as string
+      const creatorShares = pool[3] as bigint
+      const totalLpShares = pool[2] as bigint
+      const active = pool[8] as boolean
+      const resolved = pool[9] as boolean
+
+      // Also read admin's lpShares for this market
+      let adminLpShares = 0n
+      if (this.account?.address) {
+        const lpResult = await this.publicClient.readContract({
+          address: this.fpmmAddress,
+          abi: this.fpmmAbi,
+          functionName: "lpShares",
+          args: [formattedMarketId, this.account.address],
+        })
+        adminLpShares = lpResult as bigint
+      }
+
+      return {
+        creatorShares,
+        totalLpShares,
+        creatorAddress,
+        active,
+        resolved,
+        adminLpShares,
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to read pool state for market ${marketId}: ${error.message}`,
+      )
+    }
+  }
+
 
   async getAdminBalances() {
     if (!this.account) {

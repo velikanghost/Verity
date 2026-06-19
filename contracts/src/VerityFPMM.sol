@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { ConditionalTokenVault } from "./ConditionalTokenVault.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ConditionalTokenVault} from "./ConditionalTokenVault.sol";
 
 interface IVerityMarketFactory {
     function escrowBalances(bytes32 marketId) external view returns (uint256);
@@ -38,13 +38,7 @@ contract VerityFPMM is ERC1155Holder {
     using SafeERC20 for IERC20;
 
     // ─── Constants ───────────────────────────────────────────────────────
-    uint256 public constant FEE_BPS = 200; // 2% trading fee
-    uint256 public constant LP_FEE_SHARE = 60; // 60% of fees → LPs
-    uint256 public constant TREASURY_FEE_SHARE = 40; // 40% of fees → treasury
     uint256 public constant BPS_DENOMINATOR = 10_000;
-    uint256 public constant MIN_POOL_BALANCE = 40e6; // 40 USDC (6 decimals)
-    uint256 public constant CREATOR_MIN_LOCK = 10e6; // 10 USDC minimum locked by creator
-    uint256 public constant LP_LOCK_DURATION = 24 hours;
     uint256 public constant PRECISION = 1e18; // For price calculations
 
     // ─── State ───────────────────────────────────────────────────────────
@@ -53,6 +47,14 @@ contract VerityFPMM is ERC1155Holder {
     address public admin;
     address public factory; // Authorized VerityMarketFactory
     address public treasury; // Verity protocol treasury for 40% fees
+
+    // ─── Config State Variables ──────────────────────────────────────────
+    uint256 public feeBps;
+    uint256 public lpFeeShare;
+    uint256 public treasuryFeeShare;
+    uint256 public minPoolBalance;
+    uint256 public creatorMinLock;
+    uint256 public lpLockDuration;
 
     struct Pool {
         uint256 yesBalance;
@@ -64,7 +66,7 @@ contract VerityFPMM is ERC1155Holder {
         uint256 collectedFeesLp;
         uint256 collectedFeesTreasury;
         uint256 totalDeposited;
-        bool active; // true once totalDeposited >= MIN_POOL_BALANCE
+        bool active; // true once totalDeposited >= minPoolBalance
         bool resolved;
     }
 
@@ -120,6 +122,14 @@ contract VerityFPMM is ERC1155Holder {
         address indexed lp,
         uint256 amount
     );
+    event FeeBpsUpdated(uint256 newFeeBps);
+    event FeeSharesUpdated(uint256 newLpShare, uint256 newTreasuryShare);
+    event PoolLimitsUpdated(
+        uint256 newMinPoolBalance,
+        uint256 newCreatorMinLock
+    );
+    event LpLockDurationUpdated(uint256 newDuration);
+    event EmergencyWithdraw(address indexed token, uint256 amount);
 
     // ─── Errors ──────────────────────────────────────────────────────────
     error Unauthorized();
@@ -134,6 +144,7 @@ contract VerityFPMM is ERC1155Holder {
     error ZeroAmount();
     error NotCreator();
     error InvalidPool();
+    error InvalidValue();
 
     // ─── Modifiers ───────────────────────────────────────────────────────
     modifier onlyFactory() {
@@ -170,6 +181,14 @@ contract VerityFPMM is ERC1155Holder {
         USDC = IERC20(_usdc);
         treasury = _treasury;
         admin = msg.sender;
+
+        // Initialize default configurations
+        feeBps = 200;
+        lpFeeShare = 60;
+        treasuryFeeShare = 40;
+        minPoolBalance = 6e6;
+        creatorMinLock = 2e6;
+        lpLockDuration = 24 hours;
     }
 
     // ─── Admin Setup ─────────────────────────────────────────────────────
@@ -185,6 +204,46 @@ contract VerityFPMM is ERC1155Holder {
         admin = _newAdmin;
     }
 
+    function setFeeBps(uint256 _feeBps) external onlyAdmin {
+        if (_feeBps > 500) revert InvalidValue(); // Cap trading fee at 5%
+        feeBps = _feeBps;
+        emit FeeBpsUpdated(_feeBps);
+    }
+
+    function setFeeShares(
+        uint256 _lpFeeShare,
+        uint256 _treasuryFeeShare
+    ) external onlyAdmin {
+        if (_lpFeeShare + _treasuryFeeShare != 100) revert InvalidValue();
+        lpFeeShare = _lpFeeShare;
+        treasuryFeeShare = _treasuryFeeShare;
+        emit FeeSharesUpdated(_lpFeeShare, _treasuryFeeShare);
+    }
+
+    function setPoolLimits(
+        uint256 _minPoolBalance,
+        uint256 _creatorMinLock
+    ) external onlyAdmin {
+        minPoolBalance = _minPoolBalance;
+        creatorMinLock = _creatorMinLock;
+        emit PoolLimitsUpdated(_minPoolBalance, _creatorMinLock);
+    }
+
+    function setLpLockDuration(uint256 _duration) external onlyAdmin {
+        if (_duration > 3 days) revert InvalidValue(); // Cap LP lock-up at 3 days
+        lpLockDuration = _duration;
+        emit LpLockDurationUpdated(_duration);
+    }
+
+    /// @notice Emergency withdrawal of tokens by admin. Safety valve for recovery.
+    /// @param token Address of the ERC20 token to withdraw
+    /// @param amount Amount to withdraw
+    function emergencyWithdraw(address token, uint256 amount) external onlyAdmin {
+        if (amount == 0) revert ZeroAmount();
+        IERC20(token).safeTransfer(msg.sender, amount);
+        emit EmergencyWithdraw(token, amount);
+    }
+
     // ─── Pool Creation (called by Factory) ───────────────────────────────
 
     /// @notice Creates the pool after the escrow threshold is reached.
@@ -193,13 +252,16 @@ contract VerityFPMM is ERC1155Holder {
         createPool(marketId, 0);
     }
 
-    function createPool(bytes32 marketId, uint256 outcomeCount) public onlyFactory {
+    function createPool(
+        bytes32 marketId,
+        uint256 outcomeCount
+    ) public onlyFactory {
         if (pools[marketId].creator != address(0)) revert PoolAlreadyExists();
 
         IVerityMarketFactory factoryContract = IVerityMarketFactory(factory);
         uint256 totalUsdc = factoryContract.escrowBalances(marketId);
 
-        if (totalUsdc < MIN_POOL_BALANCE) revert InsufficientDeposit();
+        if (totalUsdc < minPoolBalance) revert InsufficientDeposit();
 
         // Transfer total USDC from factory to this contract
         USDC.safeTransferFrom(factory, address(this), totalUsdc);
@@ -216,7 +278,12 @@ contract VerityFPMM is ERC1155Holder {
         }
 
         // Mint outcome tokens via vault
-        VAULT.mintOutcomeTokens(marketId, address(this), totalUsdc, outcomeCount);
+        VAULT.mintOutcomeTokens(
+            marketId,
+            address(this),
+            totalUsdc,
+            outcomeCount
+        );
 
         (address creator, , , , , , ) = factoryContract.marketRegistry(
             marketId
@@ -256,8 +323,8 @@ contract VerityFPMM is ERC1155Holder {
 
         if (msg.sender == pool.creator) {
             uint256 currentlyLocked = pool.creatorShares;
-            if (currentlyLocked < CREATOR_MIN_LOCK) {
-                uint256 remainingToLock = CREATOR_MIN_LOCK - currentlyLocked;
+            if (currentlyLocked < creatorMinLock) {
+                uint256 remainingToLock = creatorMinLock - currentlyLocked;
                 uint256 toLock = amount > remainingToLock
                     ? remainingToLock
                     : amount;
@@ -299,7 +366,12 @@ contract VerityFPMM is ERC1155Holder {
         }
 
         // Mint outcome tokens
-        VAULT.mintOutcomeTokens(marketId, address(this), usdcAmount, outcomeCount);
+        VAULT.mintOutcomeTokens(
+            marketId,
+            address(this),
+            usdcAmount,
+            outcomeCount
+        );
 
         // Calculate LP shares to mint
         uint256 newShares;
@@ -311,11 +383,16 @@ contract VerityFPMM is ERC1155Holder {
             for (uint256 i = 0; i < outcomeCount; i++) {
                 uint256 bal = pool.outcomeBalances[i] / 1000;
                 oldProduct = oldProduct * bal;
-                newProduct = newProduct * ((pool.outcomeBalances[i] + usdcAmount) / 1000);
+                newProduct =
+                    newProduct *
+                    ((pool.outcomeBalances[i] + usdcAmount) / 1000);
             }
             uint256 rootOld = nthRoot(oldProduct, outcomeCount);
             uint256 rootNew = nthRoot(newProduct, outcomeCount);
-            newShares = (pool.totalLpShares * rootNew) / rootOld - pool.totalLpShares;
+            newShares =
+                (pool.totalLpShares * rootNew) /
+                rootOld -
+                pool.totalLpShares;
         }
 
         // Update pool state
@@ -334,7 +411,7 @@ contract VerityFPMM is ERC1155Holder {
         lpDepositTime[marketId][msg.sender] = block.timestamp;
 
         // Check activation threshold
-        if (!pool.active && pool.totalDeposited >= MIN_POOL_BALANCE) {
+        if (!pool.active && pool.totalDeposited >= minPoolBalance) {
             pool.active = true;
             emit PoolActivated(marketId, pool.totalDeposited);
         }
@@ -369,7 +446,12 @@ contract VerityFPMM is ERC1155Holder {
         }
 
         // Mint outcome tokens
-        VAULT.mintOutcomeTokens(marketId, address(this), usdcAmount, outcomeCount);
+        VAULT.mintOutcomeTokens(
+            marketId,
+            address(this),
+            usdcAmount,
+            outcomeCount
+        );
 
         // Calculate LP shares to mint
         uint256 newShares;
@@ -381,11 +463,16 @@ contract VerityFPMM is ERC1155Holder {
             for (uint256 i = 0; i < outcomeCount; i++) {
                 uint256 bal = pool.outcomeBalances[i] / 1000;
                 oldProduct = oldProduct * bal;
-                newProduct = newProduct * ((pool.outcomeBalances[i] + usdcAmount) / 1000);
+                newProduct =
+                    newProduct *
+                    ((pool.outcomeBalances[i] + usdcAmount) / 1000);
             }
             uint256 rootOld = nthRoot(oldProduct, outcomeCount);
             uint256 rootNew = nthRoot(newProduct, outcomeCount);
-            newShares = (pool.totalLpShares * rootNew) / rootOld - pool.totalLpShares;
+            newShares =
+                (pool.totalLpShares * rootNew) /
+                rootOld -
+                pool.totalLpShares;
         }
 
         // Update pool state
@@ -404,7 +491,7 @@ contract VerityFPMM is ERC1155Holder {
         lpDepositTime[marketId][beneficiary] = block.timestamp;
 
         // Check activation threshold
-        if (!pool.active && pool.totalDeposited >= MIN_POOL_BALANCE) {
+        if (!pool.active && pool.totalDeposited >= minPoolBalance) {
             pool.active = true;
             emit PoolActivated(marketId, pool.totalDeposited);
         }
@@ -427,7 +514,7 @@ contract VerityFPMM is ERC1155Holder {
         if (!pool.resolved) {
             if (
                 block.timestamp <
-                lpDepositTime[marketId][msg.sender] + LP_LOCK_DURATION
+                lpDepositTime[marketId][msg.sender] + lpLockDuration
             ) {
                 revert LPLockActive();
             }
@@ -440,7 +527,9 @@ contract VerityFPMM is ERC1155Holder {
 
         uint256[] memory outs = new uint256[](outcomeCount);
         for (uint256 i = 0; i < outcomeCount; i++) {
-            uint256 bal = pool.outcomeBalances.length > 0 ? pool.outcomeBalances[i] : (i == 0 ? pool.yesBalance : pool.noBalance);
+            uint256 bal = pool.outcomeBalances.length > 0
+                ? pool.outcomeBalances[i]
+                : (i == 0 ? pool.yesBalance : pool.noBalance);
             outs[i] = (bal * shareAmount) / pool.totalLpShares;
         }
 
@@ -460,7 +549,9 @@ contract VerityFPMM is ERC1155Holder {
 
         if (pool.resolved) {
             // Determine if vault is resolved
-            (bool resolved, uint256 winningOutcomeIndex, , ) = VAULT.markets(marketId);
+            (bool resolved, uint256 winningOutcomeIndex, , ) = VAULT.markets(
+                marketId
+            );
             if (resolved) {
                 // Resolved market: pay out the winning portion in USDC
                 uint256 usdcOut = outs[winningOutcomeIndex];
@@ -476,7 +567,12 @@ contract VerityFPMM is ERC1155Holder {
                     }
                 }
                 if (burnAmount > 0) {
-                    VAULT.burnOutcomeTokens(marketId, address(this), burnAmount, outcomeCount);
+                    VAULT.burnOutcomeTokens(
+                        marketId,
+                        address(this),
+                        burnAmount,
+                        outcomeCount
+                    );
                     USDC.safeTransfer(msg.sender, burnAmount);
                 }
                 // Transfer dust
@@ -507,7 +603,13 @@ contract VerityFPMM is ERC1155Holder {
             }
         }
 
-        emit LiquidityRemoved(marketId, msg.sender, shareAmount, outs[0], outcomeCount > 1 ? outs[1] : 0);
+        emit LiquidityRemoved(
+            marketId,
+            msg.sender,
+            shareAmount,
+            outs[0],
+            outcomeCount > 1 ? outs[1] : 0
+        );
     }
 
     /// @notice Creator claims their locked liquidity after market resolution.
@@ -517,7 +619,7 @@ contract VerityFPMM is ERC1155Holder {
         if (msg.sender != pool.creator) revert NotCreator();
         if (!pool.resolved) revert PoolNotResolved();
 
-        uint256 creatorShareAmount = lpShares[marketId][msg.sender];
+        uint256 creatorShareAmount = lpShares[marketId][msg.sender] + pool.creatorShares;
         if (creatorShareAmount == 0) revert InsufficientShares();
 
         uint256 outcomeCount = pool.outcomeBalances.length;
@@ -527,7 +629,9 @@ contract VerityFPMM is ERC1155Holder {
 
         uint256[] memory outs = new uint256[](outcomeCount);
         for (uint256 i = 0; i < outcomeCount; i++) {
-            uint256 bal = pool.outcomeBalances.length > 0 ? pool.outcomeBalances[i] : (i == 0 ? pool.yesBalance : pool.noBalance);
+            uint256 bal = pool.outcomeBalances.length > 0
+                ? pool.outcomeBalances[i]
+                : (i == 0 ? pool.yesBalance : pool.noBalance);
             outs[i] = (bal * creatorShareAmount) / pool.totalLpShares;
         }
 
@@ -544,9 +648,12 @@ contract VerityFPMM is ERC1155Holder {
         }
         pool.totalLpShares -= creatorShareAmount;
         lpShares[marketId][msg.sender] = 0;
+        pool.creatorShares = 0;
 
         // Determine if vault is resolved
-        (bool resolved, uint256 winningOutcomeIndex, , ) = VAULT.markets(marketId);
+        (bool resolved, uint256 winningOutcomeIndex, , ) = VAULT.markets(
+            marketId
+        );
         if (resolved) {
             uint256 usdcOut = outs[winningOutcomeIndex];
             if (usdcOut > 0) {
@@ -561,7 +668,12 @@ contract VerityFPMM is ERC1155Holder {
                 }
             }
             if (burnAmount > 0) {
-                VAULT.burnOutcomeTokens(marketId, address(this), burnAmount, outcomeCount);
+                VAULT.burnOutcomeTokens(
+                    marketId,
+                    address(this),
+                    burnAmount,
+                    outcomeCount
+                );
                 USDC.safeTransfer(msg.sender, burnAmount);
             }
             // Transfer dust if any
@@ -579,7 +691,12 @@ contract VerityFPMM is ERC1155Holder {
             }
         }
 
-        emit CreatorLiquidityClaimed(marketId, msg.sender, outs[0], outcomeCount > 1 ? outs[1] : 0);
+        emit CreatorLiquidityClaimed(
+            marketId,
+            msg.sender,
+            outs[0],
+            outcomeCount > 1 ? outs[1] : 0
+        );
     }
 
     // ─── Trading ─────────────────────────────────────────────────────────
@@ -598,8 +715,8 @@ contract VerityFPMM is ERC1155Holder {
         Pool storage pool = pools[marketId];
 
         // 1. Calculate and split fee
-        uint256 fee = (usdcAmount * FEE_BPS) / BPS_DENOMINATOR;
-        uint256 feeLp = (fee * LP_FEE_SHARE) / 100;
+        uint256 fee = (usdcAmount * feeBps) / BPS_DENOMINATOR;
+        uint256 feeLp = (fee * lpFeeShare) / 100;
         uint256 feeTreasury = fee - feeLp;
         uint256 actualAmount = usdcAmount - fee;
 
@@ -735,8 +852,8 @@ contract VerityFPMM is ERC1155Holder {
         VAULT.burnPair(marketId, address(this), grossUsdc);
 
         // 4. Deduct fee
-        uint256 fee = (grossUsdc * FEE_BPS) / BPS_DENOMINATOR;
-        uint256 feeLp = (fee * LP_FEE_SHARE) / 100;
+        uint256 fee = (grossUsdc * feeBps) / BPS_DENOMINATOR;
+        uint256 feeLp = (fee * lpFeeShare) / 100;
         uint256 feeTreasury = fee - feeLp;
         usdcOut = grossUsdc - fee;
 
@@ -763,9 +880,14 @@ contract VerityFPMM is ERC1155Holder {
         pools[marketId].resolved = true;
 
         // Query winning outcome from vault
-        (bool resolved, uint256 winningOutcomeIndex, , ) = VAULT.markets(marketId);
+        (bool resolved, uint256 winningOutcomeIndex, , ) = VAULT.markets(
+            marketId
+        );
         if (resolved) {
-            uint256 winningId = VAULT.outcomeTokenId(marketId, winningOutcomeIndex);
+            uint256 winningId = VAULT.outcomeTokenId(
+                marketId,
+                winningOutcomeIndex
+            );
             uint256 winningBalance = VAULT.balanceOf(address(this), winningId);
             if (winningBalance > 0) {
                 // Redeem all winning tokens held by the pool for USDC
@@ -802,7 +924,7 @@ contract VerityFPMM is ERC1155Holder {
         if (user == pool.creator && !pool.resolved) return false;
         if (pool.resolved) return true;
         return
-            block.timestamp >= lpDepositTime[marketId][user] + LP_LOCK_DURATION;
+            block.timestamp >= lpDepositTime[marketId][user] + lpLockDuration;
     }
 
     /// @notice Get pool balances
@@ -854,8 +976,8 @@ contract VerityFPMM is ERC1155Holder {
         require(outcomeIndex < outcomeCount, "Invalid outcome index");
 
         // 1. Calculate and split fee
-        uint256 fee = (usdcAmount * FEE_BPS) / BPS_DENOMINATOR;
-        uint256 feeLp = (fee * LP_FEE_SHARE) / 100;
+        uint256 fee = (usdcAmount * feeBps) / BPS_DENOMINATOR;
+        uint256 feeLp = (fee * lpFeeShare) / 100;
         uint256 feeTreasury = fee - feeLp;
         uint256 actualAmount = usdcAmount - fee;
 
@@ -873,7 +995,12 @@ contract VerityFPMM is ERC1155Holder {
 
         // 5. Mint outcome tokens via vault
         USDC.approve(address(VAULT), actualAmount);
-        VAULT.mintOutcomeTokens(marketId, address(this), actualAmount, outcomeCount);
+        VAULT.mintOutcomeTokens(
+            marketId,
+            address(this),
+            actualAmount,
+            outcomeCount
+        );
 
         // 6. Apply multi-outcome constant product formula iteratively to prevent overflow
         uint256 outcomeBalanceNew = pool.outcomeBalances[outcomeIndex];
@@ -950,12 +1077,19 @@ contract VerityFPMM is ERC1155Holder {
         );
 
         // 2. Solve for grossUsdc using binary search
-        uint256 grossUsdc = solveSellGrossUsdc(pool.outcomeBalances, outcomeIndex, tokenAmount);
+        uint256 grossUsdc = solveSellGrossUsdc(
+            pool.outcomeBalances,
+            outcomeIndex,
+            tokenAmount
+        );
 
         // 3. Update pool balances in storage
         for (uint256 i = 0; i < outcomeCount; i++) {
             if (i == outcomeIndex) {
-                pool.outcomeBalances[i] = pool.outcomeBalances[i] + tokenAmount - grossUsdc;
+                pool.outcomeBalances[i] =
+                    pool.outcomeBalances[i] +
+                    tokenAmount -
+                    grossUsdc;
             } else {
                 pool.outcomeBalances[i] = pool.outcomeBalances[i] - grossUsdc;
             }
@@ -968,11 +1102,16 @@ contract VerityFPMM is ERC1155Holder {
         }
 
         // 5. Burn the pairs via vault
-        VAULT.burnOutcomeTokens(marketId, address(this), grossUsdc, outcomeCount);
+        VAULT.burnOutcomeTokens(
+            marketId,
+            address(this),
+            grossUsdc,
+            outcomeCount
+        );
 
         // 6. Deduct fee
-        uint256 fee = (grossUsdc * FEE_BPS) / BPS_DENOMINATOR;
-        uint256 feeLp = (fee * LP_FEE_SHARE) / 100;
+        uint256 fee = (grossUsdc * feeBps) / BPS_DENOMINATOR;
+        uint256 feeLp = (fee * lpFeeShare) / 100;
         uint256 feeTreasury = fee - feeLp;
         usdcOut = grossUsdc - fee;
 
@@ -1038,7 +1177,7 @@ contract VerityFPMM is ERC1155Holder {
         if (x == 0) return 0;
         if (n == 1) return x;
         if (n == 2) return Math.sqrt(x);
-        
+
         uint256 y = 40_000;
         uint256 yPrev = 0;
         for (uint256 i = 0; i < 30; i++) {
