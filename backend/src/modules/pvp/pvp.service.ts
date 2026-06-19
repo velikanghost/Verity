@@ -920,17 +920,25 @@ export class PvpService {
       if (ticketCount === 0) {
         xpBoostMultiplier = 2.0
         doubleBoostActive = true
-        this.logger.log(`User ${userId} qualifies for Welcome Boost 1 (2.0x XP).`)
+        this.logger.log(
+          `User ${userId} qualifies for Welcome Boost 1 (2.0x XP).`,
+        )
       } else if (ticketCount === 1) {
         xpBoostMultiplier = 1.5
         doubleBoostActive = true
-        this.logger.log(`User ${userId} qualifies for Welcome Boost 2 (1.5x XP).`)
+        this.logger.log(
+          `User ${userId} qualifies for Welcome Boost 2 (1.5x XP).`,
+        )
       }
     }
 
     // If welcome boosts were not applied, try to consume Bronze 1.5x boost
     if (!doubleBoostActive) {
-      if (user.arenaXp >= 30 && user.arenaXp <= 499 && !user.hasUsedBronzeBoost) {
+      if (
+        user.arenaXp >= 30 &&
+        user.arenaXp <= 499 &&
+        !user.hasUsedBronzeBoost
+      ) {
         const updateResult = await this.userModel.findOneAndUpdate(
           { _id: user._id, hasUsedBronzeBoost: false },
           { $set: { hasUsedBronzeBoost: true } },
@@ -1155,13 +1163,21 @@ export class PvpService {
           pick.isCorrect = isCorrect
           updated = true
 
-          // Delete losing position immediately so they don't clutter the active ticket list
+          // Archive losing position immediately so they don't clutter the active ticket list
           if (!pick.isCorrect) {
-            await this.marketPositionModel.deleteOne({
-              marketId: pick.marketId,
-              userId: ticket.userId,
-              side: pick.selection,
-            })
+            await this.marketPositionModel.updateOne(
+              {
+                marketId: pick.marketId,
+                userId: ticket.userId,
+                side: pick.selection,
+              },
+              {
+                $set: {
+                  shares: 0,
+                  isArchived: true,
+                },
+              },
+            )
           }
         }
       }
@@ -1401,11 +1417,10 @@ export class PvpService {
 
     let balancesMap: Record<string, Record<string, number>> = {}
     try {
-      balancesMap =
-        await this.blockchainService.getUserOnChainBalancesBatch(
-          batchQueries,
-          walletAddress,
-        )
+      balancesMap = await this.blockchainService.getUserOnChainBalancesBatch(
+        batchQueries,
+        walletAddress,
+      )
     } catch (err) {
       this.logger.error(
         `Error syncing position batch in syncOnChainBalances: ${err.message}`,
@@ -1428,8 +1443,7 @@ export class PvpService {
 
         const onChain = balancesMap[child._id.toString()] || {}
 
-        const isResolved =
-          child.status === "resolved" || child.resolvedOutcome
+        const isResolved = child.status === "resolved" || child.resolvedOutcome
         const winningOutcome = child.resolvedOutcome
         const isMulti = child.outcomeCount && child.outcomeCount > 2
 
@@ -1450,11 +1464,7 @@ export class PvpService {
 
         for (let idx = 0; idx < outcomes.length; idx++) {
           const outcome = outcomes[idx]
-          const normalizedSide = isMulti
-            ? outcome
-            : idx === 0
-              ? "YES"
-              : "NO"
+          const normalizedSide = isMulti ? outcome : idx === 0 ? "YES" : "NO"
 
           const balance = onChain[outcome] ?? 0
           const isLosing =
@@ -1488,13 +1498,21 @@ export class PvpService {
               )
             }
           } else {
-            // If there's a matching position, delete it
+            // If there's a matching position, archive it
             if (dbPos) {
-              await this.marketPositionModel.deleteOne({
-                marketId: child._id,
-                userId: new Types.ObjectId(userId),
-                side: normalizedSide,
-              })
+              await this.marketPositionModel.updateOne(
+                {
+                  marketId: child._id,
+                  userId: new Types.ObjectId(userId),
+                  side: normalizedSide,
+                },
+                {
+                  $set: {
+                    shares: 0,
+                    isArchived: true,
+                  },
+                },
+              )
             }
           }
         }
@@ -1533,7 +1551,8 @@ export class PvpService {
 
     const boostsToAdd = 2 - appliedBoostsCount
     if (boostsToAdd > 0) {
-      referrer.doubleBoostRemaining = (referrer.doubleBoostRemaining ?? 0) + boostsToAdd
+      referrer.doubleBoostRemaining =
+        (referrer.doubleBoostRemaining ?? 0) + boostsToAdd
       await referrer.save()
       this.logger.log(
         `Added ${boostsToAdd} boosts to referrer ${referrer._id}'s doubleBoostRemaining (applied ${appliedBoostsCount} retroactively)`,
@@ -1606,7 +1625,9 @@ export class PvpService {
         : Promise.resolve(null),
     ])
 
-    const parent = allMarkets.find((m) => m._id.toString() === parentId.toString())
+    const parent = allMarkets.find(
+      (m) => m._id.toString() === parentId.toString(),
+    )
     const children = allMarkets.filter(
       (m) => m.parentMarketId?.toString() === parentId.toString(),
     )
@@ -1617,14 +1638,11 @@ export class PvpService {
       const lastSync = this.lastSyncMap.get(syncKey) || 0
       if (Date.now() - lastSync > 10000) {
         this.lastSyncMap.set(syncKey, Date.now())
-        this.syncOnChainBalances(
-          userId,
-          user.walletAddress,
-          children,
-        ).catch((err) =>
-          this.logger.error(
-            `Background on-chain sync failed: ${err.message}`,
-          ),
+        this.syncOnChainBalances(userId, user.walletAddress, children).catch(
+          (err) =>
+            this.logger.error(
+              `Background on-chain sync failed: ${err.message}`,
+            ),
         )
       }
     }
@@ -2132,7 +2150,11 @@ export class PvpService {
     })
 
     if (resolvedTickets.length === 0) {
-      return { claimableMarketIds: [], totalWinningsUsdc: 0, claimablePicks: [] }
+      return {
+        claimableMarketIds: [],
+        totalWinningsUsdc: 0,
+        claimablePicks: [],
+      }
     }
 
     // Collect all winning picks (isCorrect === true)
@@ -2155,7 +2177,11 @@ export class PvpService {
     }
 
     if (winningPicks.length === 0) {
-      return { claimableMarketIds: [], totalWinningsUsdc: 0, claimablePicks: [] }
+      return {
+        claimableMarketIds: [],
+        totalWinningsUsdc: 0,
+        claimablePicks: [],
+      }
     }
 
     // Deduplicate market IDs (user could have same child market across tickets, though unlikely)
@@ -2188,7 +2214,11 @@ export class PvpService {
 
     // Verify on-chain balances to find truly claimable picks
     if (!user.walletAddress) {
-      return { claimableMarketIds: [], totalWinningsUsdc: 0, claimablePicks: [] }
+      return {
+        claimableMarketIds: [],
+        totalWinningsUsdc: 0,
+        claimablePicks: [],
+      }
     }
 
     // Build batch queries for on-chain balance check
@@ -2215,7 +2245,11 @@ export class PvpService {
       this.logger.error(
         `Failed to batch read on-chain balances for claimable winnings: ${err.message}`,
       )
-      return { claimableMarketIds: [], totalWinningsUsdc: 0, claimablePicks: [] }
+      return {
+        claimableMarketIds: [],
+        totalWinningsUsdc: 0,
+        claimablePicks: [],
+      }
     }
 
     // Filter to only picks where the user still holds tokens on-chain
