@@ -105,12 +105,11 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in w-full max-w-5xl mx-auto py-10 px-4">
+    <div className="flex flex-col gap-6 animate-fade-in w-full max-w-6xl mx-auto py-10 px-4">
       {/* Analytics top section */}
       <div className="flex items-center justify-between border-b border-stone-200 pb-5">
         <div>
           <h1 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2.5">
-            <BarChart4 className="h-6 w-6 text-indigo-600" />
             Verity Analytics
           </h1>
         </div>
@@ -172,10 +171,7 @@ export default function AnalyticsPage() {
             {metricsData.pvpMatchesCount}
           </span>
           <div className="text-[11px] text-stone-500 mt-1 border-t border-stone-100 pt-2">
-            Total unique PvP ticket submissions:{" "}
-            <strong className="text-stone-800 font-semibold">
-              {metricsData.pvpUsers.submitted.real}
-            </strong>
+            Total PvP ticket submissions
           </div>
         </div>
 
@@ -196,11 +192,11 @@ export default function AnalyticsPage() {
           </span>
           <div className="flex items-center justify-between text-[11px] text-emerald-800 mt-1 border-t border-emerald-100/55 pt-2">
             <span>
-              Trades: {metricsData.volumeAndFees.overallFees.toFixed(2)} USDC
+              Trades: {metricsData.volumeAndFees.overallFees.toFixed(2)}
             </span>
             <span>
               Creation:{" "}
-              {metricsData.volumeAndFees.creationFeesCollected.toFixed(2)} USDC
+              {metricsData.volumeAndFees.creationFeesCollected.toFixed(2)}
             </span>
           </div>
         </div>
