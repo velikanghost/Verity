@@ -1065,6 +1065,20 @@ export class BlockchainService implements OnModuleInit {
     }
   }
 
+  async getMinPoolBalance(): Promise<number> {
+    try {
+      const result = await this.publicClient.readContract({
+        address: this.fpmmAddress,
+        abi: this.fpmmAbi,
+        functionName: "minPoolBalance",
+      })
+      return Number(result as bigint) / 1e6
+    } catch (error) {
+      this.logger.error(`Failed to read minPoolBalance from contract: ${error.message}`)
+      return 6 // Default fallback matching new deployment limit
+    }
+  }
+
   async getPoolState(marketId: string): Promise<{
     creatorShares: bigint
     totalLpShares: bigint

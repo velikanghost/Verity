@@ -203,6 +203,8 @@ export class PvpService {
       )
     }
 
+    const minPoolBalance = await this.blockchainService.getMinPoolBalance()
+
     let post: PostDocument | null = null
     let parentMarket: MarketDocument | null = null
     const childMarketIds: Types.ObjectId[] = []
@@ -361,11 +363,11 @@ export class PvpService {
           handicap,
         })
 
-        // Pre-deposit 40 USDC on-chain
+        // Pre-deposit USDC on-chain based on contract minPoolBalance
         const preDepositTxHash =
           await this.blockchainService.adminCreateMarketPreDeposit(
             childMarketId.toString(),
-            40,
+            minPoolBalance,
           )
 
         // Register on-chain with outcomeCount
@@ -390,7 +392,7 @@ export class PvpService {
           adminId,
           adminWalletAddress,
           preDepositTxHash,
-          40,
+          minPoolBalance,
         )
 
         const updatedChild = await this.marketModel.findById(childMarketId)
@@ -2284,12 +2286,15 @@ export class PvpService {
       throw new ForbiddenException("Only admins can fetch admin status.")
     }
 
-    const balances = await this.blockchainService.getAdminBalances()
+    const [balances, minPoolBalance] = await Promise.all([
+      this.blockchainService.getAdminBalances(),
+      this.blockchainService.getMinPoolBalance(),
+    ])
     return {
       adminAddress: balances.address,
       arcBalance: balances.arcBalance,
       usdcBalance: balances.usdcBalance,
-      preDepositUsdcPerOption: 40,
+      preDepositUsdcPerOption: minPoolBalance,
       creationFeeUsdc: 1,
     }
   }

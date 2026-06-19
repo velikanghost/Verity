@@ -279,7 +279,8 @@ export default function AdminPage() {
 
   const openAddLiquidityModal = (marketId: string) => {
     setLiquidityMarketId(marketId)
-    setLiquidityAmount("40")
+    const defaultAmount = adminBalances?.preDepositUsdcPerOption?.toString() || "40"
+    setLiquidityAmount(defaultAmount)
     setIsAddLiquidityOpen(true)
   }
 

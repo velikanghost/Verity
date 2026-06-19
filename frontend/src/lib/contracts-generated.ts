@@ -512,49 +512,7 @@ export const verityFpmmAbi = [
   {
     type: "function",
     inputs: [],
-    name: "CREATOR_MIN_LOCK",
-    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    inputs: [],
-    name: "FEE_BPS",
-    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    inputs: [],
-    name: "LP_FEE_SHARE",
-    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    inputs: [],
-    name: "LP_LOCK_DURATION",
-    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    inputs: [],
-    name: "MIN_POOL_BALANCE",
-    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    inputs: [],
     name: "PRECISION",
-    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    inputs: [],
-    name: "TREASURY_FEE_SHARE",
     outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
     stateMutability: "view",
   },
@@ -672,8 +630,22 @@ export const verityFpmmAbi = [
   {
     type: "function",
     inputs: [],
+    name: "creatorMinLock",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
     name: "factory",
     outputs: [{ name: "", internalType: "address", type: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "feeBps",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
     stateMutability: "view",
   },
   {
@@ -723,6 +695,20 @@ export const verityFpmmAbi = [
   },
   {
     type: "function",
+    inputs: [],
+    name: "lpFeeShare",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "lpLockDuration",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     inputs: [
       { name: "", internalType: "bytes32", type: "bytes32" },
       { name: "", internalType: "address", type: "address" },
@@ -737,6 +723,13 @@ export const verityFpmmAbi = [
     name: "markResolved",
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "minPoolBalance",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
   },
   {
     type: "function",
@@ -837,6 +830,40 @@ export const verityFpmmAbi = [
   },
   {
     type: "function",
+    inputs: [{ name: "_feeBps", internalType: "uint256", type: "uint256" }],
+    name: "setFeeBps",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "_lpFeeShare", internalType: "uint256", type: "uint256" },
+      { name: "_treasuryFeeShare", internalType: "uint256", type: "uint256" },
+    ],
+    name: "setFeeShares",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [{ name: "_duration", internalType: "uint256", type: "uint256" }],
+    name: "setLpLockDuration",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "_minPoolBalance", internalType: "uint256", type: "uint256" },
+      { name: "_creatorMinLock", internalType: "uint256", type: "uint256" },
+    ],
+    name: "setPoolLimits",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     inputs: [{ name: "_treasury", internalType: "address", type: "address" }],
     name: "setTreasury",
     outputs: [],
@@ -875,6 +902,13 @@ export const verityFpmmAbi = [
     stateMutability: "view",
   },
   {
+    type: "function",
+    inputs: [],
+    name: "treasuryFeeShare",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
     type: "event",
     anonymous: false,
     inputs: [
@@ -904,6 +938,38 @@ export const verityFpmmAbi = [
       },
     ],
     name: "CreatorLiquidityClaimed",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      {
+        name: "newFeeBps",
+        internalType: "uint256",
+        type: "uint256",
+        indexed: false,
+      },
+    ],
+    name: "FeeBpsUpdated",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      {
+        name: "newLpShare",
+        internalType: "uint256",
+        type: "uint256",
+        indexed: false,
+      },
+      {
+        name: "newTreasuryShare",
+        internalType: "uint256",
+        type: "uint256",
+        indexed: false,
+      },
+    ],
+    name: "FeeSharesUpdated",
   },
   {
     type: "event",
@@ -997,6 +1063,19 @@ export const verityFpmmAbi = [
     anonymous: false,
     inputs: [
       {
+        name: "newDuration",
+        internalType: "uint256",
+        type: "uint256",
+        indexed: false,
+      },
+    ],
+    name: "LpLockDurationUpdated",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      {
         name: "marketId",
         internalType: "bytes32",
         type: "bytes32",
@@ -1035,6 +1114,25 @@ export const verityFpmmAbi = [
       },
     ],
     name: "PoolCreated",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      {
+        name: "newMinPoolBalance",
+        internalType: "uint256",
+        type: "uint256",
+        indexed: false,
+      },
+      {
+        name: "newCreatorMinLock",
+        internalType: "uint256",
+        type: "uint256",
+        indexed: false,
+      },
+    ],
+    name: "PoolLimitsUpdated",
   },
   {
     type: "event",
@@ -1127,6 +1225,7 @@ export const verityFpmmAbi = [
   { type: "error", inputs: [], name: "InsufficientDeposit" },
   { type: "error", inputs: [], name: "InsufficientShares" },
   { type: "error", inputs: [], name: "InvalidPool" },
+  { type: "error", inputs: [], name: "InvalidValue" },
   { type: "error", inputs: [], name: "LPLockActive" },
   { type: "error", inputs: [], name: "NotCreator" },
   { type: "error", inputs: [], name: "PoolAlreadyExists" },
@@ -1295,6 +1394,13 @@ export const verityMarketFactoryAbi = [
   },
   {
     type: "function",
+    inputs: [],
+    name: "marketCreationFee",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     inputs: [{ name: "", internalType: "bytes32", type: "bytes32" }],
     name: "marketRegistry",
     outputs: [
@@ -1420,6 +1526,13 @@ export const verityMarketFactoryAbi = [
   },
   {
     type: "function",
+    inputs: [{ name: "_fee", internalType: "uint256", type: "uint256" }],
+    name: "setMarketCreationFee",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     inputs: [{ name: "_resolver", internalType: "address", type: "address" }],
     name: "setOptimisticResolver",
     outputs: [],
@@ -1438,6 +1551,19 @@ export const verityMarketFactoryAbi = [
     name: "voidMarket",
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      {
+        name: "newFee",
+        internalType: "uint256",
+        type: "uint256",
+        indexed: false,
+      },
+    ],
+    name: "MarketCreationFeeUpdated",
   },
   {
     type: "event",

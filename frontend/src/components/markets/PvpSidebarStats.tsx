@@ -91,11 +91,7 @@ export default function PvpSidebarStats({
   const hasClaimable = useMemo(() => {
     if (!claimableData || totalWinningsUsdcFiltered <= 0) return false
 
-    // Group claimable picks by parentMarketId to count unique events/matchups
-    const uniqueEvents = new Set(
-      claimablePicksFiltered.map((p: any) => p.parentMarketId),
-    )
-    return uniqueEvents.size > 2
+    return claimablePicksFiltered.length > 1
   }, [claimablePicksFiltered, totalWinningsUsdcFiltered, claimableData])
 
   return (

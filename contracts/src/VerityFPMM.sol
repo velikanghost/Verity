@@ -129,7 +129,6 @@ contract VerityFPMM is ERC1155Holder {
         uint256 newCreatorMinLock
     );
     event LpLockDurationUpdated(uint256 newDuration);
-    event EmergencyWithdraw(address indexed token, uint256 amount);
 
     // ─── Errors ──────────────────────────────────────────────────────────
     error Unauthorized();
@@ -186,8 +185,8 @@ contract VerityFPMM is ERC1155Holder {
         feeBps = 200;
         lpFeeShare = 60;
         treasuryFeeShare = 40;
-        minPoolBalance = 6e6;
-        creatorMinLock = 2e6;
+        minPoolBalance = 20e6;
+        creatorMinLock = 5e6;
         lpLockDuration = 24 hours;
     }
 
@@ -233,15 +232,6 @@ contract VerityFPMM is ERC1155Holder {
         if (_duration > 3 days) revert InvalidValue(); // Cap LP lock-up at 3 days
         lpLockDuration = _duration;
         emit LpLockDurationUpdated(_duration);
-    }
-
-    /// @notice Emergency withdrawal of tokens by admin. Safety valve for recovery.
-    /// @param token Address of the ERC20 token to withdraw
-    /// @param amount Amount to withdraw
-    function emergencyWithdraw(address token, uint256 amount) external onlyAdmin {
-        if (amount == 0) revert ZeroAmount();
-        IERC20(token).safeTransfer(msg.sender, amount);
-        emit EmergencyWithdraw(token, amount);
     }
 
     // ─── Pool Creation (called by Factory) ───────────────────────────────
@@ -619,7 +609,8 @@ contract VerityFPMM is ERC1155Holder {
         if (msg.sender != pool.creator) revert NotCreator();
         if (!pool.resolved) revert PoolNotResolved();
 
-        uint256 creatorShareAmount = lpShares[marketId][msg.sender] + pool.creatorShares;
+        uint256 creatorShareAmount = lpShares[marketId][msg.sender] +
+            pool.creatorShares;
         if (creatorShareAmount == 0) revert InsufficientShares();
 
         uint256 outcomeCount = pool.outcomeBalances.length;
