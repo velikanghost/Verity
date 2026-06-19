@@ -736,3 +736,40 @@ export function useClaimableWinningsQuery() {
     staleTime: 30000, // Cache for 30s to avoid excessive on-chain reads
   })
 }
+
+export function usePublicMetricsQuery() {
+  return useQuery({
+    queryKey: ["public-metrics"] as const,
+    queryFn: () =>
+      apiRequest<{
+        users: {
+          total: number
+          real: number
+          bots: number
+        }
+        pvpUsers: {
+          submitted: {
+            total: number
+            real: number
+            bots: number
+          }
+          played: {
+            total: number
+            real: number
+            bots: number
+          }
+        }
+        pvpMatchesCount: number
+        volumeAndFees: {
+          overallVolume: number
+          overallFees: number
+          standardVolume: number
+          standardFees: number
+          pvpVolume: number
+          pvpFees: number
+          creationFeesCollected: number
+          combinedFees: number
+        }
+      }>("/pvp/public-metrics"),
+  })
+}
