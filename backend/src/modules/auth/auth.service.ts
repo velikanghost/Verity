@@ -42,6 +42,7 @@ export interface UserResponse {
   referredById: string | null
   arenaXp: number
   doubleBoostRemaining: number
+  downtimeBoostRemaining: number
   hasWonFirstPvpDuel: boolean
   pvpTicketsSubmittedCount: number
   pvpMatchesWonCount: number
@@ -82,6 +83,7 @@ export function serializeUser(user: UserDocument): UserResponse {
     referredById: user.referredById ? user.referredById.toString() : null,
     arenaXp: user.arenaXp ?? 0,
     doubleBoostRemaining: user.doubleBoostRemaining ?? 0,
+    downtimeBoostRemaining: user.downtimeBoostRemaining ?? 0,
     hasWonFirstPvpDuel: user.hasWonFirstPvpDuel ?? false,
     pvpTicketsSubmittedCount: user.pvpTicketsSubmittedCount ?? 0,
     pvpMatchesWonCount: user.pvpMatchesWonCount ?? 0,
@@ -119,6 +121,7 @@ export function placeholderUserProfile(authorId: string): UserResponse {
     referredById: null,
     arenaXp: 0,
     doubleBoostRemaining: 0,
+    downtimeBoostRemaining: 0,
     hasWonFirstPvpDuel: false,
     pvpTicketsSubmittedCount: 0,
     pvpMatchesWonCount: 0,

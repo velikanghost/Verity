@@ -932,6 +932,22 @@ export class PvpService {
       }
     }
 
+    // If welcome boosts were not applied, try to consume 2.0x downtime compensation boost
+    if (!doubleBoostActive) {
+      const updateResult = await this.userModel.findOneAndUpdate(
+        { _id: user._id, downtimeBoostRemaining: { $gt: 0 } },
+        { $inc: { downtimeBoostRemaining: -1 } },
+        { new: true },
+      )
+      if (updateResult) {
+        doubleBoostActive = true
+        xpBoostMultiplier = 2.0
+        this.logger.log(
+          `User ${userId} consumed a 2.0x downtime compensation boost. remaining: ${updateResult.downtimeBoostRemaining}`,
+        )
+      }
+    }
+
     // If welcome boosts were not applied, try to consume Bronze 1.5x boost
     if (!doubleBoostActive) {
       if (
@@ -1888,17 +1904,22 @@ export class PvpService {
     }
 
     if (nextGameMultiplier === 1.0) {
-      const isBronze = user.arenaXp >= 30 && user.arenaXp <= 499
-      if (isBronze && !user.hasUsedBronzeBoost) {
-        nextGameMultiplier = 1.5
-      } else if ((user.doubleBoostRemaining ?? 0) > 0) {
-        nextGameMultiplier = 1.2
+      if ((user.downtimeBoostRemaining ?? 0) > 0) {
+        nextGameMultiplier = 2.0
+      } else {
+        const isBronze = user.arenaXp >= 30 && user.arenaXp <= 499
+        if (isBronze && !user.hasUsedBronzeBoost) {
+          nextGameMultiplier = 1.5
+        } else if ((user.doubleBoostRemaining ?? 0) > 0) {
+          nextGameMultiplier = 1.2
+        }
       }
     }
 
     return {
       referralLink: user.username,
       doubleBoostRemaining: user.doubleBoostRemaining ?? 0,
+      downtimeBoostRemaining: user.downtimeBoostRemaining ?? 0,
       hasWonFirstPvpDuel: user.hasWonFirstPvpDuel ?? false,
       welcomeBoosts: {
         isEligible,

@@ -678,6 +678,7 @@ export function useReferralsQuery() {
       apiRequest<{
         referralLink: string
         doubleBoostRemaining: number
+        downtimeBoostRemaining?: number
         hasWonFirstPvpDuel: boolean
         welcomeBoosts?: {
           isEligible: boolean

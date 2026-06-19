@@ -27,6 +27,7 @@ export interface Profile {
   referredById?: string | null
   arenaXp?: number
   doubleBoostRemaining?: number
+  downtimeBoostRemaining?: number
   hasWonFirstPvpDuel?: boolean
   pvpMatchesWonCount?: number
   pvpMatchesLostCount?: number

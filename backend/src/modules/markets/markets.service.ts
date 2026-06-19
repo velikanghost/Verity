@@ -1346,6 +1346,7 @@ export class MarketsService implements OnModuleInit {
         signalPoints: user.signalPoints,
         arenaXp: user.arenaXp,
         doubleBoostRemaining: user.doubleBoostRemaining,
+        downtimeBoostRemaining: user.downtimeBoostRemaining,
         hasWonFirstPvpDuel: user.hasWonFirstPvpDuel,
         pvpMatchesWonCount: user.pvpMatchesWonCount,
         pvpMatchesLostCount: user.pvpMatchesLostCount,
