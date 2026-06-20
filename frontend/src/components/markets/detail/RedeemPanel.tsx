@@ -1,5 +1,8 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
+import { FACTORY_ADDRESS, publicClient } from "@/lib/arc"
+import { verityMarketFactoryAbi } from "@/lib/contracts-generated"
 import { MarketPost, MarketPosition } from "@/lib/verity"
 
 interface RedeemPanelProps {
@@ -43,48 +46,37 @@ export function RedeemPanel({
 
       {myPosition && (
         <div className="mb-4 rounded-[12px] bg-parchment-card p-4 shadow-subtle">
-          <div className="flex items-center justify-between gap-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <span className="font-mono text-[10px] font-semibold uppercase text-ash">
-                My Outcome Position
+                Your Positions
               </span>
               <p className="mt-1 font-mono text-sm font-semibold text-charcoal-primary">
-                {myPosition.shares.toFixed(2)} {myPosition.side} Shares
+                {myPosition.shares.toFixed(2)} {myPosition.side}
               </p>
             </div>
-            <div>
-              {isWinner ? (
-                <span className="inline-flex items-center rounded-full bg-meadow-green/10 px-2 py-1 text-xs font-medium text-meadow-green shadow-subtle">
-                  Winner
-                </span>
-              ) : (
-                <span className="inline-flex items-center rounded-full bg-stone-surface px-2 py-1 text-xs font-medium text-ash">
-                  Losing Outcome
-                </span>
-              )}
-            </div>
+            {isWinner ? (
+              <span className="inline-flex items-center rounded-full bg-meadow-green/10 px-2 py-1 text-xs font-medium text-meadow-green shadow-subtle">
+                Winning Position
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-cherry-red/10 px-2 py-1 text-xs font-medium text-cherry-red shadow-subtle">
+                Losing Position
+              </span>
+            )}
           </div>
-
-          {isWinner && (
-            <div className="mt-4">
-              <div className="mb-3 flex justify-between font-mono text-xs text-charcoal-primary">
-                <span>Redeemable Value</span>
-                <span className="font-semibold text-meadow-green">
-                  {winningShares.toFixed(2)} USDC
-                </span>
-              </div>
-              <button
-                className="verity-pill flex h-10 w-full items-center justify-center bg-meadow-green font-mono text-xs font-semibold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45"
-                disabled={Boolean(actionLoading) || !profileId}
-                onClick={() => onRedeem(winningShares)}
-                type="button"
-              >
-                {actionLoading === "redeem"
-                  ? "Redeeming..."
-                  : "Redeem Winnings"}
-              </button>
-            </div>
-          )}
+          <button
+            className="verity-pill flex h-10 w-full items-center justify-center bg-royal-blue font-mono text-xs font-semibold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={!isWinner || Boolean(actionLoading)}
+            onClick={() => onRedeem(winningShares)}
+            type="button"
+          >
+            {actionLoading === "redeem"
+              ? "Redeeming..."
+              : isWinner
+                ? "Redeem USDC"
+                : "No Winnings to Redeem"}
+          </button>
         </div>
       )}
 
@@ -93,29 +85,25 @@ export function RedeemPanel({
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <span className="font-mono text-[10px] font-semibold uppercase text-ash">
-                Locked Creator Liquidity
+                Your LP Payout
               </span>
               <p className="mt-1 font-mono text-sm font-semibold text-charcoal-primary">
-                {myLPPosition.lpShares.toFixed(4)} LP Shares
+                {myLPPosition.lpShares.toFixed(2)} USDC
               </p>
             </div>
-            <span className="inline-flex items-center rounded-full bg-sky-blue/10 px-2 py-1 text-xs font-medium text-sky-blue shadow-subtle">
-              Creator LP
+            <span className="inline-flex items-center rounded-full bg-royal-blue/10 px-2 py-1 text-xs font-medium text-royal-blue shadow-subtle">
+              Market Creator LP
             </span>
           </div>
-          <p className="mb-3 text-xs leading-relaxed text-ash">
-            As the market creator, your initial launch liquidity can now be
-            claimed and disbursed according to the final pool ratios.
-          </p>
           <button
-            className="verity-pill flex h-10 w-full items-center justify-center bg-inverse font-mono text-xs font-semibold uppercase tracking-[0.12em] text-inverse-text transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+            className="verity-pill flex h-10 w-full items-center justify-center bg-royal-blue font-mono text-xs font-semibold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45"
             disabled={Boolean(actionLoading) || !profileId}
             onClick={() => onClaimCreatorLP(myLPPosition.lpShares)}
             type="button"
           >
             {actionLoading === "claim_creator_lp"
-              ? "Claiming..."
-              : "Claim Creator LP"}
+              ? "Claiming Creator LP..."
+              : "Claim LP Payout"}
           </button>
         </div>
       )}
@@ -129,18 +117,49 @@ interface RefundPanelProps {
   onClaimRefund: (claimAmount?: number) => Promise<void>
   actionLoading: string | null
   profileId: string | undefined
+  walletAddress?: string
 }
 
 export function RefundPanel({
+  market,
   lpPositions,
   onClaimRefund,
   actionLoading,
   profileId,
+  walletAddress,
 }: RefundPanelProps) {
+  const { data: onChainPreDeposit } = useQuery({
+    queryKey: ["preMarketDeposit", market.id, walletAddress] as const,
+    queryFn: async () => {
+      if (!walletAddress || !market.id) return BigInt(0)
+      const clean = market.id.replace(/^0x/, "")
+      const formattedMarketId = `0x${clean.padEnd(64, "0")}` as `0x${string}`
+      try {
+        const deposit = await publicClient.readContract({
+          address: FACTORY_ADDRESS,
+          abi: verityMarketFactoryAbi,
+          functionName: "preMarketDeposits",
+          args: [formattedMarketId, walletAddress as `0x${string}`],
+        })
+        return BigInt(deposit.toString())
+      } catch (error) {
+        console.error("Error reading on-chain preMarketDeposits:", error)
+        return BigInt(0)
+      }
+    },
+    enabled: Boolean(walletAddress && market.id),
+    refetchInterval: 5000,
+  })
+
   const myLPPosition = lpPositions?.find((pos) => pos.userId === profileId)
-  const hasDeposited = myLPPosition && myLPPosition.lpShares > 0
+  const onChainRefundAmount = onChainPreDeposit != null ? Number(onChainPreDeposit) / 1e6 : null
+  const hasDeposited = onChainRefundAmount !== null
+    ? onChainRefundAmount > 0
+    : Boolean(myLPPosition && myLPPosition.lpShares > 0)
 
   if (!hasDeposited) return null
+
+  const refundShares = onChainRefundAmount !== null ? onChainRefundAmount : (myLPPosition?.lpShares || 0)
 
   return (
     <section className="verity-card p-4 sm:p-5">
@@ -158,7 +177,7 @@ export function RefundPanel({
               Your Pool Funding
             </span>
             <p className="mt-1 font-mono text-sm font-semibold text-charcoal-primary">
-              {myLPPosition.lpShares.toFixed(2)} USDC
+              {refundShares.toFixed(2)} USDC
             </p>
           </div>
           <span className="inline-flex items-center rounded-full bg-meadow-green/10 px-2 py-1 text-xs font-medium text-meadow-green shadow-subtle">
@@ -168,7 +187,7 @@ export function RefundPanel({
         <button
           className="verity-pill flex h-10 w-full items-center justify-center bg-meadow-green font-mono text-xs font-semibold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45"
           disabled={Boolean(actionLoading) || !profileId}
-          onClick={() => onClaimRefund(myLPPosition.lpShares)}
+          onClick={() => onClaimRefund(refundShares)}
           type="button"
         >
           {actionLoading === "claim_refund"

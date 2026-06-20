@@ -111,6 +111,16 @@ export default function AdminPage() {
     creationFeeUsdc: number
   } | null>(null)
 
+  // Contract Balances State
+  const [contractBalances, setContractBalances] = useState<{
+    fpmmUsdcBalance: number
+    factoryUsdcBalance: number
+    adminUsdcBalance: number
+    adminAddress: string
+  } | null>(null)
+  const [contractBalancesLoading, setContractBalancesLoading] = useState(false)
+  const [isClaimingCreatorLiquidity, setIsClaimingCreatorLiquidity] = useState(false)
+
   // Metrics Data State
   const [metricsData, setMetricsData] = useState<AdminMetrics | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(false)
@@ -162,6 +172,47 @@ export default function AdminPage() {
     }
   }
 
+  // Fetch contract balances
+  async function fetchContractBalances() {
+    setContractBalancesLoading(true)
+    try {
+      const data = await apiRequest<any>("/pvp/contract-balances")
+      setContractBalances(data)
+    } catch (err: any) {
+      console.error("Failed to fetch contract balances:", err)
+    } finally {
+      setContractBalancesLoading(false)
+    }
+  }
+
+  // Batch claim creator liquidity
+  async function handleBatchClaimCreatorLiquidity() {
+    setIsClaimingCreatorLiquidity(true)
+    const loadingToast = toast.loading("Batch claiming creator liquidity from resolved PvP markets...")
+    try {
+      const result = await apiRequest<any>("/pvp/admin/claim-creator-liquidity", {
+        method: "POST",
+      })
+      toast.dismiss(loadingToast)
+      
+      const { claimed, skipped, failed } = result.summary || { claimed: 0, skipped: 0, failed: 0 }
+      toast.success(
+        `Batch claim completed! Claimed: ${claimed}, Skipped: ${skipped}, Failed: ${failed}`,
+        { duration: 5000 }
+      )
+      
+      // Refresh balances & markets
+      void fetchAdminStatus()
+      void fetchContractBalances()
+      void fetchMarkets()
+    } catch (err: any) {
+      toast.dismiss(loadingToast)
+      toast.error(err.message || "Failed to batch claim creator liquidity.")
+    } finally {
+      setIsClaimingCreatorLiquidity(false)
+    }
+  }
+
   // Check auth on load
   useEffect(() => {
     const storedToken = localStorage.getItem("verity_admin_auth_token")
@@ -171,6 +222,7 @@ export default function AdminPage() {
       void fetchMarkets()
       void fetchAdminStatus()
       void fetchMetricsData()
+      void fetchContractBalances()
     }
   }, [])
 
@@ -227,7 +279,8 @@ export default function AdminPage() {
 
   const openAddLiquidityModal = (marketId: string) => {
     setLiquidityMarketId(marketId)
-    setLiquidityAmount("40")
+    const defaultAmount = adminBalances?.preDepositUsdcPerOption?.toString() || "40"
+    setLiquidityAmount(defaultAmount)
     setIsAddLiquidityOpen(true)
   }
 
@@ -298,6 +351,7 @@ export default function AdminPage() {
     void fetchMarkets()
     void fetchAdminStatus()
     void fetchMetricsData()
+    void fetchContractBalances()
   }
 
   if (!isAuthorized) {
@@ -373,8 +427,13 @@ export default function AdminPage() {
         {/* Balances & Operations Top Row */}
         <BalancesCard
           adminBalances={adminBalances}
+          contractBalances={contractBalances}
+          contractBalancesLoading={contractBalancesLoading}
+          onRefreshContractBalances={fetchContractBalances}
           activeTab={activeTab}
           onOpenCreateDrawer={() => setIsCreateDrawerOpen(true)}
+          onBatchClaimCreatorLiquidity={handleBatchClaimCreatorLiquidity}
+          isClaiming={isClaimingCreatorLiquidity}
         />
 
         {/* Tab content conditional rendering */}

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Script } from "forge-std/Script.sol";
-import { console2 } from "forge-std/console2.sol";
-import { ConditionalTokenVault } from "../src/ConditionalTokenVault.sol";
-import { VerityFPMM } from "../src/VerityFPMM.sol";
-import { VerityMarketFactory } from "../src/VerityMarketFactory.sol";
-import { VerityOptimisticResolver } from "../src/VerityOptimisticResolver.sol";
-import { MockUSDC } from "../test/helpers/MockUSDC.sol";
-import { MockPyth } from "../test/helpers/MockPyth.sol";
-
+import {Script} from "forge-std/Script.sol";
+import {console2} from "forge-std/console2.sol";
+import {ConditionalTokenVault} from "../src/ConditionalTokenVault.sol";
+import {VerityFPMM} from "../src/VerityFPMM.sol";
+import {VerityMarketFactory} from "../src/VerityMarketFactory.sol";
+import {VerityOptimisticResolver} from "../src/VerityOptimisticResolver.sol";
+import {MockUSDC} from "../test/helpers/MockUSDC.sol";
+import {MockPyth} from "../test/helpers/MockPyth.sol";
 
 contract BroadcasterFinder {
     address public immutable BROADCASTER;
@@ -24,6 +23,7 @@ contract Deploy is Script {
         string networkName;
         address usdcAddress;
         address pythAddress;
+        address vaultAddress;
         bool isTestnet;
     }
 
@@ -40,6 +40,7 @@ contract Deploy is Script {
                 networkName: "Arc Testnet",
                 usdcAddress: 0x3600000000000000000000000000000000000000,
                 pythAddress: 0x2880aB155794e7179c9eE2e38200202908C17B43,
+                vaultAddress: 0xd418a4116E48A180DCA0b6b5a2D69b17Cb1F1Ac3, // Set this to the existing vault address to reuse it (e.g. 0xd418a4116E48A180DCA0b6b5a2D69b17Cb1F1Ac3)
                 isTestnet: true
             });
         }
@@ -49,6 +50,7 @@ contract Deploy is Script {
                 networkName: "Local Testnet",
                 usdcAddress: address(0), // Will deploy MockUSDC
                 pythAddress: address(0), // Will deploy MockPyth
+                vaultAddress: address(0),
                 isTestnet: true
             });
         }
@@ -96,21 +98,32 @@ contract Deploy is Script {
             console2.log("Using configured Pyth at:", pythAddr);
         }
 
-        // 1. Deploy ConditionalTokenVault
-        console2.log("\nDeploying ConditionalTokenVault...");
-        ConditionalTokenVault vault = new ConditionalTokenVault(usdcAddr);
-        console2.log("ConditionalTokenVault deployed at:", address(vault));
+        // 1. Deploy ConditionalTokenVault (or reuse existing)
+        address vaultAddr = config.vaultAddress;
+        ConditionalTokenVault vault;
+        if (vaultAddr != address(0)) {
+            console2.log(
+                "\nReusing existing ConditionalTokenVault at:",
+                vaultAddr
+            );
+            vault = ConditionalTokenVault(vaultAddr);
+        } else {
+            console2.log("\nDeploying new ConditionalTokenVault...");
+            vault = new ConditionalTokenVault(usdcAddr);
+            vaultAddr = address(vault);
+            console2.log("ConditionalTokenVault deployed at:", vaultAddr);
+        }
 
         // 2. Deploy VerityFPMM
         console2.log("Deploying VerityFPMM...");
-        VerityFPMM fpmm = new VerityFPMM(address(vault), usdcAddr, treasury);
+        VerityFPMM fpmm = new VerityFPMM(vaultAddr, usdcAddr, treasury);
         console2.log("VerityFPMM deployed at:", address(fpmm));
 
         // 3. Deploy VerityMarketFactory
         console2.log("Deploying VerityMarketFactory...");
         VerityMarketFactory factory = new VerityMarketFactory(
             address(fpmm),
-            address(vault),
+            vaultAddr,
             usdcAddr,
             pythAddr
         );
@@ -130,8 +143,17 @@ contract Deploy is Script {
 
         // 5. Wire up permissions
         console2.log("\nWiring up contract permissions...");
-        vault.setFpmm(address(fpmm));
-        vault.setFactory(address(factory));
+        if (vault.admin() == deployer) {
+            console2.log(
+                "Updating FPMM and Factory on ConditionalTokenVault..."
+            );
+            vault.setFpmm(address(fpmm));
+            vault.setFactory(address(factory));
+        } else {
+            console2.log(
+                "WARNING: Deployer is not the admin of the existing vault. Skipped vault.setFpmm() and vault.setFactory()."
+            );
+        }
         fpmm.setFactory(address(factory));
         factory.setOptimisticResolver(address(resolver));
         console2.log("Contract permissions wired successfully.");

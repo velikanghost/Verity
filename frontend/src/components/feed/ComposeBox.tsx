@@ -889,9 +889,7 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
           )}
 
           {/* Action Row */}
-          <div className="flex items-center justify-between border-t border-border pt-3 mt-1">
-            <div className="flex items-center gap-2"></div>
-
+          <div className="flex items-center justify-end border-t border-border pt-3 mt-1">
             <button
               className={`verity-pill px-5 py-2 text-sm font-semibold tracking-[-0.18px] transition-all border ${
                 canUsePrimaryAction

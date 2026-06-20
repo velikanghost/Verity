@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Query, Param } from "@nestjs/common"
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Query,
+  Param,
+} from "@nestjs/common"
 import { PvpService } from "./pvp.service"
 import { CreatePvpEventDto, SubmitTicketDto } from "./pvp.dto"
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard"
@@ -19,7 +28,8 @@ export class PvpController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: "Admin-only: Deploy a new PvP Parent + Child Markets event with dynamic options (min 3)",
+    summary:
+      "Admin-only: Deploy a new PvP Parent + Child Markets event with dynamic options (min 3)",
   })
   async createPvpEvent(@Request() req: any, @Body() dto: CreatePvpEventDto) {
     return this.pvpService.createPvpEvent(req.user.id, dto)
@@ -29,9 +39,13 @@ export class PvpController {
   @UseGuards(JwtAuthGuard, AdminGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: "Admin-only: Lock a PvP Parent and its Child Markets to prevent further entries/trades",
+    summary:
+      "Admin-only: Lock a PvP Parent and its Child Markets to prevent further entries/trades",
   })
-  async lockPvpEvent(@Request() req: any, @Param("parentMarketId") parentMarketId: string) {
+  async lockPvpEvent(
+    @Request() req: any,
+    @Param("parentMarketId") parentMarketId: string,
+  ) {
     return this.pvpService.lockPvpEvent(req.user.id, parentMarketId)
   }
 
@@ -109,7 +123,8 @@ export class PvpController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: "Retrieve all unclaimed winning picks across all resolved PvP events for the authenticated user",
+    summary:
+      "Retrieve all unclaimed winning picks across all resolved PvP events for the authenticated user",
   })
   async getClaimableWinnings(@Request() req: any) {
     return this.pvpService.getClaimableWinnings(req.user.id)
@@ -142,5 +157,29 @@ export class PvpController {
   async getPublicMetrics() {
     return this.pvpService.getPublicMetrics()
   }
-}
 
+  @Get("contract-balances")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Admin-only: Get USDC balances held by FPMM and Factory contracts",
+  })
+  async getContractBalances(@Request() req: any) {
+    return this.pvpService.getContractBalances(req.user.id)
+  }
+
+  @Post("admin/claim-creator-liquidity")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "Admin-only: Batch claim creator liquidity from all resolved PvP markets",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns per-market claim results and summary",
+  })
+  async batchClaimCreatorLiquidity(@Request() req: any) {
+    return this.pvpService.batchClaimCreatorLiquidity(req.user.id)
+  }
+}

@@ -349,6 +349,9 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           refetchMarket(),
           reloadDailyVotes(),
           queryClient.invalidateQueries({
+            queryKey: ["preMarketDeposit"],
+          }),
+          queryClient.invalidateQueries({
             queryKey: ["pool-state", detailMarketId],
           }),
           queryClient.invalidateQueries({
@@ -879,6 +882,7 @@ export default function MarketDetail({ marketId }: MarketDetailProps) {
           onClaimRefund={handleClaimRefund}
           actionLoading={actionPending}
           profileId={profileId}
+          walletAddress={user?.walletAddress || undefined}
         />
       )}
 

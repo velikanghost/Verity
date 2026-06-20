@@ -203,6 +203,8 @@ export class PvpService {
       )
     }
 
+    const minPoolBalance = await this.blockchainService.getMinPoolBalance()
+
     let post: PostDocument | null = null
     let parentMarket: MarketDocument | null = null
     const childMarketIds: Types.ObjectId[] = []
@@ -361,11 +363,11 @@ export class PvpService {
           handicap,
         })
 
-        // Pre-deposit 40 USDC on-chain
+        // Pre-deposit USDC on-chain based on contract minPoolBalance
         const preDepositTxHash =
           await this.blockchainService.adminCreateMarketPreDeposit(
             childMarketId.toString(),
-            40,
+            minPoolBalance,
           )
 
         // Register on-chain with outcomeCount
@@ -390,7 +392,7 @@ export class PvpService {
           adminId,
           adminWalletAddress,
           preDepositTxHash,
-          40,
+          minPoolBalance,
         )
 
         const updatedChild = await this.marketModel.findById(childMarketId)
@@ -2339,13 +2341,147 @@ export class PvpService {
       throw new ForbiddenException("Only admins can fetch admin status.")
     }
 
-    const balances = await this.blockchainService.getAdminBalances()
+    const [balances, minPoolBalance] = await Promise.all([
+      this.blockchainService.getAdminBalances(),
+      this.blockchainService.getMinPoolBalance(),
+    ])
     return {
       adminAddress: balances.address,
       arcBalance: balances.arcBalance,
       usdcBalance: balances.usdcBalance,
-      preDepositUsdcPerOption: 40,
+      preDepositUsdcPerOption: minPoolBalance,
       creationFeeUsdc: 1,
+    }
+  }
+
+  async getContractBalances(adminId: string) {
+    const admin = await this.userModel.findById(adminId)
+    if (!admin || admin.role !== "admin") {
+      throw new ForbiddenException("Only admins can fetch contract balances.")
+    }
+
+    const [fpmmBalance, factoryBalance, adminBalances] = await Promise.all([
+      this.blockchainService.getFpmmUsdcBalance(),
+      this.blockchainService.getFactoryUsdcBalance(),
+      this.blockchainService.getAdminBalances(),
+    ])
+
+    return {
+      fpmmUsdcBalance: fpmmBalance,
+      factoryUsdcBalance: factoryBalance,
+      adminUsdcBalance: adminBalances.usdcBalance,
+      adminAddress: adminBalances.address,
+    }
+  }
+
+  async batchClaimCreatorLiquidity(adminId: string) {
+    const admin = await this.userModel.findById(adminId)
+    if (!admin || admin.role !== "admin") {
+      throw new ForbiddenException("Only admins can claim creator liquidity.")
+    }
+
+    // Find all resolved PvP child markets
+    const resolvedMarkets = await this.marketModel.find({
+      category: "pvp",
+      marketType: "child",
+      status: "resolved",
+    })
+
+    const results: {
+      marketId: string
+      question: string
+      status: "claimed" | "already_claimed" | "not_resolved_onchain" | "failed"
+      txHash?: string
+      error?: string
+      creatorShares?: string
+      adminLpShares?: string
+    }[] = []
+
+    let totalClaimed = 0
+    let totalSkipped = 0
+    let totalFailed = 0
+
+    const adminAddress = this.blockchainService.getAdminAddress()
+
+    for (const market of resolvedMarkets) {
+      const marketId = market._id.toString()
+      try {
+        // Check if there is an unclaimed pre-market deposit on Factory for the admin
+        if (adminAddress) {
+          const unclaimedDeposit =
+            await this.blockchainService.getPreMarketDeposit(
+              marketId,
+              adminAddress,
+            )
+          if (unclaimedDeposit > 0n) {
+            this.logger.log(
+              `Claiming pre-market LP shares for market ${marketId} (${unclaimedDeposit.toString()} raw)`,
+            )
+            await this.blockchainService.claimPreMarketLpShares(marketId)
+          }
+        }
+
+        // Read on-chain pool state
+        const poolState = await this.blockchainService.getPoolState(marketId)
+
+        // Skip if no shares to claim
+        const totalClaimable = poolState.creatorShares + poolState.adminLpShares
+        if (totalClaimable === 0n) {
+          results.push({
+            marketId,
+            question: market.question,
+            status: "already_claimed",
+            creatorShares: "0",
+            adminLpShares: "0",
+          })
+          totalSkipped++
+          continue
+        }
+
+        // Skip if pool is not resolved on-chain
+        if (!poolState.resolved) {
+          results.push({
+            marketId,
+            question: market.question,
+            status: "not_resolved_onchain",
+            creatorShares: poolState.creatorShares.toString(),
+            adminLpShares: poolState.adminLpShares.toString(),
+          })
+          totalSkipped++
+          continue
+        }
+
+        // Claim creator liquidity
+        const txHash =
+          await this.blockchainService.adminClaimCreatorLiquidity(marketId)
+        results.push({
+          marketId,
+          question: market.question,
+          status: "claimed",
+          txHash,
+          creatorShares: poolState.creatorShares.toString(),
+          adminLpShares: poolState.adminLpShares.toString(),
+        })
+        totalClaimed++
+      } catch (error) {
+        results.push({
+          marketId,
+          question: market.question,
+          status: "failed",
+          error: error.message,
+        })
+        totalFailed++
+      }
+    }
+
+    return {
+      summary: {
+        totalMarkets: resolvedMarkets.length,
+        claimed: totalClaimed,
+        skipped: totalSkipped,
+        failed: totalFailed,
+      },
+      results,
     }
   }
 
@@ -2354,7 +2490,7 @@ export class PvpService {
 
     // 1. Users count
     const totalUsers = await this.userModel.countDocuments()
-    
+
     // Get bot user IDs first
     const bots = await this.userModel
       .find({ username: { $in: botUsernames } }, { _id: 1 })
@@ -2372,15 +2508,11 @@ export class PvpService {
           _id: "$userId",
           hasPlayed: {
             $max: {
-              $cond: [
-                { $in: ["$status", ["matched", "resolved"]] },
-                1,
-                0
-              ]
-            }
-          }
-        }
-      }
+              $cond: [{ $in: ["$status", ["matched", "resolved"]] }, 1, 0],
+            },
+          },
+        },
+      },
     ])
 
     let realUsersSubmittedCount = 0
@@ -2407,7 +2539,9 @@ export class PvpService {
     }
 
     const uniqueUsersWithTicketsAllSize = ticketStatsList.length
-    const uniqueUsersWithMatchedTicketsSize = ticketStatsList.filter(s => s.hasPlayed === 1).length
+    const uniqueUsersWithMatchedTicketsSize = ticketStatsList.filter(
+      (s) => s.hasPlayed === 1,
+    ).length
 
     // 3. Count PvP Matches
     const totalPvpMatches = await this.pvpMatchModel.countDocuments()
@@ -2420,14 +2554,14 @@ export class PvpService {
           from: "markets",
           localField: "marketId",
           foreignField: "_id",
-          as: "market"
-        }
+          as: "market",
+        },
       },
       {
         $unwind: {
           path: "$market",
-          preserveNullAndEmptyArrays: true
-        }
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $group: {
@@ -2436,42 +2570,26 @@ export class PvpService {
           overallFees: { $sum: "$feeUsdc" },
           pvpVolume: {
             $sum: {
-              $cond: [
-                { $eq: ["$market.category", "pvp"] },
-                "$amountUsdc",
-                0
-              ]
-            }
+              $cond: [{ $eq: ["$market.category", "pvp"] }, "$amountUsdc", 0],
+            },
           },
           pvpFees: {
             $sum: {
-              $cond: [
-                { $eq: ["$market.category", "pvp"] },
-                "$feeUsdc",
-                0
-              ]
-            }
+              $cond: [{ $eq: ["$market.category", "pvp"] }, "$feeUsdc", 0],
+            },
           },
           standardVolume: {
             $sum: {
-              $cond: [
-                { $ne: ["$market.category", "pvp"] },
-                "$amountUsdc",
-                0
-              ]
-            }
+              $cond: [{ $ne: ["$market.category", "pvp"] }, "$amountUsdc", 0],
+            },
           },
           standardFees: {
             $sum: {
-              $cond: [
-                { $ne: ["$market.category", "pvp"] },
-                "$feeUsdc",
-                0
-              ]
-            }
-          }
-        }
-      }
+              $cond: [{ $ne: ["$market.category", "pvp"] }, "$feeUsdc", 0],
+            },
+          },
+        },
+      },
     ])
 
     const tradeStats = tradeStatsList[0] || {
@@ -2480,7 +2598,7 @@ export class PvpService {
       pvpVolume: 0,
       pvpFees: 0,
       standardVolume: 0,
-      standardFees: 0
+      standardFees: 0,
     }
 
     // 5. Creation fees collected
@@ -2489,9 +2607,9 @@ export class PvpService {
       {
         $group: {
           _id: null,
-          total: { $sum: "$marketCreationFeeUsdc" }
-        }
-      }
+          total: { $sum: "$marketCreationFeeUsdc" },
+        },
+      },
     ])
     const creationFeesCollected = creationFeeStatsList[0]?.total || 0
 

@@ -10,11 +10,15 @@ import { Loader2 } from "lucide-react"
 interface PvpSidebarStatsProps {
   profile: any
   referralsData: any
+  claimedMarketIds: Set<string>
+  onClaimSuccess: (marketIds: string[]) => void
 }
 
 export default function PvpSidebarStats({
   profile,
   referralsData,
+  claimedMarketIds,
+  onClaimSuccess,
 }: PvpSidebarStatsProps) {
   const [copiedCode, setCopiedCode] = useState(false)
   const queryClient = useQueryClient()
@@ -22,15 +26,36 @@ export default function PvpSidebarStats({
   const { data: claimableData } = useClaimableWinningsQuery()
   const [isClaiming, setIsClaiming] = useState(false)
 
+  const claimablePicksFiltered = useMemo(() => {
+    return (
+      claimableData?.claimablePicks?.filter(
+        (p: any) => !claimedMarketIds.has(p.marketId),
+      ) || []
+    )
+  }, [claimableData, claimedMarketIds])
+
+  const totalWinningsUsdcFiltered = useMemo(() => {
+    return claimablePicksFiltered.reduce(
+      (sum: number, p: any) => sum + (p.shares ?? 0),
+      0,
+    )
+  }, [claimablePicksFiltered])
+
+  const claimableMarketIdsFiltered = useMemo(() => {
+    return claimablePicksFiltered.map((p: any) => p.marketId)
+  }, [claimablePicksFiltered])
+
   const handleClaimAll = useCallback(async () => {
-    if (!claimableData || claimableData.claimableMarketIds.length === 0) return
+    if (claimableMarketIdsFiltered.length === 0) return
 
     setIsClaiming(true)
     try {
       await redeemMultipleWinnings(
-        claimableData.claimableMarketIds,
-        claimableData.totalWinningsUsdc,
+        claimableMarketIdsFiltered,
+        totalWinningsUsdcFiltered,
       )
+
+      onClaimSuccess(claimableMarketIdsFiltered)
 
       // Invalidate relevant queries after successful claim
       void queryClient.invalidateQueries({
@@ -40,13 +65,22 @@ export default function PvpSidebarStats({
       void queryClient.invalidateQueries({
         queryKey: ["pvp-my-active-tickets"],
       })
+      void queryClient.invalidateQueries({ queryKey: ["positions"] })
+      void queryClient.invalidateQueries({ queryKey: ["usdcBalance"] })
+      void queryClient.invalidateQueries({ queryKey: ["wallet-profile"] })
     } catch (err) {
       console.error("Failed to claim all winnings:", err)
       toast.error("Failed to claim winnings.")
     } finally {
       setIsClaiming(false)
     }
-  }, [claimableData, redeemMultipleWinnings, queryClient])
+  }, [
+    claimableMarketIdsFiltered,
+    totalWinningsUsdcFiltered,
+    redeemMultipleWinnings,
+    queryClient,
+    onClaimSuccess,
+  ])
 
   function handleCopyReferral() {
     if (!referralsData?.referralLink) return
@@ -58,14 +92,10 @@ export default function PvpSidebarStats({
   }
 
   const hasClaimable = useMemo(() => {
-    if (!claimableData || claimableData.totalWinningsUsdc <= 0) return false
+    if (!claimableData || totalWinningsUsdcFiltered <= 0) return false
 
-    // Group claimable picks by parentMarketId to count unique events/matchups
-    const uniqueEvents = new Set(
-      claimableData.claimablePicks?.map((p: any) => p.parentMarketId) || [],
-    )
-    return uniqueEvents.size > 2
-  }, [claimableData])
+    return claimablePicksFiltered.length > 1
+  }, [claimablePicksFiltered, totalWinningsUsdcFiltered, claimableData])
 
   return (
     <div className="verity-card p-5 bg-white dark:bg-zinc-900/30 flex flex-col gap-4">
@@ -93,7 +123,7 @@ export default function PvpSidebarStats({
             Unclaimed Winnings
           </span>
           <strong className="text-3xl font-bold font-mono text-charcoal-primary dark:text-white block mt-1">
-            {claimableData?.totalWinningsUsdc.toFixed(2)}
+            {totalWinningsUsdcFiltered.toFixed(2)}
             <span className="text-sm font-sans text-ash font-medium">
               {" "}
               USDC
