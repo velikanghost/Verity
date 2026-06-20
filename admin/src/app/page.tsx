@@ -21,6 +21,7 @@ import MarketsTable from "@/components/MarketsTable"
 import CreateMarketDrawer from "@/components/CreateMarketDrawer"
 import ResolveMarketDrawer from "@/components/ResolveMarketDrawer"
 import MetricsTab from "@/components/MetricsTab"
+import CouponsTab from "@/components/CouponsTab"
 
 interface Market {
   id: string
@@ -82,7 +83,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false)
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<"moderation" | "metrics">("moderation")
+  const [activeTab, setActiveTab] = useState<"moderation" | "metrics" | "coupons">("moderation")
 
   // Markets state
   const [markets, setMarkets] = useState<Market[]>([])
@@ -355,6 +356,18 @@ export default function AdminPage() {
                 <BarChart4 className="h-3.5 w-3.5" />
                 Metrics
               </button>
+              <button
+                onClick={() => setActiveTab("coupons")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  activeTab === "coupons"
+                    ? "bg-white text-stone-950 shadow-xs"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                {/* We can use a tag or ticket icon, but let's reuse BarChart4 for now or just text if no icon available */}
+                <span className="font-bold font-mono tracking-wider text-[10px]">C%</span>
+                Coupons
+              </button>
             </nav>
           </div>
 
@@ -377,7 +390,6 @@ export default function AdminPage() {
           onOpenCreateDrawer={() => setIsCreateDrawerOpen(true)}
         />
 
-        {/* Tab content conditional rendering */}
         {activeTab === "moderation" ? (
           <MarketsTable
             marketsLoading={marketsLoading}
@@ -398,12 +410,14 @@ export default function AdminPage() {
             openAddLiquidityModal={openAddLiquidityModal}
             handleOpenArbitrateResolve={handleOpenArbitrateResolve}
           />
-        ) : (
+        ) : activeTab === "metrics" ? (
           <MetricsTab
             metricsLoading={metricsLoading}
             metricsData={metricsData}
             fetchMetricsData={fetchMetricsData}
           />
+        ) : (
+          <CouponsTab />
         )}
       </main>
 

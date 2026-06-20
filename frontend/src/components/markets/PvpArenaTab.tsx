@@ -245,7 +245,7 @@ export default function PvpArenaTab({
     [redeemMultipleWinnings, refetchPvpStatus],
   )
 
-  async function handleSubmitPvpTicket() {
+  async function handleSubmitPvpTicket(couponCode?: string) {
     if (!profile || !user?.walletAddress) {
       toast.error("Connect your wallet to queue for the Arena.")
       return
@@ -421,6 +421,7 @@ export default function PvpArenaTab({
       const ticketPromise = submitTicketMutation.mutateAsync({
         parentMarketId: selectedPvpEvent.id,
         picks,
+        couponCode,
       })
 
       // Run database sync asynchronously in the background

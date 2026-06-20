@@ -32,6 +32,7 @@ import { calculatePvpResultXp, calculatePvpScore } from "./pvp-scoring"
 import type { PvpResult } from "./pvp-scoring"
 import { AgentService } from "../agent/agent.service"
 import { ConfigService } from "@nestjs/config"
+import { CouponsService } from "../coupons/coupons.service"
 
 export const BOT_PROFILES = [
   { username: "alex_g", displayName: "Alex Green" },
@@ -171,6 +172,7 @@ export class PvpService {
     private readonly liquidityService: LiquidityService,
     private readonly agentService: AgentService,
     private readonly configService: ConfigService,
+    private readonly couponsService: CouponsService,
   ) {}
 
   async createPvpEvent(adminId: string, dto: CreatePvpEventDto) {
@@ -903,68 +905,104 @@ export class PvpService {
       await existing.save()
     }
 
-    // Check if new user welcome boosts apply
-    const cutoffStr = this.configService.get<string>("NEW_USER_CUTOFF_DATE")
-    const cutoffDate = cutoffStr ? new Date(cutoffStr) : null
-    const isNewUser =
-      cutoffDate && user.createdAt && new Date(user.createdAt) >= cutoffDate
+    // Try applying coupon if provided
+    let appliedCoupon: string | null = null
+    let couponMultiplier: number | null = null
+    if (dto.couponCode) {
+      try {
+        const coupon = await this.couponsService.validateCoupon(dto.couponCode)
+        
+        // Check per-user limit
+        const userUsageCount = await this.pvpTicketModel.countDocuments({
+          userId: new Types.ObjectId(userId),
+          couponCode: coupon.code,
+          status: { $ne: "cancelled" }
+        })
+        
+        if (userUsageCount >= coupon.maxUsesPerUser) {
+          throw new BadRequestException(`You have already used this coupon code the maximum allowed number of times (${coupon.maxUsesPerUser}).`)
+        }
+
+        couponMultiplier = coupon.multiplier
+        appliedCoupon = coupon.code
+      } catch (err: any) {
+        // We can throw if we want the ticket to be blocked, 
+        // but user requested: "if its invalid they can still go ahead and submit their ticket"
+        // so we just log and ignore the invalid coupon
+        this.logger.warn(`User ${userId} provided invalid coupon code ${dto.couponCode}: ${err.message}`)
+      }
+    }
 
     let xpBoostMultiplier = 1.0
     let doubleBoostActive = false
 
-    if (isNewUser) {
-      const ticketCount = await this.pvpTicketModel.countDocuments({
-        userId: user._id,
-        status: { $ne: "cancelled" },
-      })
-      if (ticketCount === 0) {
-        xpBoostMultiplier = 2.0
-        doubleBoostActive = true
-        this.logger.log(
-          `User ${userId} qualifies for Welcome Boost 1 (2.0x XP).`,
-        )
-      } else if (ticketCount === 1) {
-        xpBoostMultiplier = 1.5
-        doubleBoostActive = true
-        this.logger.log(
-          `User ${userId} qualifies for Welcome Boost 2 (1.5x XP).`,
-        )
-      }
-    }
+    if (appliedCoupon && couponMultiplier) {
+      xpBoostMultiplier = couponMultiplier
+      doubleBoostActive = true
+      this.logger.log(`User ${userId} applied coupon ${appliedCoupon} (${couponMultiplier}x). Bypassing other boosts.`)
+    } else {
+      // Check if new user welcome boosts apply
+      const cutoffStr = this.configService.get<string>("NEW_USER_CUTOFF_DATE")
+      const cutoffDate = cutoffStr ? new Date(cutoffStr) : null
+      const isNewUser =
+        cutoffDate && user.createdAt && new Date(user.createdAt) >= cutoffDate
 
-    // If welcome boosts were not applied, try to consume Bronze 1.5x boost
-    if (!doubleBoostActive) {
-      if (
-        user.arenaXp >= 30 &&
-        user.arenaXp <= 499 &&
-        !user.hasUsedBronzeBoost
-      ) {
+      if (isNewUser) {
+        // Count only tickets where a coupon was NOT used
+        const ticketCount = await this.pvpTicketModel.countDocuments({
+          userId: user._id,
+          status: { $ne: "cancelled" },
+          couponCode: { $in: [null, undefined] }
+        })
+        if (ticketCount === 0) {
+          xpBoostMultiplier = 2.0
+          doubleBoostActive = true
+          this.logger.log(
+            `User ${userId} qualifies for Welcome Boost 1 (2.0x XP).`,
+          )
+        } else if (ticketCount === 1) {
+          xpBoostMultiplier = 1.5
+          doubleBoostActive = true
+          this.logger.log(
+            `User ${userId} qualifies for Welcome Boost 2 (1.5x XP).`,
+          )
+        }
+      }
+
+      // If welcome boosts were not applied, try to consume Bronze 1.5x boost
+      if (!doubleBoostActive) {
+        if (
+          user.arenaXp >= 30 &&
+          user.arenaXp <= 499 &&
+          !user.hasUsedBronzeBoost
+        ) {
+          const updateResult = await this.userModel.findOneAndUpdate(
+            { _id: user._id, hasUsedBronzeBoost: false },
+            { $set: { hasUsedBronzeBoost: true } },
+            { new: true },
+          )
+          if (updateResult) {
+            doubleBoostActive = true
+            xpBoostMultiplier = 1.5
+            this.logger.log(`User ${userId} consumed one-time Bronze 1.5x boost.`)
+          }
+        }
+      }
+
+      // If welcome and bronze boosts were not applied, try to consume standard referral boost
+      if (!doubleBoostActive) {
         const updateResult = await this.userModel.findOneAndUpdate(
-          { _id: user._id, hasUsedBronzeBoost: false },
-          { $set: { hasUsedBronzeBoost: true } },
+          { _id: user._id, doubleBoostRemaining: { $gt: 0 } },
+          { $inc: { doubleBoostRemaining: -1 } },
           { new: true },
         )
         if (updateResult) {
           doubleBoostActive = true
-          xpBoostMultiplier = 1.5
-          this.logger.log(`User ${userId} consumed one-time Bronze 1.5x boost.`)
+          xpBoostMultiplier = 1.2
+          this.logger.log(
+            `User ${userId} consumed an XP boost. remaining: ${updateResult.doubleBoostRemaining}`,
+          )
         }
-      }
-    }
-
-    // If welcome and bronze boosts were not applied, try to consume standard referral boost
-    if (!doubleBoostActive) {
-      const updateResult = await this.userModel.findOneAndUpdate(
-        { _id: user._id, doubleBoostRemaining: { $gt: 0 } },
-        { $inc: { doubleBoostRemaining: -1 } },
-        { new: true },
-      )
-      if (updateResult) {
-        doubleBoostActive = true
-        xpBoostMultiplier = 1.2
-        this.logger.log(
-          `User ${userId} consumed an XP boost. remaining: ${updateResult.doubleBoostRemaining}`,
-        )
       }
     }
 
@@ -980,7 +1018,13 @@ export class PvpService {
       status: "queued",
       doubleBoostActive,
       xpBoostMultiplier,
+      couponCode: appliedCoupon,
     })
+
+    if (appliedCoupon) {
+      await this.couponsService.incrementUsage(appliedCoupon)
+      this.logger.log(`User ${userId} successfully applied coupon ${appliedCoupon}. New multiplier: ${xpBoostMultiplier}x.`)
+    }
 
     // Perform matchmaking
     const match = await this.matchmake(ticket)
@@ -1877,6 +1921,7 @@ export class PvpService {
       ticketsCount = await this.pvpTicketModel.countDocuments({
         userId: user._id,
         status: { $ne: "cancelled" },
+        couponCode: { $in: [null, undefined] }
       })
       if (ticketsCount === 0) {
         isEligible = true

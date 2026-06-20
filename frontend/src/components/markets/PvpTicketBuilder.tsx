@@ -1,7 +1,8 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
+import { apiRequest } from "@/store/apiClient"
 import { HelpCircle, ChevronRight, Check } from "lucide-react"
 import ArenaCategory, { getCategoryMeta } from "./PvpArenaCategory"
 import { getCountryFlag } from "./PvpMatchupCarousel"
@@ -98,7 +99,7 @@ interface PvpTicketBuilderProps {
   onToggleSelection: (optId: string, selection: string) => void
   onSetBetAmount: (amount: number) => void
   onSetShowTooltip: (show: boolean) => void
-  onSubmitTicket: () => Promise<void>
+  onSubmitTicket: (couponCode?: string) => Promise<void>
   onAddLiquidity: (marketId: string) => void
 }
 
@@ -120,6 +121,35 @@ export default function PvpTicketBuilder({
   onAddLiquidity,
 }: PvpTicketBuilderProps) {
   const selectionCount = Object.keys(pvpSelections).length
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("")
+  const [couponMultiplier, setCouponMultiplier] = useState<number | null>(null)
+  const [couponError, setCouponError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const code = couponCode.trim()
+    if (!code) {
+      setCouponMultiplier(null)
+      setCouponError(null)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await apiRequest<{ success: boolean; multiplier: number }>(
+          `/coupons/validate/${code}`
+        )
+        setCouponMultiplier(res.multiplier)
+        setCouponError(null)
+      } catch (err: any) {
+        setCouponMultiplier(null)
+        setCouponError(err.message || "Invalid coupon")
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [couponCode])
 
   const totalVolume = useMemo(() => {
     if (!selectedPvpEvent?.options) return 0
@@ -300,11 +330,39 @@ export default function PvpTicketBuilder({
             </div>
           </div>
 
-          {/* XP boost indicator and submit button */}
+          {/* Coupon Code Input */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-t border-dashed border-border/60 dark:border-zinc-800/60 pt-4 mt-2">
+            <span className="text-xs font-mono text-ash font-bold uppercase">
+              Apply Coupon Code
+            </span>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                placeholder="e.g. WELCOME20"
+                value={couponCode}
+                disabled={isSubmitting}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                className="w-32 h-9 px-2 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white focus-visible:ring-1 focus-visible:ring-indigo-500 text-right disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+          </div>
+          {couponError && couponCode.length > 0 && (
+            <div className="text-[10px] text-red-500 font-mono text-right w-full mt-1">
+              {couponError}
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-t border-border dark:border-zinc-800 pt-4 mt-2">
             <div className="flex items-center gap-2">
-              {referralsData?.welcomeBoosts?.isEligible &&
-              referralsData.welcomeBoosts.nextGameMultiplier > 1.2 ? (
+              {couponMultiplier ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                  Coupon Active: {couponMultiplier}x XP
+                  <span className="font-medium opacity-80 ml-1">
+                    (Other boosts saved)
+                  </span>
+                </span>
+              ) : referralsData?.welcomeBoosts?.isEligible &&
+                referralsData.welcomeBoosts.nextGameMultiplier > 1.2 ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/40 text-[11px] font-bold text-indigo-700 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/40">
                   Welcome Boost Active:{" "}
                   {referralsData.welcomeBoosts.nextGameMultiplier}x XP for your{" "}
@@ -327,7 +385,7 @@ export default function PvpTicketBuilder({
             </div>
 
             <button
-              onClick={onSubmitTicket}
+              onClick={() => onSubmitTicket(couponCode.trim() || undefined)}
               disabled={isSubmitting || selectionCount < 3}
               className="verity-pill px-6 h-11 bg-indigo-600 text-white hover:bg-indigo-500 font-bold uppercase tracking-wider text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >

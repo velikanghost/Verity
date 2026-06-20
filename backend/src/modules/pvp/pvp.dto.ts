@@ -54,4 +54,9 @@ export class SubmitTicketDto {
   @Type(() => PvpPickInput)
   @ArrayMinSize(3)
   picks: PvpPickInput[]
+
+  @ApiProperty({ description: "Optional coupon code for XP multiplier", required: false })
+  @IsOptional()
+  @IsString()
+  couponCode?: string
 }
