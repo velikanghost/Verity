@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { MarketPost } from "@/lib/verity"
 
@@ -24,11 +24,46 @@ export default function ActiveMarketLPPanel({
 }: ActiveMarketLPPanelProps) {
   const [addAmount, setAddAmount] = useState("10")
   const [removeShares, setRemoveShares] = useState("10")
+  const [timeLeftStr, setTimeLeftStr] = useState("")
 
   const myPosition = lpPositions?.[0]
   const myShares = myPosition?.lpShares ?? 0
   const myDeposited = myPosition?.depositedUsdc ?? 0
   const canRemove = myPosition?.canRemoveLiquidity ?? true
+
+  useEffect(() => {
+    if (canRemove || !myPosition?.depositedAt) {
+      setTimeLeftStr("")
+      return
+    }
+
+    const updateTimer = () => {
+      const depositTime = new Date(myPosition.depositedAt).getTime()
+      const unlockTime = depositTime + 24 * 60 * 60 * 1000
+      const now = Date.now()
+      const diff = unlockTime - now
+
+      if (diff <= 0) {
+        setTimeLeftStr("")
+        return
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+      let str = ""
+      if (hours > 0) str += `${hours}h `
+      if (minutes > 0 || hours > 0) str += `${minutes}m `
+      str += `${seconds}s`
+
+      setTimeLeftStr(str)
+    }
+
+    updateTimer()
+    const interval = setInterval(updateTimer, 1000)
+    return () => clearInterval(interval)
+  }, [canRemove, myPosition?.depositedAt])
 
   const totalPoolShares = poolState?.pool?.totalLPShares ?? 0
   const currentPoolBalance = poolState?.pool?.currentPoolBalance ?? 0
@@ -134,8 +169,7 @@ export default function ActiveMarketLPPanel({
           </div>
           {!canRemove && (
             <p className="mt-2 text-[10px] leading-relaxed text-ember-orange">
-              * Liquidity is locked for 24 hours after adding to prevent
-              front-running.
+              {timeLeftStr && `Unlocks in ${timeLeftStr}`}
             </p>
           )}
         </div>

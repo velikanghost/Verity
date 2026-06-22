@@ -566,13 +566,24 @@ export class MarketsService implements OnModuleInit {
       throw new NotFoundException("Market not found.")
     }
 
-    const txHash = await this.blockchainService.adminDepositPreMarketLiquidity(
-      marketId,
-      amount,
-    )
+    let txHash: string
+    if (market.status === "tradable") {
+      txHash = await this.blockchainService.adminAddActiveLiquidity(
+        marketId,
+        amount,
+      )
+    } else {
+      txHash = await this.blockchainService.adminDepositPreMarketLiquidity(
+        marketId,
+        amount,
+      )
+    }
 
     // Sync database pool state from chain
     await this.liquidityService.syncPoolFromChain(marketId)
+
+    // Sync market prices & balances
+    await this.syncMarketPrices(marketId)
 
     return {
       success: true,

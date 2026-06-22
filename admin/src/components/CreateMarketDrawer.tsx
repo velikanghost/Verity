@@ -58,6 +58,87 @@ function parseTeams(question: string): { teamA: string; teamB: string } {
   return { teamA: "Team A", teamB: "Team B" }
 }
 
+function determineOptionGroup(
+  optionName: string,
+  teamA: string,
+  teamB: string,
+): string {
+  const name = optionName.toLowerCase().trim()
+  const tA = teamA.toLowerCase().trim()
+  const tB = teamB.toLowerCase().trim()
+
+  if (
+    name.includes("wins the match") ||
+    name.includes("ends in a draw") ||
+    name === `${tA} wins` ||
+    name === `${tB} wins` ||
+    name === "draw"
+  ) {
+    return "major"
+  }
+
+  if (
+    name.includes("scores first goal") ||
+    name.includes("first goal") ||
+    name.includes("scores first") ||
+    name === "no goal in the match" ||
+    name === "no goal"
+  ) {
+    return "first_goal"
+  }
+
+  if (name.includes("leads at halftime") || name.includes("halftime")) {
+    return "halftime_leader"
+  }
+
+  if (name.includes("keeps a clean sheet") || name.includes("clean sheet")) {
+    return "clean_sheet"
+  }
+
+  if (
+    name.includes("commits more fouls") ||
+    name.includes("fouls") ||
+    name.includes("foul")
+  ) {
+    return "fouls_leader"
+  }
+
+  if (name.includes("red card") || name.includes("red cards")) {
+    return "red_card"
+  }
+
+  if (
+    name.includes("yellow card") ||
+    name.includes("yellow cards") ||
+    name.includes("card") ||
+    name.includes("cards")
+  ) {
+    return "yellow_cards"
+  }
+
+  if (name.includes("corner") || name.includes("corners")) {
+    return "corners"
+  }
+
+  if (name.includes("goals") || name.includes("goal")) {
+    return "goals"
+  }
+
+  if (
+    name.includes("both teams to score") ||
+    name.includes("both teams score") ||
+    name.includes("btts")
+  ) {
+    return "btts"
+  }
+
+  if (name.includes("offsides") || name.includes("offside")) {
+    return "offsides"
+  }
+
+  return `unique_${optionName.replace(/\s+/g, "_").toLowerCase()}`
+}
+
 export default function CreateMarketDrawer({
   isOpen,
   onClose,
@@ -148,6 +229,17 @@ export default function CreateMarketDrawer({
     return [...opts, ...customOptions]
   }, [categories, customOptions, teamA, teamB, hasTeams])
 
+  // Calculate actual count of unique markets after option grouping
+  const actualMarketsCount = useMemo(() => {
+    if (generatedOptions.length === 0) return 0
+    const groups = new Set<string>()
+    generatedOptions.forEach((opt) => {
+      const group = determineOptionGroup(opt, teamA || "Team A", teamB || "Team B")
+      groups.add(group)
+    })
+    return groups.size
+  }, [generatedOptions, teamA, teamB])
+
   const toggleCategory = useCallback((key: string) => {
     setCategories((prev) => ({
       ...prev,
@@ -213,7 +305,7 @@ export default function CreateMarketDrawer({
         }),
       })
       toast.success(
-        `Successfully deployed PvP Event + ${generatedOptions.length} Proposition markets!`,
+        `Successfully deployed PvP Event + ${generatedOptions.length} Options (${actualMarketsCount} markets)!`,
       )
       setPvpQuestion("")
       setPvpDeadline("")
@@ -673,7 +765,7 @@ export default function CreateMarketDrawer({
               <div>
                 Deployment will create{" "}
                 <strong className="font-semibold text-indigo-900">
-                  {generatedOptions.length} markets
+                  {actualMarketsCount} markets
                 </strong>
                 .
               </div>
@@ -682,7 +774,7 @@ export default function CreateMarketDrawer({
                 <strong className="font-extrabold text-indigo-900">
                   {(
                     adminBalances.preDepositUsdcPerOption *
-                    generatedOptions.length
+                    actualMarketsCount
                   ).toFixed(2)}{" "}
                   USDC
                 </strong>

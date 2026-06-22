@@ -2,7 +2,7 @@
 
 import { toast } from "react-hot-toast"
 import { Button } from "@/components/ui/button"
-import { Wallet, Copy, Plus } from "lucide-react"
+import { Wallet, Copy, Plus, Coins, ArrowDownToLine, RefreshCw } from "lucide-react"
 
 interface BalancesCardProps {
   adminBalances: {
@@ -12,14 +12,29 @@ interface BalancesCardProps {
     preDepositUsdcPerOption: number
     creationFeeUsdc: number
   } | null
+  contractBalances: {
+    fpmmUsdcBalance: number
+    factoryUsdcBalance: number
+    adminUsdcBalance: number
+    adminAddress: string
+  } | null
+  contractBalancesLoading: boolean
+  onRefreshContractBalances: () => void
   activeTab: string
   onOpenCreateDrawer: () => void
+  onBatchClaimCreatorLiquidity: () => void
+  isClaiming: boolean
 }
 
 export default function BalancesCard({
   adminBalances,
+  contractBalances,
+  contractBalancesLoading,
+  onRefreshContractBalances,
   activeTab,
   onOpenCreateDrawer,
+  onBatchClaimCreatorLiquidity,
+  isClaiming,
 }: BalancesCardProps) {
   if (!adminBalances) return null
 
@@ -29,38 +44,32 @@ export default function BalancesCard({
   }
 
   return (
-    <div className="verity-card p-5 bg-linear-to-r from-indigo-50 to-indigo-100/30 border border-indigo-100 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
-      <div className="flex items-center gap-4 w-full md:w-auto">
-        <div className="h-12 w-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
-          <Wallet className="h-6 w-6" />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+      {/* Admin Wallet Card */}
+      <div className="p-5 bg-white border border-stone-200 rounded-2xl flex items-center gap-4 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full -mr-8 -mt-8 opacity-50 pointer-events-none" />
+        <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shrink-0">
+          <Wallet className="h-5 w-5" />
         </div>
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-700">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-indigo-700">
             Admin Wallet
           </h3>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="font-mono text-sm font-semibold text-stone-800 break-all md:break-normal">
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="font-mono text-xs font-semibold text-stone-800 truncate block">
               {adminBalances.adminAddress}
             </span>
             <button
               type="button"
               onClick={() => copyToClipboard(adminBalances.adminAddress)}
-              className="text-indigo-600 hover:text-indigo-800 p-1 rounded-md hover:bg-indigo-100/50 transition-colors cursor-pointer shrink-0"
+              className="text-indigo-600 hover:text-indigo-800 p-1 rounded-md hover:bg-indigo-50 transition-colors cursor-pointer shrink-0"
               title="Copy Address"
             >
-              <Copy className="h-3.5 w-3.5" />
+              <Copy className="h-3 w-3" />
             </button>
           </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0 border-indigo-200/50">
-        <div className="flex gap-6">
-          <div>
-            <span className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider">
-              USDC Balance
-            </span>
-            <span className="font-mono text-lg font-bold text-indigo-900">
+          <div className="mt-1.5">
+            <span className="font-mono text-base font-bold text-stone-900">
               {adminBalances.usdcBalance.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -69,15 +78,86 @@ export default function BalancesCard({
             </span>
           </div>
         </div>
+      </div>
 
-        {activeTab === "moderation" && (
-          <Button
-            onClick={onOpenCreateDrawer}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg px-4 h-11 text-xs tracking-wide shadow-sm flex items-center gap-2 transition-all cursor-pointer shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            Create PvP Event
-          </Button>
+      {/* Contract Balances Card */}
+      <div className="p-5 bg-white border border-stone-200 rounded-2xl flex items-start gap-4 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-full -mr-8 -mt-8 opacity-50 pointer-events-none" />
+        <div className="h-10 w-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md shrink-0">
+          <Coins className="h-5 w-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
+              On-Chain Contracts
+            </h3>
+            <button
+              onClick={onRefreshContractBalances}
+              disabled={contractBalancesLoading}
+              className="text-stone-400 hover:text-stone-600 p-1 rounded-md hover:bg-stone-50 transition-all cursor-pointer"
+              title="Refresh contract balances"
+            >
+              <RefreshCw className={`h-3 w-3 ${contractBalancesLoading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
+          
+          <div className="mt-2 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-stone-500 font-medium">FPMM Pools:</span>
+              <span className="font-mono font-semibold text-stone-900">
+                {contractBalances ? (
+                  `${contractBalances.fpmmUsdcBalance.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })} USDC`
+                ) : (
+                  <span className="text-stone-300">...</span>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-stone-500 font-medium">Factory Escrow:</span>
+              <span className="font-mono font-semibold text-stone-900">
+                {contractBalances ? (
+                  `${contractBalances.factoryUsdcBalance.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })} USDC`
+                ) : (
+                  <span className="text-stone-300">...</span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin Actions Card */}
+      <div className="p-5 bg-stone-50 border border-stone-200 rounded-2xl flex flex-col justify-center gap-2 shadow-inner">
+        {activeTab === "moderation" ? (
+          <>
+            <Button
+              onClick={onBatchClaimCreatorLiquidity}
+              disabled={isClaiming}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg h-9 text-xs tracking-wide shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <ArrowDownToLine className={`h-3.5 w-3.5 ${isClaiming ? "animate-bounce" : ""}`} />
+              {isClaiming ? "Claiming LP..." : "Batch Claim Creator LP"}
+            </Button>
+            <Button
+              onClick={onOpenCreateDrawer}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg h-9 text-xs tracking-wide shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Create PvP Event
+            </Button>
+          </>
+        ) : (
+          <div className="text-center py-2">
+            <span className="text-xs text-stone-500 italic">
+              Switch to Moderation tab to perform actions.
+            </span>
+          </div>
         )}
       </div>
     </div>

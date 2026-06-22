@@ -17,6 +17,7 @@ import { SocketModule } from "./modules/socket/socket.module"
 import { NotificationsModule } from "./modules/notifications/notifications.module"
 import { CircleWalletModule } from "./modules/circle-wallet/circle-wallet.module"
 import { PvpModule } from "./modules/pvp/pvp.module"
+import { MissionsModule } from "./modules/missions/missions.module"
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { PvpModule } from "./modules/pvp/pvp.module"
     NotificationsModule,
     CircleWalletModule,
     PvpModule,
+    MissionsModule,
   ],
   controllers: [AppController],
   providers: [

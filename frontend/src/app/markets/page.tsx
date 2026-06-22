@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, Suspense } from "react"
+import { useState, useEffect, useMemo, Suspense, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useFeed } from "@/hooks/useFeed"
 import { useWalletProfile } from "@/hooks/useWalletProfile"
@@ -75,6 +75,17 @@ function MarketsContent() {
     null,
   )
   const [hasManuallySelected, setHasManuallySelected] = useState<boolean>(false)
+  const [claimedMarketIds, setClaimedMarketIds] = useState<Set<string>>(
+    new Set(),
+  )
+
+  const handleClaimSuccess = useCallback((marketIds: string[]) => {
+    setClaimedMarketIds((prev) => {
+      const next = new Set(prev)
+      marketIds.forEach((id) => next.add(id))
+      return next
+    })
+  }, [])
 
   // Sync selected event to query param or the most recent one
   useEffect(() => {
@@ -181,11 +192,18 @@ function MarketsContent() {
             referralsData={referralsData}
             selectedPvpEventId={selectedPvpEventId}
             setSelectedPvpEventId={handleSelectPvpEvent}
+            claimedMarketIds={claimedMarketIds}
+            setClaimedMarketIds={setClaimedMarketIds}
           />
 
           {/* Right Sidebar: Profile stats & Duel History */}
           <div className="flex flex-col gap-4">
-            <PvpSidebarStats profile={profile} referralsData={referralsData} />
+            <PvpSidebarStats
+              profile={profile}
+              referralsData={referralsData}
+              claimedMarketIds={claimedMarketIds}
+              onClaimSuccess={handleClaimSuccess}
+            />
             <DuelHistory />
           </div>
         </div>

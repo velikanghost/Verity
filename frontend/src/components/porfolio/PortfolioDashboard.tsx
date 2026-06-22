@@ -74,7 +74,7 @@ export default function PortfolioDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4 animate-pulse">
+      <div className="flex flex-col mt-4 gap-4 animate-pulse">
         <div className="h-40 rounded-[12px] bg-stone-surface" />
         <div className="h-64 rounded-[12px] bg-stone-surface" />
       </div>

@@ -123,7 +123,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
             )
           }
 
-          // Since 40 USDC escrow balance was already present, the contract automatically deployed the pool!
+          // Since sufficient escrow balance was already present, the contract automatically deployed the pool!
           // So we transition status to tradable directly
           market.status = "tradable"
           market.fundingDeadline = fundingDeadline
@@ -273,7 +273,12 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
             }
 
             let proposedIndex: number
-            if (market.outcomeCount && market.outcomeCount >= 2 && market.outcomes && market.outcomes.length > 0) {
+            if (
+              market.outcomeCount &&
+              market.outcomeCount >= 2 &&
+              market.outcomes &&
+              market.outcomes.length > 0
+            ) {
               const idx = market.outcomes.findIndex(
                 (o) =>
                   o.toLowerCase().trim() ===
@@ -354,9 +359,7 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
             if (proposal.finalized) {
               // Read on-chain state to get ground truth winning index
               const onChainState =
-                await this.blockchainService.readOnChainMarketState(
-                  marketIdStr,
-                )
+                await this.blockchainService.readOnChainMarketState(marketIdStr)
               const winIdx = Number(onChainState.winningOutcomeIndex)
 
               // Check if we need to sync: either DB is not resolved, OR winning index differs
