@@ -32,6 +32,7 @@ export interface Profile {
   pvpMatchesWonCount?: number
   pvpMatchesLostCount?: number
   pvpMatchesDrawnCount?: number
+  twitterUsername?: string | null
 }
 
 export interface MarketPost {

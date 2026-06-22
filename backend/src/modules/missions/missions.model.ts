@@ -17,8 +17,17 @@ export class Mission {
   @Prop({ type: String, required: true, trim: true })
   actionUrl: string
 
+  @Prop({ type: String, enum: ["social", "activity"], default: "social", index: true })
+  missionType: "social" | "activity"
+
+  @Prop({ type: String, default: null, index: true })
+  verificationKey: string | null
+
   @Prop({ type: Boolean, default: true, index: true })
   isActive: boolean
+
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 export const MissionSchema = SchemaFactory.createForClass(Mission)

@@ -21,6 +21,16 @@ export class CreateMissionDto {
   @IsString()
   @IsNotEmpty()
   actionUrl: string
+
+  @ApiPropertyOptional({ example: "social", enum: ["social", "activity"] })
+  @IsString()
+  @IsOptional()
+  missionType?: "social" | "activity"
+
+  @ApiPropertyOptional({ example: "twitter_follow" })
+  @IsString()
+  @IsOptional()
+  verificationKey?: string | null
 }
 
 export class UpdateMissionDto {
@@ -44,6 +54,16 @@ export class UpdateMissionDto {
   @IsString()
   @IsOptional()
   actionUrl?: string
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  missionType?: "social" | "activity"
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  verificationKey?: string | null
 
   @ApiPropertyOptional()
   @IsBoolean()

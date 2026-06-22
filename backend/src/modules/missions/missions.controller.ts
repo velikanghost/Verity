@@ -43,6 +43,17 @@ export class MissionsController {
     return this.missionsService.getMissions(req.user.id, true)
   }
 
+  @Post("link-twitter")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Link the authenticated user's Twitter/X username",
+  })
+  async linkTwitter(@Request() req: any, @Body() body: { twitterUsername: string }) {
+    return this.missionsService.linkTwitterUsername(req.user.id, body.twitterUsername)
+  }
+
   @Post(":id/complete")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

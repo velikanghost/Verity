@@ -781,6 +781,8 @@ export interface Mission {
   xpReward: number
   actionUrl: string
   completed: boolean
+  missionType: "social" | "activity"
+  verificationKey?: string | null
 }
 
 export function useMissionsQuery() {
@@ -801,6 +803,7 @@ export function useCompleteMissionMutation() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["missions"] })
       void qc.invalidateQueries({ queryKey: ["wallet-profile"] })
+      void qc.invalidateQueries({ queryKey: ["profile"] })
       void qc.invalidateQueries({ queryKey: ["pvp-leaderboards"] })
     },
   })
@@ -814,6 +817,8 @@ export function useCreateMissionMutation() {
       description: string
       xpReward: number
       actionUrl: string
+      missionType?: "social" | "activity"
+      verificationKey?: string | null
     }) =>
       apiRequest<any>("/missions", {
         method: "POST",
@@ -824,3 +829,39 @@ export function useCreateMissionMutation() {
     },
   })
 }
+
+export function useLinkTwitterMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { twitterUsername: string }) =>
+      apiRequest<{ success: boolean; twitterUsername: string | null }>(
+        "/missions/link-twitter",
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+        },
+      ),
+    onSuccess: (data) => {
+      qc.setQueryData(["profile"], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          twitterUsername: data.twitterUsername,
+          twitter_username: data.twitterUsername,
+        }
+      })
+      qc.setQueryData(["wallet-profile"], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          twitterUsername: data.twitterUsername,
+          twitter_username: data.twitterUsername,
+        }
+      })
+      void qc.invalidateQueries({ queryKey: ["profile"] })
+      void qc.invalidateQueries({ queryKey: ["wallet-profile"] })
+      void qc.invalidateQueries({ queryKey: ["missions"] })
+    },
+  })
+}
+

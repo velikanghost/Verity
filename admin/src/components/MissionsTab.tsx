@@ -23,6 +23,8 @@ interface Mission {
   xpReward: number
   actionUrl: string
   isActive: boolean
+  missionType: "social" | "activity"
+  verificationKey?: string | null
 }
 
 export default function MissionsTab() {
@@ -36,6 +38,8 @@ export default function MissionsTab() {
   const [description, setDescription] = useState("")
   const [xpReward, setXpReward] = useState("100")
   const [actionUrl, setActionUrl] = useState("")
+  const [missionType, setMissionType] = useState<"social" | "activity">("social")
+  const [verificationKey, setVerificationKey] = useState("")
 
   // Editing states
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -43,8 +47,10 @@ export default function MissionsTab() {
   const [editDescription, setEditDescription] = useState("")
   const [editXpReward, setEditXpReward] = useState("")
   const [editActionUrl, setEditActionUrl] = useState("")
-  // Fetch all missions for admin management
+  const [editMissionType, setEditMissionType] = useState<"social" | "activity">("social")
+  const [editVerificationKey, setEditVerificationKey] = useState("")
 
+  // Fetch all missions for admin management
   async function fetchMissions() {
     setLoading(true)
     try {
@@ -84,6 +90,8 @@ export default function MissionsTab() {
           description: description.trim() || undefined,
           xpReward: reward,
           actionUrl: actionUrl.trim(),
+          missionType,
+          verificationKey: verificationKey || null,
         }),
       })
 
@@ -92,6 +100,8 @@ export default function MissionsTab() {
       setDescription("")
       setXpReward("100")
       setActionUrl("")
+      setMissionType("social")
+      setVerificationKey("")
       setShowCreateForm(false)
       void fetchMissions()
     } catch (err: any) {
@@ -145,6 +155,8 @@ export default function MissionsTab() {
     setEditDescription(mission.description || "")
     setEditXpReward(mission.xpReward.toString())
     setEditActionUrl(mission.actionUrl)
+    setEditMissionType(mission.missionType || "social")
+    setEditVerificationKey(mission.verificationKey || "")
   }
 
   // Save edited mission
@@ -164,6 +176,8 @@ export default function MissionsTab() {
           description: editDescription.trim() || undefined,
           xpReward: reward,
           actionUrl: editActionUrl.trim(),
+          missionType: editMissionType,
+          verificationKey: editVerificationKey || null,
         }),
       })
       toast.success("Mission updated successfully!")
@@ -244,11 +258,58 @@ export default function MissionsTab() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-stone-600">Mission Type</label>
+              <select
+                value={missionType}
+                onChange={(e) => {
+                  const val = e.target.value as "social" | "activity"
+                  setMissionType(val)
+                  setVerificationKey("")
+                }}
+                className="h-9 px-3 border border-stone-200 bg-white text-xs rounded-lg outline-none focus:border-indigo-500"
+              >
+                <option value="social">Social (Twitter/Timer)</option>
+                <option value="activity">On-Platform Activity</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-stone-600">Verification Key</label>
+              <select
+                value={verificationKey}
+                onChange={(e) => setVerificationKey(e.target.value)}
+                className="h-9 px-3 border border-stone-200 bg-white text-xs rounded-lg outline-none focus:border-indigo-500"
+              >
+                {missionType === "social" ? (
+                  <>
+                    <option value="">None (3s Timer Verification)</option>
+                    <option value="twitter_follow">twitter_follow (Check Follow)</option>
+                    <option value="twitter_retweet">twitter_retweet (Check Retweet)</option>
+                    <option value="twitter_like">twitter_like (Verify Like - Skip API)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="">Select activity key...</option>
+                    <option value="has_voted">has_voted (Placed Vote)</option>
+                    <option value="has_commented">has_commented (Posted Comment)</option>
+                    <option value="has_liked">has_liked (Liked Post)</option>
+                    <option value="has_traded">has_traded (Traded Share)</option>
+                    <option value="has_added_liquidity">has_added_liquidity (Added LP)</option>
+                    <option value="has_created_market">has_created_market (Created Market)</option>
+                    <option value="has_set_profile">has_set_profile (Completed Onboarding)</option>
+                  </>
+                )}
+              </select>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-stone-600">Action URL</label>
             <input
-              type="url"
-              placeholder="e.g. https://twitter.com/verity"
+              type="text"
+              placeholder="e.g. /markets or https://x.com/verity"
               value={actionUrl}
               onChange={(e) => setActionUrl(e.target.value)}
               required
@@ -321,11 +382,50 @@ export default function MissionsTab() {
                             className="h-8 px-2 border border-stone-250 bg-white text-xs font-semibold rounded-md outline-none focus:border-indigo-500"
                           />
                           <input
-                            type="url"
+                            type="text"
                             value={editActionUrl}
                             onChange={(e) => setEditActionUrl(e.target.value)}
                             className="h-8 px-2 border border-stone-250 bg-white text-xs font-mono rounded-md outline-none focus:border-indigo-500"
                           />
+                          <div className="grid grid-cols-2 gap-2 mt-1">
+                            <select
+                              value={editMissionType}
+                              onChange={(e) => {
+                                const val = e.target.value as "social" | "activity"
+                                setEditMissionType(val)
+                                setEditVerificationKey("")
+                              }}
+                              className="h-8 px-2 border border-stone-250 bg-white text-[10px] rounded-md outline-none focus:border-indigo-500"
+                            >
+                              <option value="social">Social</option>
+                              <option value="activity">Activity</option>
+                            </select>
+                            <select
+                              value={editVerificationKey}
+                              onChange={(e) => setEditVerificationKey(e.target.value)}
+                              className="h-8 px-2 border border-stone-250 bg-white text-[10px] rounded-md outline-none focus:border-indigo-500"
+                            >
+                              {editMissionType === "social" ? (
+                                <>
+                                  <option value="">None (Timer)</option>
+                                  <option value="twitter_follow">twitter_follow</option>
+                                  <option value="twitter_retweet">twitter_retweet</option>
+                                  <option value="twitter_like">twitter_like</option>
+                                </>
+                              ) : (
+                                <>
+                                  <option value="">None</option>
+                                  <option value="has_voted">has_voted</option>
+                                  <option value="has_commented">has_commented</option>
+                                  <option value="has_liked">has_liked</option>
+                                  <option value="has_traded">has_traded</option>
+                                  <option value="has_added_liquidity">has_added_liquidity</option>
+                                  <option value="has_created_market">has_created_market</option>
+                                  <option value="has_set_profile">has_set_profile</option>
+                                </>
+                              )}
+                            </select>
+                          </div>
                         </div>
                       ) : (
                         <div>
@@ -334,6 +434,16 @@ export default function MissionsTab() {
                           </span>
                           <span className="text-[10px] text-indigo-600 block mt-1 font-mono truncate max-w-[200px]">
                             {mission.actionUrl}
+                          </span>
+                          <span className="inline-flex gap-1.5 mt-1.5">
+                            <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-bold uppercase bg-stone-100 text-stone-600 border border-stone-200">
+                              {mission.missionType || "social"}
+                            </span>
+                            {mission.verificationKey && (
+                              <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-mono bg-indigo-50 border border-indigo-100 text-indigo-600">
+                                {mission.verificationKey}
+                              </span>
+                            )}
                           </span>
                         </div>
                       )}
@@ -345,7 +455,7 @@ export default function MissionsTab() {
                         <textarea
                           value={editDescription}
                           onChange={(e) => setEditDescription(e.target.value)}
-                          rows={2}
+                          rows={3}
                           className="w-full p-2 border border-stone-250 bg-white text-xs rounded-md outline-none focus:border-indigo-500 resize-none"
                         />
                       ) : (
@@ -445,3 +555,4 @@ export default function MissionsTab() {
     </div>
   )
 }
+
