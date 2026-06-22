@@ -7,7 +7,7 @@ export default function MissionsPage() {
   const { profile } = useWalletProfile()
 
   return (
-    <div className="w-full max-w-[1240px] mx-auto py-6 font-sans flex flex-col gap-6">
+    <div className="w-full max-w-[1240px] mx-auto py-4 font-sans flex flex-col gap-6">
       {/* Top Header Card */}
       <section className="verity-card relative overflow-hidden p-5 flex flex-col sm:flex-row justify-between items-center gap-6">
         {/* Background shapes rhyming with Home */}

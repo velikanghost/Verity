@@ -74,7 +74,7 @@ export default function PortfolioDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4 animate-pulse">
+      <div className="flex flex-col gap-4 mt-4 animate-pulse">
         <div className="h-40 rounded-[12px] bg-stone-surface" />
         <div className="h-64 rounded-[12px] bg-stone-surface" />
       </div>
@@ -86,11 +86,8 @@ export default function PortfolioDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Top Grid: Left Side has Header + Net Worth + Actions, Right Side has Trending Markets */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-3 sm:py-4">
-        {/* Left Section (spanning 2 columns on desktop) */}
         <div className="lg:col-span-2 flex flex-col gap-4">
-          {/* Title / Header Card (originally PagePanel header) */}
           <section className="verity-card relative overflow-hidden p-4 sm:p-5">
             <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-sunburst-yellow/30" />
             <p className="relative font-mono text-xs font-semibold uppercase tracking-[0.16em] text-ember-orange">
@@ -105,14 +102,9 @@ export default function PortfolioDashboard() {
             </p>
           </section>
 
-          {/* Net Worth and Actions Grid */}
           <div className="grid gap-4 md:grid-cols-3">
-            {/* Net Worth Card (2/3 width on desktop) */}
             <div className="md:col-span-2 verity-card p-6 bg-surface-solid border border-border relative overflow-hidden flex flex-col justify-between">
               <div className="absolute right-4 top-7 flex flex-col items-end gap-1.5">
-                {/* <span className="verity-pill inline-flex items-center px-2 py-0.5 bg-meadow-green/10 text-meadow-green font-mono text-[9px] font-semibold">
-                  Arc Testnet
-                </span> */}
                 <div className="text-right mt-1">
                   <span className="block font-mono text-[8px] text-ash uppercase tracking-wider">
                     Daily Signals
