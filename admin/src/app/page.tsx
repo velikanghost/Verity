@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { LogOut, RefreshCw, TrendingUp, BarChart4 } from "lucide-react"
+import { LogOut, TrendingUp, BarChart4, Sparkles, Ticket } from "lucide-react"
 
 // Import modular sub-components
 import LoginPanel from "@/components/LoginPanel"
@@ -22,6 +22,7 @@ import CreateMarketDrawer from "@/components/CreateMarketDrawer"
 import ResolveMarketDrawer from "@/components/ResolveMarketDrawer"
 import MetricsTab from "@/components/MetricsTab"
 import CouponsTab from "@/components/CouponsTab"
+import MissionsTab from "@/components/MissionsTab"
 
 interface Market {
   id: string
@@ -83,7 +84,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false)
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<"moderation" | "metrics" | "coupons">("moderation")
+  const [activeTab, setActiveTab] = useState<
+    "moderation" | "metrics" | "coupons" | "missions"
+  >("moderation")
 
   // Markets state
   const [markets, setMarkets] = useState<Market[]>([])
@@ -132,11 +135,15 @@ export default function AdminPage() {
   // Add Liquidity Dialog State
   const [isAddLiquidityOpen, setIsAddLiquidityOpen] = useState(false)
   const [liquidityAmount, setLiquidityAmount] = useState("40")
-  const [liquidityMarketId, setLiquidityMarketId] = useState<string | null>(null)
-  
+  const [liquidityMarketId, setLiquidityMarketId] = useState<string | null>(
+    null,
+  )
+
   const [winningOutcome, setWinningOutcome] = useState<string>("YES")
   const [resolveTxHash, setResolveTxHash] = useState("")
-  const [adminAddress, setAdminAddress] = useState("0x0000000000000000000000000000000000000000")
+  const [adminAddress, setAdminAddress] = useState(
+    "0x0000000000000000000000000000000000000000",
+  )
 
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -325,11 +332,18 @@ export default function AdminPage() {
   }
 
   const getProposedOutcomeText = (market: Market) => {
-    if (market.proposedOutcomeIndex !== null && market.proposedOutcomeIndex !== undefined) {
+    if (
+      market.proposedOutcomeIndex !== null &&
+      market.proposedOutcomeIndex !== undefined
+    ) {
       return market.outcomes?.[market.proposedOutcomeIndex] || "None"
     }
-    if (market.proposedOutcome === null || market.proposedOutcome === undefined) return "None"
-    const opts = market.outcomes && market.outcomes.length > 0 ? market.outcomes : ["YES", "NO"]
+    if (market.proposedOutcome === null || market.proposedOutcome === undefined)
+      return "None"
+    const opts =
+      market.outcomes && market.outcomes.length > 0
+        ? market.outcomes
+        : ["YES", "NO"]
     if (market.proposedOutcome === true) {
       return opts[0] || "YES"
     } else {
@@ -340,9 +354,10 @@ export default function AdminPage() {
   const handleOpenArbitrateResolve = (market: Market) => {
     setSelectedMarketId(market.id)
     setResolveTxHash("")
-    const outcomes = market.outcomes && market.outcomes.length > 0
-      ? market.outcomes
-      : ["YES", "NO"]
+    const outcomes =
+      market.outcomes && market.outcomes.length > 0
+        ? market.outcomes
+        : ["YES", "NO"]
     setWinningOutcome(outcomes[0])
     setIsResolveDrawerOpen(true)
   }
@@ -418,9 +433,19 @@ export default function AdminPage() {
                     : "text-stone-600 hover:text-stone-900"
                 }`}
               >
-                {/* We can use a tag or ticket icon, but let's reuse BarChart4 for now or just text if no icon available */}
-                <span className="font-bold font-mono tracking-wider text-[10px]">C%</span>
+                <Ticket className="h-3.5 w-3.5" />
                 Coupons
+              </button>
+              <button
+                onClick={() => setActiveTab("missions")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  activeTab === "missions"
+                    ? "bg-white text-stone-950 shadow-xs"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Missions
               </button>
             </nav>
           </div>
@@ -449,7 +474,8 @@ export default function AdminPage() {
           isClaiming={isClaimingCreatorLiquidity}
         />
 
-        {activeTab === "moderation" ? (
+        {/* Tab content conditional rendering */}
+        {activeTab === "moderation" && (
           <MarketsTable
             marketsLoading={marketsLoading}
             markets={markets}
@@ -469,15 +495,16 @@ export default function AdminPage() {
             openAddLiquidityModal={openAddLiquidityModal}
             handleOpenArbitrateResolve={handleOpenArbitrateResolve}
           />
-        ) : activeTab === "metrics" ? (
+        )}
+        {activeTab === "metrics" && (
           <MetricsTab
             metricsLoading={metricsLoading}
             metricsData={metricsData}
             fetchMetricsData={fetchMetricsData}
           />
-        ) : (
-          <CouponsTab />
         )}
+        {activeTab === "coupons" && <CouponsTab />}
+        {activeTab === "missions" && <MissionsTab />}
       </main>
 
       {/* Create PvP Event Drawer */}

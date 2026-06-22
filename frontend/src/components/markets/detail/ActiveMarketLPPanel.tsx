@@ -169,9 +169,7 @@ export default function ActiveMarketLPPanel({
           </div>
           {!canRemove && (
             <p className="mt-2 text-[10px] leading-relaxed text-ember-orange">
-              * Liquidity is locked for 24 hours after adding to prevent
-              front-running.
-              {timeLeftStr && ` (Unlocks in ${timeLeftStr})`}
+              {timeLeftStr && `Unlocks in ${timeLeftStr}`}
             </p>
           )}
         </div>

@@ -774,3 +774,95 @@ export function usePublicMetricsQuery() {
       }>("/pvp/public-metrics"),
   })
 }
+
+export interface Mission {
+  id: string
+  title: string
+  description: string
+  xpReward: number
+  actionUrl: string
+  completed: boolean
+  missionType: "social" | "activity"
+  verificationKey?: string | null
+}
+
+export function useMissionsQuery() {
+  return useQuery({
+    queryKey: ["missions"] as const,
+    queryFn: () => apiRequest<Mission[]>("/missions"),
+  })
+}
+
+export function useCompleteMissionMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (missionId: string) =>
+      apiRequest<{ success: boolean; xpEarned: number; totalXp: number }>(
+        `/missions/${missionId}/complete`,
+        { method: "POST" },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["missions"] })
+      void qc.invalidateQueries({ queryKey: ["wallet-profile"] })
+      void qc.invalidateQueries({ queryKey: ["profile"] })
+      void qc.invalidateQueries({ queryKey: ["pvp-leaderboards"] })
+    },
+  })
+}
+
+export function useCreateMissionMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: {
+      title: string
+      description: string
+      xpReward: number
+      actionUrl: string
+      missionType?: "social" | "activity"
+      verificationKey?: string | null
+    }) =>
+      apiRequest<any>("/missions", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["missions"] })
+    },
+  })
+}
+
+export function useLinkTwitterMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { twitterUsername: string }) =>
+      apiRequest<{ success: boolean; twitterUsername: string | null }>(
+        "/missions/link-twitter",
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+        },
+      ),
+    onSuccess: (data) => {
+      qc.setQueryData(["profile"], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          twitterUsername: data.twitterUsername,
+          twitter_username: data.twitterUsername,
+        }
+      })
+      qc.setQueryData(["wallet-profile"], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          twitterUsername: data.twitterUsername,
+          twitter_username: data.twitterUsername,
+        }
+      })
+      void qc.invalidateQueries({ queryKey: ["profile"] })
+      void qc.invalidateQueries({ queryKey: ["wallet-profile"] })
+      void qc.invalidateQueries({ queryKey: ["missions"] })
+    },
+  })
+}
+
