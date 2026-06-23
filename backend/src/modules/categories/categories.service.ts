@@ -31,7 +31,6 @@ export class CategoriesService {
     const category = new this.categoryModel({
       slug: cleanSlug,
       displayName: dto.displayName.trim(),
-      iconName: dto.iconName?.trim() || null,
       isActive: true,
     })
     return category.save()
@@ -55,7 +54,6 @@ export class CategoriesService {
     }
 
     if (dto.displayName !== undefined) category.displayName = dto.displayName.trim()
-    if (dto.iconName !== undefined) category.iconName = dto.iconName?.trim() || null
     if (dto.isActive !== undefined) category.isActive = dto.isActive
 
     return category.save()

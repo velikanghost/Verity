@@ -124,6 +124,14 @@ export default function PvpTicketBuilder({
   const selectionCount = Object.keys(pvpSelections).length
   const { rawBalance, formattedBalance } = useUsdcBalance()
 
+  const activeBoostsList = referralsData?.activeBoosts || []
+  const downtimeBoostRemaining = activeBoostsList
+    .filter((b: any) => b.source === "downtime")
+    .reduce((sum: number, b: any) => sum + (b.matchesRemaining || 0), 0)
+  const doubleBoostRemaining = activeBoostsList
+    .filter((b: any) => b.source === "referral")
+    .reduce((sum: number, b: any) => sum + (b.matchesRemaining || 0), 0)
+
   // Coupon state
   const [couponCode, setCouponCode] = useState("")
   const [couponMultiplier, setCouponMultiplier] = useState<number | null>(null)
@@ -140,7 +148,7 @@ export default function PvpTicketBuilder({
     const timer = setTimeout(async () => {
       try {
         const res = await apiRequest<{ success: boolean; multiplier: number }>(
-          `/coupons/validate/${code}`
+          `/coupons/validate/${code}`,
         )
         setCouponMultiplier(res.multiplier)
         setCouponError(null)
@@ -364,29 +372,28 @@ export default function PvpTicketBuilder({
               {couponMultiplier ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
                   Coupon Active: {couponMultiplier}x XP
-                  <span className="font-medium opacity-80 ml-1">
-                    (Other boosts saved)
-                  </span>
                 </span>
               ) : referralsData?.welcomeBoosts?.isEligible &&
                 referralsData.welcomeBoosts.nextGameMultiplier > 1.2 ? (
                 <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm w-full sm:w-auto">
-                  ⚡ Welcome Boost: {referralsData.welcomeBoosts.nextGameMultiplier}x XP ({referralsData.welcomeBoosts.ticketsCount === 0 ? "1st" : "2nd"} game)
+                  ⚡ Welcome Boost:{" "}
+                  {referralsData.welcomeBoosts.nextGameMultiplier}x XP (
+                  {referralsData.welcomeBoosts.ticketsCount === 0
+                    ? "1st"
+                    : "2nd"}{" "}
+                  game)
                 </span>
-              ) : referralsData?.downtimeBoostRemaining &&
-                referralsData.downtimeBoostRemaining > 0 ? (
+              ) : downtimeBoostRemaining > 0 ? (
                 <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-500/10 dark:bg-amber-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm w-full sm:w-auto">
-                  ⚡ Boost: 2x ({referralsData.downtimeBoostRemaining} remaining)
+                  ⚡ Boost: 2x ({downtimeBoostRemaining} remaining)
                 </span>
               ) : (
                 <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-ash/80 text-center w-full sm:w-auto block">
                   ⚡ Boosts Remaining:{" "}
                   <strong className="text-charcoal-primary dark:text-white font-mono font-bold">
-                    {referralsData?.doubleBoostRemaining ?? 0}
+                    {doubleBoostRemaining}
                   </strong>
-                  {referralsData &&
-                    referralsData.doubleBoostRemaining > 0 &&
-                    " (Auto 1.2x XP)"}
+                  {doubleBoostRemaining > 0 && " (Auto 1.2x XP)"}
                 </span>
               )}
             </div>

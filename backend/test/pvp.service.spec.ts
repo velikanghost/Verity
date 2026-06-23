@@ -430,7 +430,7 @@ describe("PvpService", () => {
       const mockUser = {
         _id: new Types.ObjectId(),
         createdAt: new Date("2026-06-17T00:00:00.000Z"), // after cutoff
-        doubleBoostRemaining: 0,
+        activeBoosts: [],
       }
       const mockParentMarket = {
         _id: new Types.ObjectId(),
@@ -496,7 +496,7 @@ describe("PvpService", () => {
       const mockUser = {
         _id: new Types.ObjectId(),
         createdAt: new Date("2026-06-17T00:00:00.000Z"), // after cutoff
-        doubleBoostRemaining: 0,
+        activeBoosts: [],
       }
       const mockParentMarket = {
         _id: new Types.ObjectId(),
@@ -564,7 +564,7 @@ describe("PvpService", () => {
       const mockUser = {
         _id: new Types.ObjectId(),
         createdAt: new Date("2020-01-01"),
-        doubleBoostRemaining: 0,
+        activeBoosts: [],
         arenaXp: 100,
         hasUsedBronzeBoost: false,
       }
@@ -622,7 +622,10 @@ describe("PvpService", () => {
         }),
       )
       expect(userModel.findOneAndUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({ _id: mockUser._id, hasUsedBronzeBoost: false }),
+        expect.objectContaining({
+          _id: mockUser._id,
+          hasUsedBronzeBoost: false,
+        }),
         expect.objectContaining({ $set: { hasUsedBronzeBoost: true } }),
         expect.any(Object),
       )
@@ -630,7 +633,7 @@ describe("PvpService", () => {
   })
 
   describe("awardReferrerFirstWinBoosts", () => {
-    it("should retroactively apply boosts to active tickets and add remainder to doubleBoostRemaining", async () => {
+    it("should retroactively apply boosts to active tickets and add remainder to activeBoosts", async () => {
       const mockReferredPlayer = {
         _id: new Types.ObjectId(),
         username: "referee",
@@ -639,8 +642,9 @@ describe("PvpService", () => {
       const mockReferrer = {
         _id: mockReferredPlayer.referredById,
         username: "referrer",
-        doubleBoostRemaining: 0,
+        activeBoosts: [] as any[],
         save: jest.fn().mockResolvedValue(true),
+        markModified: jest.fn(),
       }
 
       const mockTicket1 = {
@@ -666,11 +670,11 @@ describe("PvpService", () => {
       expect(mockTicket1.save).toHaveBeenCalled()
 
       // Remaining boost should be added to referrer (2 earned - 1 applied = 1 remaining)
-      expect(mockReferrer.doubleBoostRemaining).toBe(1)
+      expect(mockReferrer.activeBoosts[0].matchesRemaining).toBe(1)
       expect(mockReferrer.save).toHaveBeenCalled()
     })
 
-    it("should add both boosts to doubleBoostRemaining if there are no active, unboosted tickets", async () => {
+    it("should add both boosts to activeBoosts if there are no active, unboosted tickets", async () => {
       const mockReferredPlayer = {
         _id: new Types.ObjectId(),
         username: "referee",
@@ -679,8 +683,19 @@ describe("PvpService", () => {
       const mockReferrer = {
         _id: mockReferredPlayer.referredById,
         username: "referrer",
-        doubleBoostRemaining: 1,
+        activeBoosts: [
+          {
+            type: "match_based",
+            multiplier: 1.2,
+            matchesRemaining: 1,
+            source: "referral",
+            category: null,
+            sourceId: null,
+            expiresAt: null,
+          },
+        ] as any[],
         save: jest.fn().mockResolvedValue(true),
+        markModified: jest.fn(),
       }
 
       userModel.findById.mockResolvedValue(mockReferrer)
@@ -694,7 +709,7 @@ describe("PvpService", () => {
       await (service as any).awardReferrerFirstWinBoosts(mockReferredPlayer)
 
       // Referral boosts added to referrer (1 + 2 = 3)
-      expect(mockReferrer.doubleBoostRemaining).toBe(3)
+      expect(mockReferrer.activeBoosts[0].matchesRemaining).toBe(3)
       expect(mockReferrer.save).toHaveBeenCalled()
     })
   })

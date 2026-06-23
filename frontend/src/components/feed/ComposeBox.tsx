@@ -20,6 +20,7 @@ import { useMarketLimits } from "@/hooks/useMarketLimits"
 import {
   useCreateMarketPostMutation,
   useValidateMarketPostMutation,
+  useGetCategoriesQuery,
 } from "@/store/verity/verityQueries"
 import { toast } from "@/lib/toast"
 import { FACTORY_ADDRESS } from "@/lib/arc"
@@ -154,6 +155,7 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
   const { createMarketPreDeposit } = useUsdcTransfer()
   const { rawBalance } = useUsdcBalance()
   const { data: limits } = useMarketLimits()
+  const { data: categoriesData } = useGetCategoriesQuery()
   const { mutateAsync: validateMarketPost } = useValidateMarketPostMutation()
   const { mutateAsync: createMarketPost } = useCreateMarketPostMutation()
 
@@ -165,7 +167,7 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
   const [market, setMarket] = useState<MarketInput>({
     content: "",
     question: "",
-    category: "Sports",
+    category: "sports",
     deadline: "",
     resolutionSource: "",
     yesCondition: "",
@@ -495,7 +497,7 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
         setMarket({
           content: "",
           question: "",
-          category: "Sports",
+          category: "sports",
           deadline: "",
           resolutionSource: "",
           yesCondition: "",
@@ -658,12 +660,23 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                     }
                     value={market.category}
                   >
-                    {MARKET_CATEGORIES.map((category) => (
+                    {(categoriesData && categoriesData.length > 0
+                      ? categoriesData
+                      : [
+                          { slug: "sports", displayName: "Sports" },
+                          { slug: "culture", displayName: "Culture" },
+                          { slug: "crypto", displayName: "Crypto" },
+                          { slug: "economics", displayName: "Economics" },
+                          { slug: "miscellaneous", displayName: "Miscellaneous" },
+                          { slug: "politics", displayName: "Politics" },
+                        ]
+                    ).map((cat) => (
                       <option
-                        key={category}
+                        key={cat.slug}
+                        value={cat.slug}
                         className="bg-surface-solid text-charcoal-primary"
                       >
-                        {category}
+                        {cat.displayName}
                       </option>
                     ))}
                   </select>

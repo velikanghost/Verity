@@ -272,8 +272,8 @@ export class CircleWalletService implements OnModuleInit {
   }
 
   private async pollTransactionReceipt(transactionId: string): Promise<string> {
-    const maxAttempts = 30 // 30 attempts, 2 seconds apart = 60 seconds max
-    const intervalMs = 1000
+    const maxAttempts = 90 // 90 attempts, 2 seconds apart = 180 seconds (3 minutes) max
+    const intervalMs = 2000
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, intervalMs))

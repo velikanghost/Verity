@@ -17,6 +17,7 @@ import { toast } from "@/lib/toast"
 import {
   useCastFreeVoteMutation,
   useDailyVotesQuery,
+  useGetCategoriesQuery,
 } from "@/store/verity/verityQueries"
 import { calculateYesPercent, displayHandle } from "@/lib/verity"
 
@@ -86,6 +87,7 @@ export default function StandardMarketsFeed({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const castFreeVoteMutation = useCastFreeVoteMutation()
   const { data: dailyVotesData } = useDailyVotesQuery(profile?.id || "")
+  const { data: categoriesData } = useGetCategoriesQuery()
   const dailyVotesRemaining = dailyVotesData?.votesRemaining ?? 10
 
   // Filtered standard markets
@@ -121,7 +123,8 @@ export default function StandardMarketsFeed({
         .toLowerCase()
         .includes(searchQuery.toLowerCase())
       const matchesCategory =
-        !selectedCategory || item.market.category === selectedCategory
+        !selectedCategory ||
+        item.market.category?.toLowerCase() === selectedCategory.toLowerCase()
       return matchesSearch && matchesCategory
     })
   }, [feedItems, searchQuery, selectedCategory])
@@ -172,26 +175,33 @@ export default function StandardMarketsFeed({
           >
             All
           </button>
-          {[
-            "Crypto",
-            "Culture",
-            "Economics",
-            "Politics",
-            "Sports",
-            "Miscellaneous",
-          ].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-full border transition-all ${
-                selectedCategory === cat
-                  ? "bg-inverse text-inverse-text border-inverse"
-                  : "bg-white-surface border-border text-graphite hover:border-ash dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+          {(categoriesData && categoriesData.length > 0
+            ? categoriesData
+            : [
+                { slug: "crypto", displayName: "Crypto" },
+                { slug: "culture", displayName: "Culture" },
+                { slug: "economics", displayName: "Economics" },
+                { slug: "politics", displayName: "Politics" },
+                { slug: "sports", displayName: "Sports" },
+                { slug: "miscellaneous", displayName: "Miscellaneous" },
+              ]
+          ).map((cat) => {
+            const isSelected =
+              selectedCategory?.toLowerCase() === cat.slug.toLowerCase()
+            return (
+              <button
+                key={cat.slug}
+                onClick={() => setSelectedCategory(cat.slug)}
+                className={`px-3 py-1.5 rounded-full border transition-all ${
+                  isSelected
+                    ? "bg-inverse text-inverse-text border-inverse"
+                    : "bg-white-surface border-border text-graphite hover:border-ash dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {cat.displayName}
+              </button>
+            )
+          })}
         </div>
       </div>
 

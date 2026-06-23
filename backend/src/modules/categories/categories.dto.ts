@@ -9,11 +9,6 @@ export class CreateCategoryDto {
   @ApiProperty({ description: "Category display name", example: "Football" })
   @IsString()
   displayName: string
-
-  @ApiPropertyOptional({ description: "Lucide icon name", example: "Trophy" })
-  @IsOptional()
-  @IsString()
-  iconName?: string
 }
 
 export class UpdateCategoryDto {
@@ -21,11 +16,6 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
   displayName?: string
-
-  @ApiPropertyOptional({ description: "Lucide icon name", example: "Trophy" })
-  @IsOptional()
-  @IsString()
-  iconName?: string
 
   @ApiPropertyOptional({ description: "Is the category active?", example: true })
   @IsOptional()

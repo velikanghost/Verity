@@ -11,9 +11,6 @@ export class Category {
   @Prop({ required: true, trim: true })
   displayName: string
 
-  @Prop({ type: String, default: null })
-  iconName: string | null
-
   @Prop({ type: Boolean, default: true, index: true })
   isActive: boolean
 }
