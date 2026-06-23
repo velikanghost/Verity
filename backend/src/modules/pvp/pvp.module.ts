@@ -10,6 +10,7 @@ import { SocketModule } from "../socket/socket.module"
 import { NotificationsModule } from "../notifications/notifications.module"
 import { LiquidityModule } from "../liquidity/liquidity.module"
 import { AgentModule } from "../agent/agent.module"
+import { CouponsModule } from "../coupons/coupons.module"
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AgentModule } from "../agent/agent.module"
     NotificationsModule,
     LiquidityModule,
     AgentModule,
+    CouponsModule,
   ],
   controllers: [PvpController],
   providers: [PvpService],

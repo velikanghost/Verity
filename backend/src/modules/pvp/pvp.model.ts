@@ -53,6 +53,9 @@ export class PvpTicket {
   @Prop({ type: Number, default: 1 })
   xpBoostMultiplier: number
 
+  @Prop({ type: String, default: null })
+  couponCode: string | null
+
   createdAt?: Date
   updatedAt?: Date
 }
