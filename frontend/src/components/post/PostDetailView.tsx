@@ -196,6 +196,7 @@ function PostDetailCard({
         outcomeCount={market.outcomeCount}
         outcomes={market.outcomes}
         outcomePrices={market.outcomePrices}
+        minimumPoolBalance={market.minimumPoolBalance || market.minimum_pool_balance}
       />
     )
   }

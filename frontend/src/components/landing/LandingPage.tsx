@@ -242,7 +242,7 @@ function LandingVisual() {
               <div className="h-full bg-meadow-green landing-progress" />
             </div>
             <p className="mt-3 font-mono text-xs text-ash">
-              28.80 / 40.00 USDC
+              14.40 / 20.00 USDC
             </p>
           </div>
         </div>

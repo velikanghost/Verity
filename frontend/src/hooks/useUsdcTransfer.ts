@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/components/providers/AuthModals"
 import { type Address } from "viem"
-import { arcUsdcAddress, FACTORY_ADDRESS, publicClient } from "@/lib/arc"
+import { arcUsdcAddress, FACTORY_ADDRESS, publicClient, factoryAbi } from "@/lib/arc"
 
 export function useUsdcTransfer() {
   const { user, executeTxBatch } = useAuth()
@@ -48,7 +48,19 @@ export function useUsdcTransfer() {
   ) {
     checkPreconditions()
 
-    const totalRequired = BigInt(Math.round((creatorLpAmount + 1) * 1e6))
+    let creationFee = BigInt(1000000) // 1 USDC fallback
+    try {
+      const fee = await publicClient.readContract({
+        address: FACTORY_ADDRESS,
+        abi: factoryAbi,
+        functionName: "marketCreationFee",
+      })
+      creationFee = fee
+    } catch (e) {
+      console.error("Failed to read marketCreationFee from contract:", e)
+    }
+
+    const totalRequired = BigInt(Math.round(creatorLpAmount * 1e6)) + creationFee
     const formattedMarketId = ("0x" + marketId.padEnd(64, "0")) as Address
     const calls: Array<{
       contractAddress: string
@@ -95,7 +107,7 @@ export function useUsdcTransfer() {
     const hash = await executeTxBatch(
       calls,
       `Create Market & Pre-Deposit ${creatorLpAmount} USDC Liquidity`,
-      creatorLpAmount + 1, // + 1 USDC creation fee
+      creatorLpAmount + Number(creationFee) / 1e6,
       undefined,
       deferClose,
     )

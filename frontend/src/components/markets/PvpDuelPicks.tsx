@@ -5,7 +5,15 @@ interface PvpDuelPicksProps {
 }
 
 export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
-  const picks = pvpStatus.ticket?.picks || []
+  const userPicks = pvpStatus.ticket?.picks || []
+  const oppPicks = pvpStatus.opponent?.picks || []
+
+  const allMarketIds = Array.from(
+    new Set([
+      ...userPicks.map((p: any) => p.marketId),
+      ...oppPicks.map((p: any) => p.marketId),
+    ]),
+  ).filter(Boolean)
 
   const question = pvpStatus.event?.question || ""
   const parsedTeams = (() => {
@@ -50,18 +58,33 @@ export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
 
       {/* Per-pick rows */}
       <div className="space-y-3">
-        {picks.map((pick: any) => {
+        {allMarketIds.map((marketId: any) => {
+          const pick = userPicks.find((p: any) => p.marketId === marketId)
           const childOpt = pvpStatus.event?.options.find(
-            (o: any) => o.id === pick.marketId,
+            (o: any) => o.id === marketId,
           )
           const oppPick = pvpStatus.opponent?.picks.find(
-            (p: any) => p.marketId === pick.marketId,
+            (p: any) => p.marketId === marketId,
           )
-          const invested = pick.investedUsdc ?? 0
+          const invested = pick?.investedUsdc ?? 0
+
+          const isResolved =
+            childOpt?.status === "resolved" ||
+            childOpt?.resolvedOutcome !== null ||
+            pick?.status === "resolved" ||
+            pick?.resolvedOutcome !== null ||
+            oppPick?.status === "resolved" ||
+            oppPick?.resolvedOutcome !== null
+
+          const resolvedOutcome =
+            childOpt?.resolvedOutcome ||
+            pick?.resolvedOutcome ||
+            oppPick?.resolvedOutcome ||
+            null
 
           return (
             <div
-              key={pick.marketId}
+              key={marketId}
               className="flex flex-col gap-3 p-4 rounded-xl bg-parchment-card dark:bg-zinc-900/40 border border-border dark:border-zinc-800/85"
             >
               {/* Top row: Title + Shares */}
@@ -69,7 +92,8 @@ export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
                 <span className="text-xs font-bold tracking-wide text-charcoal-primary dark:text-zinc-200 uppercase truncate">
                   {(
                     childOpt?.optionName ||
-                    pick.optionName ||
+                    pick?.optionName ||
+                    oppPick?.optionName ||
                     "Pick"
                   ).toUpperCase()}
                 </span>
@@ -86,7 +110,9 @@ export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
                     You
                   </span>
                   <span className="text-xs font-semibold text-charcoal-primary dark:text-zinc-200 truncate max-w-full">
-                    {formatPickSelection(pick.selection, childOpt)}
+                    {pick
+                      ? formatPickSelection(pick.selection, childOpt) || "—"
+                      : "—"}
                   </span>
                 </div>
 
@@ -101,34 +127,37 @@ export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
                     </span>
                   ) : (
                     <span className="text-xs font-semibold text-charcoal-primary dark:text-zinc-200 truncate max-w-full">
-                      {formatPickSelection(oppPick?.selection, childOpt)}
+                      {oppPick
+                        ? formatPickSelection(oppPick.selection, childOpt) ||
+                          "—"
+                        : "—"}
                     </span>
                   )}
                 </div>
 
                 {/* Outcome — only shown when resolved */}
-                {(pick.status === "resolved" ||
-                  pick.resolvedOutcome !== null) && (
+                {isResolved && (
                   <div className="flex flex-col items-start bg-zinc-100 dark:bg-zinc-900/60 px-3 py-1.5 rounded-[8px] border border-border dark:border-zinc-800 flex-1 min-w-0">
                     <span className="text-[9px] font-inter text-ash uppercase">
                       Outcome
                     </span>
                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 truncate max-w-full">
-                      {formatPickSelection(pick.resolvedOutcome, childOpt)}
+                      {formatPickSelection(resolvedOutcome, childOpt) || ""}
                     </span>
                   </div>
                 )}
 
                 {/* Points — only shown when resolved */}
-                {pick.isCorrect !== null && (
+                {((pick && pick.isCorrect !== null) ||
+                  (oppPick && oppPick.isCorrect !== null)) && (
                   <div className="flex flex-col items-center justify-center px-3 py-1.5 rounded-[8px] border border-border dark:border-zinc-800 shrink-0">
                     <span className="text-[9px] font-inter text-ash uppercase">
                       Points
                     </span>
                     <span
-                      className={`text-xs font-bold ${pick.isCorrect ? "text-meadow-green" : "text-charcoal-primary dark:text-zinc-400"}`}
+                      className={`text-xs font-bold ${pick?.isCorrect ? "text-meadow-green" : "text-charcoal-primary dark:text-zinc-400"}`}
                     >
-                      {pick.isCorrect ? "+1 pt" : "0 pts"}
+                      {pick?.isCorrect ? "+1 pt" : "0 pts"}
                     </span>
                   </div>
                 )}

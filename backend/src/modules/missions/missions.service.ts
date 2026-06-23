@@ -50,7 +50,6 @@ export class MissionsService {
       return {
         id: missionObj._id.toString(),
         title: missionObj.title,
-        description: missionObj.description,
         xpReward: missionObj.xpReward,
         actionUrl: missionObj.actionUrl,
         isActive: missionObj.isActive,
@@ -215,8 +214,6 @@ export class MissionsService {
                 "You have not retweeted the target tweet.",
               )
             }
-          } else if (mission.verificationKey === "twitter_like") {
-            // No direct API support - skip verification (fallback to frontend timer flow/backend direct success)
           } else {
             throw new BadRequestException(
               `Unknown social verification key: ${mission.verificationKey}`,
@@ -253,7 +250,6 @@ export class MissionsService {
   async createMission(dto: CreateMissionDto) {
     const mission = new this.missionModel({
       title: dto.title,
-      description: dto.description ?? "",
       xpReward: dto.xpReward,
       actionUrl: dto.actionUrl,
       missionType: dto.missionType ?? "social",

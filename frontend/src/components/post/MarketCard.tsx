@@ -54,6 +54,7 @@ export interface MarketCardProps {
   outcomeCount?: number
   outcomes?: string[]
   outcomePrices?: number[]
+  minimumPoolBalance?: number
 }
 
 export default function MarketCard({
@@ -97,6 +98,7 @@ export default function MarketCard({
   outcomeCount = 2,
   outcomes = [],
   outcomePrices = [],
+  minimumPoolBalance = 20,
 }: MarketCardProps) {
   const isPvp = category?.toLowerCase() === "pvp"
   const yesLabel = isPvp ? yesCondition || "YES" : "YES"
@@ -204,7 +206,7 @@ export default function MarketCard({
             <>
               <span>Pool Funding</span>
               <span className="font-mono text-xs font-semibold text-meadow-green">
-                {liquidity.toFixed(2)} / 40.00 USDC
+                {liquidity.toFixed(2)} / {minimumPoolBalance.toFixed(2)} USDC
               </span>
             </>
           )}
@@ -215,7 +217,7 @@ export default function MarketCard({
             <div className="h-2 overflow-hidden rounded-full bg-white-surface shadow-subtle">
               <div
                 className="h-full bg-meadow-green transition-all duration-500"
-                style={{ width: `${Math.min(100, (liquidity / 40) * 100)}%` }}
+                style={{ width: `${Math.min(100, (liquidity / minimumPoolBalance) * 100)}%` }}
               />
             </div>
           </div>
@@ -223,7 +225,7 @@ export default function MarketCard({
 
         {!isClosed &&
           (isTradable ? null : status === "funding_pool" ||
-            (status === "qualified" && liquidity >= 40) ? (
+            (status === "qualified" && liquidity >= minimumPoolBalance) ? (
             <div className="flex flex-col items-center justify-center py-3 text-center">
               <svg
                 className="mb-2 h-7 w-7 animate-spin text-meadow-green"

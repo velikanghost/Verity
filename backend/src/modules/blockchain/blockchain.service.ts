@@ -1136,7 +1136,35 @@ export class BlockchainService implements OnModuleInit {
       return Number(result as bigint) / 1e6
     } catch (error) {
       this.logger.error(`Failed to read minPoolBalance from contract: ${error.message}`)
-      return 6 // Default fallback matching new deployment limit
+      return 20 // Default fallback matching deployment limit
+    }
+  }
+
+  async getCreatorMinLock(): Promise<number> {
+    try {
+      const result = await this.publicClient.readContract({
+        address: this.fpmmAddress,
+        abi: this.fpmmAbi,
+        functionName: "creatorMinLock",
+      })
+      return Number(result as bigint) / 1e6
+    } catch (error) {
+      this.logger.error(`Failed to read creatorMinLock from contract: ${error.message}`)
+      return 5 // Default fallback matching deployment limit
+    }
+  }
+
+  async getMarketCreationFee(): Promise<number> {
+    try {
+      const result = await this.publicClient.readContract({
+        address: this.factoryAddress,
+        abi: this.factoryAbi,
+        functionName: "marketCreationFee",
+      })
+      return Number(result as bigint) / 1e6
+    } catch (error) {
+      this.logger.error(`Failed to read marketCreationFee from contract: ${error.message}`)
+      return 1 // Default fallback matching deployment limit
     }
   }
 

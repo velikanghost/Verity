@@ -36,7 +36,7 @@ export default function OutcomesPanel({
 
           if (isChildPreMarket) {
             const currentFunding = child.liquidity ?? 0
-            const minFunding = 40
+            const minFunding = child.minimumPoolBalance || child.minimum_pool_balance || 20
             const progress = Math.min(100, (currentFunding / minFunding) * 100)
 
             return (
@@ -63,7 +63,7 @@ export default function OutcomesPanel({
                         {child.optionName || child.question}
                       </span>
                       <span className="text-[9px] font-mono text-sky-blue border border-sky-blue/20 bg-sky-blue/5 px-1.5 py-0.5 rounded shrink-0 font-medium">
-                        Separate Pool
+                        Group Pool
                       </span>
                     </div>
 

@@ -19,7 +19,6 @@ import {
 interface Mission {
   id: string
   title: string
-  description?: string
   xpReward: number
   actionUrl: string
   isActive: boolean
@@ -35,7 +34,6 @@ export default function MissionsTab() {
   // Creation form states
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
   const [xpReward, setXpReward] = useState("100")
   const [actionUrl, setActionUrl] = useState("")
   const [missionType, setMissionType] = useState<"social" | "activity">("social")
@@ -44,7 +42,6 @@ export default function MissionsTab() {
   // Editing states
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
-  const [editDescription, setEditDescription] = useState("")
   const [editXpReward, setEditXpReward] = useState("")
   const [editActionUrl, setEditActionUrl] = useState("")
   const [editMissionType, setEditMissionType] = useState<"social" | "activity">("social")
@@ -87,7 +84,6 @@ export default function MissionsTab() {
         method: "POST",
         body: JSON.stringify({
           title: title.trim(),
-          description: description.trim() || undefined,
           xpReward: reward,
           actionUrl: actionUrl.trim(),
           missionType,
@@ -97,7 +93,6 @@ export default function MissionsTab() {
 
       toast.success("Mission created successfully!")
       setTitle("")
-      setDescription("")
       setXpReward("100")
       setActionUrl("")
       setMissionType("social")
@@ -152,7 +147,6 @@ export default function MissionsTab() {
   function startEditing(mission: Mission) {
     setEditingId(mission.id)
     setEditTitle(mission.title)
-    setEditDescription(mission.description || "")
     setEditXpReward(mission.xpReward.toString())
     setEditActionUrl(mission.actionUrl)
     setEditMissionType(mission.missionType || "social")
@@ -173,7 +167,6 @@ export default function MissionsTab() {
         method: "PUT",
         body: JSON.stringify({
           title: editTitle.trim(),
-          description: editDescription.trim() || undefined,
           xpReward: reward,
           actionUrl: editActionUrl.trim(),
           missionType: editMissionType,
@@ -287,7 +280,6 @@ export default function MissionsTab() {
                     <option value="">None (3s Timer Verification)</option>
                     <option value="twitter_follow">twitter_follow (Check Follow)</option>
                     <option value="twitter_retweet">twitter_retweet (Check Retweet)</option>
-                    <option value="twitter_like">twitter_like (Verify Like - Skip API)</option>
                   </>
                 ) : (
                   <>
@@ -317,16 +309,7 @@ export default function MissionsTab() {
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-stone-600">Description</label>
-            <textarea
-              placeholder="What should the user do? e.g. Follow @Verity on X to earn 100 XP"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="p-3 border border-stone-200 bg-white text-xs rounded-lg outline-none focus:border-indigo-500 resize-none"
-            />
-          </div>
+
 
           <div className="flex justify-end gap-2 pt-2">
             <Button
@@ -355,7 +338,6 @@ export default function MissionsTab() {
             <thead>
               <tr className="border-b border-stone-200 bg-stone-50 text-stone-500 font-bold uppercase tracking-wider text-[10px]">
                 <th className="p-4 w-[250px]">Mission</th>
-                <th className="p-4">Description</th>
                 <th className="p-4 w-[100px]">XP Reward</th>
                 <th className="p-4 w-[100px]">Status</th>
                 <th className="p-4 text-right w-[180px]">Actions</th>
@@ -410,7 +392,6 @@ export default function MissionsTab() {
                                   <option value="">None (Timer)</option>
                                   <option value="twitter_follow">twitter_follow</option>
                                   <option value="twitter_retweet">twitter_retweet</option>
-                                  <option value="twitter_like">twitter_like</option>
                                 </>
                               ) : (
                                 <>
@@ -449,19 +430,7 @@ export default function MissionsTab() {
                       )}
                     </td>
 
-                    {/* Description */}
-                    <td className="p-4 align-top text-stone-600 leading-normal max-w-sm">
-                      {isEditing ? (
-                        <textarea
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                          rows={3}
-                          className="w-full p-2 border border-stone-250 bg-white text-xs rounded-md outline-none focus:border-indigo-500 resize-none"
-                        />
-                      ) : (
-                        mission.description
-                      )}
-                    </td>
+
 
                     {/* XP Reward */}
                     <td className="p-4 align-top font-mono font-bold text-amber-600 text-sm">

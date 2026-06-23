@@ -8,8 +8,6 @@ export class Mission {
   @Prop({ type: String, required: true, trim: true })
   title: string
 
-  @Prop({ type: String, required: false, trim: true, default: "" })
-  description?: string
 
   @Prop({ type: Number, required: true, min: 0 })
   xpReward: number

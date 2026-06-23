@@ -4,6 +4,12 @@ import { NotFoundException, BadRequestException } from "@nestjs/common"
 import { MissionsService } from "../src/modules/missions/missions.service"
 import { User } from "../src/modules/users/users.model"
 import { Mission } from "../src/modules/missions/missions.model"
+import { Vote, MarketTrade } from "../src/modules/markets/markets.model"
+import { Comment } from "../src/modules/comments/comments.model"
+import { Like } from "../src/modules/interactions/interactions.model"
+import { LPPosition } from "../src/modules/liquidity/liquidity.model"
+import { Post } from "../src/modules/posts/posts.model"
+import { TwitterVerifyService } from "../src/modules/missions/twitter-verify.service"
 import { Types } from "mongoose"
 
 describe("MissionsService", () => {
@@ -24,7 +30,6 @@ describe("MissionsService", () => {
   const mockMission = {
     _id: new Types.ObjectId(mockMissionId),
     title: "Test Mission",
-    description: "Follow us to earn XP",
     xpReward: 100,
     actionUrl: "https://example.com",
     isActive: true,
@@ -32,7 +37,6 @@ describe("MissionsService", () => {
       return {
         _id: this._id,
         title: this.title,
-        description: this.description,
         xpReward: this.xpReward,
         actionUrl: this.actionUrl,
         isActive: this.isActive,
@@ -64,6 +68,14 @@ describe("MissionsService", () => {
     mockMissionModel.findByIdAndUpdate = jest.fn()
     mockMissionModel.findByIdAndDelete = jest.fn()
 
+    const mockVoteModel = { findOne: jest.fn() }
+    const mockMarketTradeModel = { findOne: jest.fn() }
+    const mockCommentModel = { findOne: jest.fn() }
+    const mockLikeModel = { findOne: jest.fn() }
+    const mockLPPositionModel = { findOne: jest.fn() }
+    const mockPostModel = { findOne: jest.fn() }
+    const mockTwitterVerifyService = { checkFollow: jest.fn(), checkRetweet: jest.fn() }
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MissionsService,
@@ -74,6 +86,34 @@ describe("MissionsService", () => {
         {
           provide: getModelToken(Mission.name),
           useValue: mockMissionModel,
+        },
+        {
+          provide: getModelToken(Vote.name),
+          useValue: mockVoteModel,
+        },
+        {
+          provide: getModelToken(MarketTrade.name),
+          useValue: mockMarketTradeModel,
+        },
+        {
+          provide: getModelToken(Comment.name),
+          useValue: mockCommentModel,
+        },
+        {
+          provide: getModelToken(Like.name),
+          useValue: mockLikeModel,
+        },
+        {
+          provide: getModelToken(LPPosition.name),
+          useValue: mockLPPositionModel,
+        },
+        {
+          provide: getModelToken(Post.name),
+          useValue: mockPostModel,
+        },
+        {
+          provide: TwitterVerifyService,
+          useValue: mockTwitterVerifyService,
         },
       ],
     }).compile()
@@ -102,9 +142,11 @@ describe("MissionsService", () => {
       expect(result[0]).toEqual({
         id: mockMissionId,
         title: mockMission.title,
-        description: mockMission.description,
         xpReward: mockMission.xpReward,
         actionUrl: mockMission.actionUrl,
+        isActive: true,
+        missionType: "social",
+        verificationKey: null,
         completed: true,
       })
     })

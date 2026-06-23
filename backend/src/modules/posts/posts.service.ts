@@ -64,6 +64,8 @@ export interface MarketResponse {
   uniqueVoterThreshold: number
   marketCreationFeeUsdc: number
   market_creation_fee_usdc: number
+  minimumPoolBalance: number
+  minimum_pool_balance: number
   creationFeeTxHash: string | null
   creation_fee_tx_hash: string | null
   feeCollectorAddress: string | null
@@ -246,6 +248,8 @@ export class PostsService {
       uniqueVoterThreshold: market.uniqueVoterThreshold,
       marketCreationFeeUsdc: market.marketCreationFeeUsdc,
       market_creation_fee_usdc: market.marketCreationFeeUsdc,
+      minimumPoolBalance: market.minimumPoolBalance ?? 20,
+      minimum_pool_balance: market.minimumPoolBalance ?? 20,
       creationFeeTxHash: market.creationFeeTxHash,
       creation_fee_tx_hash: market.creationFeeTxHash,
       feeCollectorAddress: market.feeCollectorAddress,

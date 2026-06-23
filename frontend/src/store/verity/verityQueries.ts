@@ -777,7 +777,6 @@ export function usePublicMetricsQuery() {
 export interface Mission {
   id: string
   title: string
-  description: string
   xpReward: number
   actionUrl: string
   completed: boolean
@@ -814,7 +813,6 @@ export function useCreateMissionMutation() {
   return useMutation({
     mutationFn: (body: {
       title: string
-      description: string
       xpReward: number
       actionUrl: string
       missionType?: "social" | "activity"

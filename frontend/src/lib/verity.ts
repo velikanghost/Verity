@@ -65,6 +65,8 @@ export interface MarketPost {
   usdcNoAmount?: number
   liquidity?: number
   market_creation_fee_usdc?: number
+  minimumPoolBalance?: number
+  minimum_pool_balance?: number
   creationFeeTxHash?: string | null
   creation_fee_tx_hash?: string | null
   feeCollectorAddress?: string | null

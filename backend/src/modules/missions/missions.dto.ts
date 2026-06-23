@@ -7,10 +7,6 @@ export class CreateMissionDto {
   @IsNotEmpty()
   title: string
 
-  @ApiPropertyOptional({ example: "Follow us on Twitter to earn 100 XP" })
-  @IsString()
-  @IsOptional()
-  description?: string
 
   @ApiProperty({ example: 100 })
   @IsNumber()
@@ -39,10 +35,6 @@ export class UpdateMissionDto {
   @IsOptional()
   title?: string
 
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  description?: string
 
   @ApiPropertyOptional()
   @IsNumber()

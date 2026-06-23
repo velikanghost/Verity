@@ -27,7 +27,8 @@ export default function PreMarketFundingPanel({
   activeOptionName,
 }: PreMarketFundingPanelProps) {
   const currentPoolBalance = poolState?.pool?.currentPoolBalance ?? 0
-  const minPoolBalance = 40
+  const minPoolBalance = poolState?.pool?.minimumPoolBalance ?? 20
+  const creatorLiquidity = poolState?.pool?.creatorLiquidity ?? 5
   const progress = Math.min(100, (currentPoolBalance / minPoolBalance) * 100)
 
   const [depositAmount, setDepositAmount] = useState("10")
@@ -47,7 +48,7 @@ export default function PreMarketFundingPanel({
           </h2>
           <p className="mt-1 text-sm tracking-[-0.18px] text-ash">
             {activeOptionName
-              ? `Fund the launch pool for the option: ${activeOptionName}. Each outcome option has a separate liquidity pool and must be funded individually.`
+              ? `Fund the launch pool for the option group: ${activeOptionName}. Contributions fund this group's shared liquidity pool, which must reach ${minPoolBalance} USDC to activate trading.`
               : `Fund this market's launch pool. Contributions convert to LP shares once the pool hits ${minPoolBalance} USDC.`}
           </p>
         </div>
@@ -62,8 +63,8 @@ export default function PreMarketFundingPanel({
           <div>
             <span>
               You are currently funding the <strong>{activeOptionName}</strong>{" "}
-              pool. Each option pool is <strong>separate</strong> and must reach
-              40 USDC to activate trading for that option.
+              pool. This pool covers all outcomes within this option group and must reach{" "}
+              <strong>{minPoolBalance} USDC</strong> to activate trading.
             </span>
           </div>
         </div>
@@ -93,19 +94,19 @@ export default function PreMarketFundingPanel({
               Creator Action Required
             </h3>
             <p className="mb-3 mt-1 text-xs text-ash">
-              The creator must fund the first 10 USDC to initialize the pool and
+              The creator must fund the first {creatorLiquidity} USDC to initialize the pool and
               activate funding.
             </p>
             {isCurrentUserCreator ? (
               <button
                 className="verity-pill flex h-11 w-full items-center justify-center bg-inverse font-mono text-xs font-semibold uppercase tracking-[0.12em] text-inverse-text transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={Boolean(actionLoading) || !profileId}
-                onClick={() => onFundPreMarket(10)}
+                onClick={() => onFundPreMarket(creatorLiquidity)}
                 type="button"
               >
                 {actionLoading === "fund_pre_market"
                   ? "Funding..."
-                  : "Fund 10 USDC"}
+                  : `Fund ${creatorLiquidity} USDC`}
               </button>
             ) : null}
           </div>

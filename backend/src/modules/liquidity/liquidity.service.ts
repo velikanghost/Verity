@@ -70,11 +70,12 @@ export class LiquidityService {
       market.deadline < sevenDaysFromNow ? market.deadline : sevenDaysFromNow
 
     const minPoolBalance = await this.blockchainService.getMinPoolBalance()
+    const creatorMinLock = await this.blockchainService.getCreatorMinLock()
 
     const pool = await this.liquidityPoolModel.create({
       marketId: new Types.ObjectId(marketId),
       creatorAddress: creatorWallet,
-      creatorLiquidity: 10, // 10 USDC minimum
+      creatorLiquidity: creatorMinLock,
       minimumPoolBalance: minPoolBalance,
       fundingDeadline,
       status: "funding",
@@ -96,7 +97,7 @@ export class LiquidityService {
       userId: new Types.ObjectId(creatorId),
       walletAddress: creatorWallet,
       lpShares: Number(lpShares) / 1e6,
-      depositedUsdc: 10,
+      depositedUsdc: creatorMinLock,
       isCreator: true,
       depositTxHash: txHash,
     })
@@ -106,7 +107,7 @@ export class LiquidityService {
       poolId: pool._id,
       userId: new Types.ObjectId(creatorId),
       type: "creator_deposit",
-      amount: 10,
+      amount: creatorMinLock,
       txHash,
       lpSharesDelta: Number(lpShares) / 1e6,
     })
