@@ -1356,8 +1356,12 @@ export class MarketsService implements OnModuleInit {
         followingCount: user.followingCount,
         signalPoints: user.signalPoints,
         arenaXp: user.arenaXp,
-        doubleBoostRemaining: user.doubleBoostRemaining,
-        downtimeBoostRemaining: user.downtimeBoostRemaining,
+        doubleBoostRemaining: (user.activeBoosts || [])
+          .filter((b: any) => b.source === "referral" && b.type === "match_based")
+          .reduce((sum: number, b: any) => sum + (b.matchesRemaining || 0), 0),
+        downtimeBoostRemaining: (user.activeBoosts || [])
+          .filter((b: any) => b.source === "downtime" && b.type === "match_based")
+          .reduce((sum: number, b: any) => sum + (b.matchesRemaining || 0), 0),
         hasWonFirstPvpDuel: user.hasWonFirstPvpDuel,
         pvpMatchesWonCount: user.pvpMatchesWonCount,
         pvpMatchesLostCount: user.pvpMatchesLostCount,

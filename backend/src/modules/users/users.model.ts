@@ -4,6 +4,30 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose"
 export type UserDocument = HydratedDocument<User>
 export type FollowDocument = HydratedDocument<Follow>
 
+@Schema({ _id: false })
+export class ActiveBoost {
+  @Prop({ type: String, required: true, enum: ["time_based", "match_based", "category_specific"] })
+  type: string
+
+  @Prop({ type: Number, required: true, min: 1.0 })
+  multiplier: number
+
+  @Prop({ type: Date, default: null })
+  expiresAt: Date | null
+
+  @Prop({ type: Number, default: 0 })
+  matchesRemaining: number
+
+  @Prop({ type: String, default: null })
+  category: string | null
+
+  @Prop({ type: String, required: true })
+  source: string
+
+  @Prop({ type: String, default: null })
+  sourceId: string | null
+}
+
 @Schema({ timestamps: true, versionKey: false })
 export class User {
   @Prop({ type: String, trim: true, lowercase: true, default: null })
@@ -14,9 +38,6 @@ export class User {
 
   @Prop({ type: String, enum: ["user", "admin"], default: "user" })
   role: string
-
-  @Prop({ type: String, default: null, trim: true, index: true })
-  privyDid: string | null
 
   @Prop({ type: String, default: null, trim: true, index: true })
   circleWalletId: string | null
@@ -68,11 +89,8 @@ export class User {
   @Prop({ type: Number, default: 0 })
   arenaXp: number
 
-  @Prop({ type: Number, default: 0 })
-  doubleBoostRemaining: number
-
-  @Prop({ type: Number, default: 0 })
-  downtimeBoostRemaining: number
+  @Prop({ type: [ActiveBoost], default: [] })
+  activeBoosts: ActiveBoost[]
 
   @Prop({ type: Boolean, default: false })
   hasWonFirstPvpDuel: boolean

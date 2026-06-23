@@ -974,16 +974,37 @@ export class PvpService {
       // If welcome boosts were not applied, try to consume 2.0x downtime compensation boost
       if (!doubleBoostActive) {
         const updateResult = await this.userModel.findOneAndUpdate(
-          { _id: user._id, downtimeBoostRemaining: { $gt: 0 } },
-          { $inc: { downtimeBoostRemaining: -1 } },
-          { new: true },
+          {
+            _id: user._id,
+            activeBoosts: {
+              $elemMatch: {
+                source: "downtime",
+                type: "match_based",
+                matchesRemaining: { $gt: 0 }
+              }
+            }
+          } as any,
+          {
+            $inc: { "activeBoosts.$.matchesRemaining": -1 }
+          },
+          { new: true }
         )
         if (updateResult) {
+          await this.userModel.updateOne(
+            { _id: user._id },
+            {
+              $pull: {
+                activeBoosts: {
+                  source: "downtime",
+                  type: "match_based",
+                  matchesRemaining: { $lte: 0 }
+                }
+              }
+            } as any
+          )
           doubleBoostActive = true
           xpBoostMultiplier = 2.0
-          this.logger.log(
-            `User ${userId} consumed a 2.0x downtime compensation boost. remaining: ${updateResult.downtimeBoostRemaining}`,
-          )
+          this.logger.log(`User ${userId} consumed a 2.0x downtime compensation boost.`)
         }
       }
 
@@ -1010,16 +1031,37 @@ export class PvpService {
       // If welcome, downtime, and bronze boosts were not applied, try to consume standard referral boost
       if (!doubleBoostActive) {
         const updateResult = await this.userModel.findOneAndUpdate(
-          { _id: user._id, doubleBoostRemaining: { $gt: 0 } },
-          { $inc: { doubleBoostRemaining: -1 } },
-          { new: true },
+          {
+            _id: user._id,
+            activeBoosts: {
+              $elemMatch: {
+                source: "referral",
+                type: "match_based",
+                matchesRemaining: { $gt: 0 }
+              }
+            }
+          } as any,
+          {
+            $inc: { "activeBoosts.$.matchesRemaining": -1 }
+          },
+          { new: true }
         )
         if (updateResult) {
+          await this.userModel.updateOne(
+            { _id: user._id },
+            {
+              $pull: {
+                activeBoosts: {
+                  source: "referral",
+                  type: "match_based",
+                  matchesRemaining: { $lte: 0 }
+                }
+              }
+            } as any
+          )
           doubleBoostActive = true
           xpBoostMultiplier = 1.2
-          this.logger.log(
-            `User ${userId} consumed an XP boost. remaining: ${updateResult.doubleBoostRemaining}`,
-          )
+          this.logger.log(`User ${userId} consumed a 1.2x referral double boost.`)
         }
       }
     }
@@ -1613,11 +1655,29 @@ export class PvpService {
 
     const boostsToAdd = 2 - appliedBoostsCount
     if (boostsToAdd > 0) {
-      referrer.doubleBoostRemaining =
-        (referrer.doubleBoostRemaining ?? 0) + boostsToAdd
+      if (!referrer.activeBoosts) {
+        referrer.activeBoosts = []
+      }
+      const existingRefBoost = referrer.activeBoosts.find(
+        (b) => b.source === "referral" && b.type === "match_based",
+      )
+      if (existingRefBoost) {
+        existingRefBoost.matchesRemaining += boostsToAdd
+      } else {
+        referrer.activeBoosts.push({
+          type: "match_based",
+          multiplier: 1.2,
+          matchesRemaining: boostsToAdd,
+          category: null,
+          source: "referral",
+          sourceId: null,
+          expiresAt: null,
+        } as any)
+      }
+      referrer.markModified("activeBoosts")
       await referrer.save()
       this.logger.log(
-        `Added ${boostsToAdd} boosts to referrer ${referrer._id}'s doubleBoostRemaining (applied ${appliedBoostsCount} retroactively)`,
+        `Added ${boostsToAdd} boosts to referrer ${referrer._id}'s activeBoosts (applied ${appliedBoostsCount} retroactively)`,
       )
     } else {
       this.logger.log(
@@ -1951,13 +2011,21 @@ export class PvpService {
     }
 
     if (nextGameMultiplier === 1.0) {
-      if ((user.downtimeBoostRemaining ?? 0) > 0) {
+      const activeBoosts = user.activeBoosts || []
+      const hasDowntime = activeBoosts.some(
+        (b) => b.source === "downtime" && b.matchesRemaining > 0,
+      )
+      const hasReferral = activeBoosts.some(
+        (b) => b.source === "referral" && b.matchesRemaining > 0,
+      )
+
+      if (hasDowntime) {
         nextGameMultiplier = 2.0
       } else {
         const isBronze = user.arenaXp >= 30 && user.arenaXp <= 499
         if (isBronze && !user.hasUsedBronzeBoost) {
           nextGameMultiplier = 1.5
-        } else if ((user.doubleBoostRemaining ?? 0) > 0) {
+        } else if (hasReferral) {
           nextGameMultiplier = 1.2
         }
       }
@@ -1965,8 +2033,7 @@ export class PvpService {
 
     return {
       referralLink: user.username,
-      doubleBoostRemaining: user.doubleBoostRemaining ?? 0,
-      downtimeBoostRemaining: user.downtimeBoostRemaining ?? 0,
+      activeBoosts: user.activeBoosts || [],
       hasWonFirstPvpDuel: user.hasWonFirstPvpDuel ?? false,
       welcomeBoosts: {
         isEligible,
