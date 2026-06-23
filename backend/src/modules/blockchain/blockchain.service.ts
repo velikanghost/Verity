@@ -370,6 +370,55 @@ export class BlockchainService implements OnModuleInit {
     return (clean.startsWith("0x") ? clean : `0x${clean}`) as `0x${string}`
   }
 
+  private async safeWriteContract(params: any, retries = 2): Promise<string> {
+    let lastError: any;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const nonce = await this.publicClient.getTransactionCount({
+          address: this.account.address,
+          blockTag: "pending",
+        })
+
+        const txParams: any = {
+          ...params,
+          nonce,
+        }
+
+        // On retry attempts, fetch current gas price and bump it by 20%
+        if (attempt > 0) {
+          const gasPrice = await this.publicClient.getGasPrice()
+          txParams.gasPrice = (gasPrice * BigInt(120)) / BigInt(100)
+          this.logger.log(
+            `Retrying transaction with bumped gas price: ${txParams.gasPrice.toString()}`
+          )
+        }
+
+        const txHash = await this.walletClient.writeContract(txParams)
+        const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
+        if (receipt.status === "reverted") {
+          throw new Error("Transaction reverted on-chain")
+        }
+        return txHash
+      } catch (error: any) {
+        lastError = error;
+        const msg = error?.message || "";
+        this.logger.warn(`Transaction attempt ${attempt} failed: ${msg}`);
+
+        if (
+          msg.includes("replacement transaction underpriced") ||
+          msg.includes("nonce too low") ||
+          msg.includes("underpriced")
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        throw error;
+      }
+    }
+    throw lastError;
+  }
+
   async readPoolBalances(marketId: string) {
     const formattedMarketId = this.formatMarketId(marketId)
     try {
@@ -818,7 +867,7 @@ export class BlockchainService implements OnModuleInit {
     const formattedMarketId = this.formatMarketId(marketId)
 
     try {
-      const txHash = await this.walletClient.writeContract({
+      return await this.safeWriteContract({
         address: this.factoryAddress,
         abi: this.factoryAbi,
         functionName: "registerMarket",
@@ -831,11 +880,6 @@ export class BlockchainService implements OnModuleInit {
         ],
         chain: arcTestnet,
       })
-      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
-      if (receipt.status === "reverted") {
-        throw new Error("Transaction reverted on-chain: registerMarket")
-      }
-      return txHash
     } catch (error) {
       throw new Error(`Failed to register market ${marketId}: ${error.message}`)
     }
@@ -855,19 +899,13 @@ export class BlockchainService implements OnModuleInit {
 
     const formattedMarketId = this.formatMarketId(marketId)
     try {
-      const txHash = await this.walletClient.writeContract({
+      return await this.safeWriteContract({
         address: this.factoryAddress,
         abi: this.factoryAbi,
         functionName: "createMarketPreDeposit",
         args: [formattedMarketId, rawAmount],
         chain: arcTestnet,
       })
-      // Wait for block confirmation
-      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
-      if (receipt.status === "reverted") {
-        throw new Error("Transaction reverted on-chain: createMarketPreDeposit")
-      }
-      return txHash
     } catch (error) {
       throw new Error(
         `Failed to create market pre-deposit for ${marketId}: ${error.message}`,
@@ -1516,7 +1554,7 @@ export class BlockchainService implements OnModuleInit {
     const maxUint256 = BigInt(
       "115792089237316195423570985008687907853269984665640564039457584007913129639935",
     )
-    const txHash = await this.walletClient.writeContract({
+    return this.safeWriteContract({
       address: this.usdcAddress,
       abi: [
         {
@@ -1534,13 +1572,6 @@ export class BlockchainService implements OnModuleInit {
       args: [spender as `0x${string}`, maxUint256],
       chain: arcTestnet,
     })
-
-    // Wait for approval transaction receipt and check status
-    const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash })
-    if (receipt.status === "reverted") {
-      throw new Error(`Approval transaction reverted on-chain for spender ${spender}`)
-    }
-    return txHash
   }
 
   async getResolutionBond(): Promise<bigint> {

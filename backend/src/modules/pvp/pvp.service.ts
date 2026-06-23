@@ -212,32 +212,6 @@ export class PvpService {
     const childMarketIds: Types.ObjectId[] = []
 
     try {
-      // 1. Create Post
-      post = await this.postModel.create({
-        authorId: new Types.ObjectId(adminId),
-        type: "market",
-        content: dto.question.trim(),
-      })
-
-      // 2. Create Parent Market
-      const lockTime = dto.lockTime
-        ? new Date(dto.lockTime)
-        : new Date(dto.deadline)
-      parentMarket = await this.marketModel.create({
-        postId: post._id,
-        authorId: new Types.ObjectId(adminId),
-        question: dto.question.trim(),
-        category: "pvp",
-        deadline: new Date(dto.deadline),
-        lockTime,
-        resolutionSource: dto.resolutionSource.trim(),
-        yesCondition: teamA,
-        noCondition: teamB,
-        status: "tradable",
-        marketType: "parent",
-      })
-
-      // 3. Create Child Markets and Register/Fund them on-chain
       const childMarkets: MarketDocument[] = []
       const deadlineUnix = Math.floor(new Date(dto.deadline).getTime() / 1000)
       const now = new Date()
@@ -284,7 +258,22 @@ export class PvpService {
         groups[optionGroup].push(optionName)
       }
 
-      // We will loop over each option group to create one child market per group!
+      // We will loop over each option group to register and fund them on-chain first
+      const deployedMarkets: Array<{
+        childMarketId: Types.ObjectId;
+        questionSuffix: string;
+        optionName: string;
+        outcomes: string[];
+        handicap: number | null;
+        optionGroup: string;
+        outcomeCount: number;
+        preDepositTxHash: string;
+      }> = []
+
+      const lockTime = dto.lockTime
+        ? new Date(dto.lockTime)
+        : new Date(dto.deadline)
+
       for (const [optionGroup, groupOptions] of Object.entries(groups)) {
         const outcomeCount = groupOptions.length === 1 ? 2 : groupOptions.length
 
@@ -343,28 +332,6 @@ export class PvpService {
         const childMarketId = new Types.ObjectId()
         childMarketIds.push(childMarketId)
 
-        const child = await this.marketModel.create({
-          _id: childMarketId,
-          postId: post._id,
-          authorId: new Types.ObjectId(adminId),
-          question: `${dto.question.trim()} - ${questionSuffix}`,
-          category: "pvp",
-          deadline: new Date(dto.deadline),
-          lockTime,
-          resolutionSource: dto.resolutionSource.trim(),
-          yesCondition: outcomes[0] || "YES",
-          noCondition: outcomes[1] || "NO",
-          status: "funding_pool", // temporary status while funding
-          marketType: "child",
-          parentMarketId: parentMarket._id,
-          optionName,
-          teamName: teamA, // Keep teamA as primary associated team
-          optionGroup,
-          outcomeCount,
-          outcomes,
-          handicap,
-        })
-
         // Pre-deposit USDC on-chain based on contract minPoolBalance
         const preDepositTxHash =
           await this.blockchainService.adminCreateMarketPreDeposit(
@@ -388,16 +355,80 @@ export class PvpService {
           }
         }
 
+        deployedMarkets.push({
+          childMarketId,
+          questionSuffix,
+          optionName,
+          outcomes,
+          handicap,
+          optionGroup,
+          outcomeCount,
+          preDepositTxHash,
+        })
+      }
+
+      // 4. All on-chain transactions succeeded! Write everything to MongoDB.
+      const postId = new Types.ObjectId()
+      const parentMarketId = new Types.ObjectId()
+
+      // Create Post
+      post = await this.postModel.create({
+        _id: postId,
+        authorId: new Types.ObjectId(adminId),
+        type: "market",
+        content: dto.question.trim(),
+      })
+
+      // Create Parent Market
+      parentMarket = await this.marketModel.create({
+        _id: parentMarketId,
+        postId: postId,
+        authorId: new Types.ObjectId(adminId),
+        question: dto.question.trim(),
+        category: "pvp",
+        deadline: new Date(dto.deadline),
+        lockTime,
+        resolutionSource: dto.resolutionSource.trim(),
+        yesCondition: teamA,
+        noCondition: teamB,
+        status: "tradable",
+        marketType: "parent",
+      })
+
+      // Create Child Markets & Pools in DB
+      for (const item of deployedMarkets) {
+        const child = await this.marketModel.create({
+          _id: item.childMarketId,
+          postId: postId,
+          authorId: new Types.ObjectId(adminId),
+          question: `${dto.question.trim()} - ${item.questionSuffix}`,
+          category: "pvp",
+          deadline: new Date(dto.deadline),
+          lockTime,
+          resolutionSource: dto.resolutionSource.trim(),
+          yesCondition: item.outcomes[0] || "YES",
+          noCondition: item.outcomes[1] || "NO",
+          status: "funding_pool", // temporary status while funding
+          marketType: "child",
+          parentMarketId: parentMarketId,
+          optionName: item.optionName,
+          teamName: teamA, // Keep teamA as primary associated team
+          optionGroup: item.optionGroup,
+          outcomeCount: item.outcomeCount,
+          outcomes: item.outcomes,
+          handicap: item.handicap,
+        })
+
         // Initialize database pool from pre-deposit (which will sync and transition status to "tradable")
         await this.liquidityService.initializePoolFromPreDeposit(
-          childMarketId.toString(),
+          item.childMarketId.toString(),
           adminId,
           adminWalletAddress,
-          preDepositTxHash,
+          item.preDepositTxHash,
           minPoolBalance,
         )
 
-        const updatedChild = await this.marketModel.findById(childMarketId)
+        const updatedChild = await this.marketModel.findById(item.childMarketId)
         if (updatedChild) {
           childMarkets.push(updatedChild)
         } else {
@@ -432,11 +463,12 @@ export class PvpService {
           await this.liquidityService.deletePoolAndPositions(childId.toString())
         } catch (poolErr) {
           this.logger.error(
-            `Rollback error cleaning pool for ${childId}: ${poolErr.message}`,
+            `Rollback error cleaning pool for child market ${childId}: ${poolErr.message}`,
           )
         }
         try {
-          await this.marketModel.deleteOne({ _id: childId })
+          const res = await this.marketModel.findByIdAndDelete(childId)
+          this.logger.log(`Rollback: Deleted child market ${childId}. Result: ${JSON.stringify(res)}`)
         } catch (dbErr) {
           this.logger.error(
             `Rollback error deleting child market ${childId}: ${dbErr.message}`,
@@ -447,10 +479,11 @@ export class PvpService {
       // Rollback parent market
       if (parentMarket) {
         try {
-          await this.marketModel.deleteOne({ _id: parentMarket._id })
+          const res = await this.marketModel.findByIdAndDelete(parentMarket._id)
+          this.logger.log(`Rollback: Deleted parent market ${parentMarket._id}. Result: ${JSON.stringify(res)}`)
         } catch (dbErr) {
           this.logger.error(
-            `Rollback error deleting parent market: ${dbErr.message}`,
+            `Rollback error deleting parent market ${parentMarket._id}: ${dbErr.message}`,
           )
         }
       }
@@ -458,9 +491,10 @@ export class PvpService {
       // Rollback post
       if (post) {
         try {
-          await this.postModel.deleteOne({ _id: post._id })
+          const res = await this.postModel.findByIdAndDelete(post._id)
+          this.logger.log(`Rollback: Deleted post ${post._id}. Result: ${JSON.stringify(res)}`)
         } catch (dbErr) {
-          this.logger.error(`Rollback error deleting post: ${dbErr.message}`)
+          this.logger.error(`Rollback error deleting post ${post._id}: ${dbErr.message}`)
         }
       }
 
