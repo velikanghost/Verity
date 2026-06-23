@@ -909,7 +909,8 @@ export class PvpService {
 
     // 1. Calculate active user boost details first
     let activeUserBoostMultiplier = 1.0
-    let selectedUserBoostType: "welcome" | "downtime" | "bronze" | "referral" | null = null
+    let selectedUserBoostType: string | null = null
+    let selectedBoostObject: any = null
 
     // Check if new user welcome boosts apply
     const cutoffStr = this.configService.get<string>("NEW_USER_CUTOFF_DATE")
@@ -933,29 +934,49 @@ export class PvpService {
     }
 
     const activeBoosts = user.activeBoosts || []
-    const hasDowntimeBoost = activeBoosts.some(
-      (b) => b.source === "downtime" && b.matchesRemaining > 0,
-    )
     const isBronzeEligible =
       user.arenaXp >= 30 &&
       user.arenaXp <= 499 &&
       !user.hasUsedBronzeBoost
-    const hasReferralBoost = activeBoosts.some(
-      (b) => b.source === "referral" && b.matchesRemaining > 0,
-    )
+
+    const candidates: Array<{ type: string; multiplier: number; obj?: any }> = []
 
     if (welcomeBoostMultiplier > 1.0) {
-      activeUserBoostMultiplier = welcomeBoostMultiplier
-      selectedUserBoostType = "welcome"
-    } else if (hasDowntimeBoost) {
-      activeUserBoostMultiplier = 2.0
-      selectedUserBoostType = "downtime"
-    } else if (isBronzeEligible) {
-      activeUserBoostMultiplier = 1.5
-      selectedUserBoostType = "bronze"
-    } else if (hasReferralBoost) {
-      activeUserBoostMultiplier = 1.2
-      selectedUserBoostType = "referral"
+      candidates.push({ type: "welcome", multiplier: welcomeBoostMultiplier })
+    }
+
+    if (isBronzeEligible) {
+      candidates.push({ type: "bronze", multiplier: 1.5 })
+    }
+
+    for (const b of activeBoosts) {
+      if (b.type === "match_based" && b.matchesRemaining > 0) {
+        candidates.push({ type: b.source, multiplier: b.multiplier, obj: b })
+      }
+    }
+
+    if (candidates.length > 0) {
+      const typePriority: Record<string, number> = {
+        welcome: 10,
+        downtime: 8,
+        mission: 6,
+        bronze: 4,
+        referral: 2,
+      }
+
+      candidates.sort((a, b) => {
+        if (b.multiplier !== a.multiplier) {
+          return b.multiplier - a.multiplier
+        }
+        const prioA = typePriority[a.type] || 0
+        const prioB = typePriority[b.type] || 0
+        return prioB - prioA
+      })
+
+      const best = candidates[0]
+      activeUserBoostMultiplier = best.multiplier
+      selectedUserBoostType = best.type
+      selectedBoostObject = best.obj
     }
 
     // 2. Validate coupon if provided
@@ -1007,54 +1028,31 @@ export class PvpService {
     if (shouldConsumeUserBoost && selectedUserBoostType) {
       if (selectedUserBoostType === "welcome") {
         this.logger.log(`User ${userId} consumed Welcome Boost (${xpBoostMultiplier}x).`)
-      } else if (selectedUserBoostType === "downtime") {
-        const updateResult = await this.userModel.findOneAndUpdate(
-          {
-            _id: user._id,
-            activeBoosts: {
-              $elemMatch: {
-                source: "downtime",
-                type: "match_based",
-                matchesRemaining: { $gt: 0 }
-              }
-            }
-          } as any,
-          {
-            $inc: { "activeBoosts.$.matchesRemaining": -1 }
-          },
-          { new: true }
-        )
-        if (updateResult) {
-          await this.userModel.updateOne(
-            { _id: user._id },
-            {
-              $pull: {
-                activeBoosts: {
-                  source: "downtime",
-                  type: "match_based",
-                  matchesRemaining: { $lte: 0 }
-                }
-              }
-            } as any
-          )
-          this.logger.log(`User ${userId} consumed a downtime compensation boost match.`)
-        }
       } else if (selectedUserBoostType === "bronze") {
-        await this.userModel.updateOne(
-          { _id: user._id },
-          { $set: { hasUsedBronzeBoost: true } }
+        await this.userModel.findOneAndUpdate(
+          { _id: user._id, hasUsedBronzeBoost: false },
+          { $set: { hasUsedBronzeBoost: true } },
+          { new: true }
         )
         this.logger.log(`User ${userId} consumed one-time Bronze 1.5x boost.`)
-      } else if (selectedUserBoostType === "referral") {
+      } else if (selectedBoostObject) {
+        const source = selectedBoostObject.source
+        const sourceId = selectedBoostObject.sourceId
+        
+        const elemMatchQuery: any = {
+          source,
+          type: "match_based",
+          matchesRemaining: { $gt: 0 }
+        }
+        if (sourceId) {
+          elemMatchQuery.sourceId = sourceId
+        }
+
         const updateResult = await this.userModel.findOneAndUpdate(
           {
             _id: user._id,
             activeBoosts: {
-              $elemMatch: {
-                source: "referral",
-                type: "match_based",
-                matchesRemaining: { $gt: 0 }
-              }
+              $elemMatch: elemMatchQuery
             }
           } as any,
           {
@@ -1063,19 +1061,23 @@ export class PvpService {
           { new: true }
         )
         if (updateResult) {
+          const pullQuery: any = {
+            source,
+            type: "match_based",
+            matchesRemaining: { $lte: 0 }
+          }
+          if (sourceId) {
+            pullQuery.sourceId = sourceId
+          }
           await this.userModel.updateOne(
             { _id: user._id },
             {
               $pull: {
-                activeBoosts: {
-                  source: "referral",
-                  type: "match_based",
-                  matchesRemaining: { $lte: 0 }
-                }
+                activeBoosts: pullQuery
               }
             } as any
           )
-          this.logger.log(`User ${userId} consumed a referral double boost match.`)
+          this.logger.log(`User ${userId} consumed a ${source} boost match (multiplier: ${xpBoostMultiplier}x).`)
         }
       }
     }
@@ -2026,22 +2028,41 @@ export class PvpService {
 
     if (nextGameMultiplier === 1.0) {
       const activeBoosts = user.activeBoosts || []
-      const hasDowntime = activeBoosts.some(
-        (b) => b.source === "downtime" && b.matchesRemaining > 0,
-      )
-      const hasReferral = activeBoosts.some(
-        (b) => b.source === "referral" && b.matchesRemaining > 0,
-      )
+      const isBronzeEligible =
+        user.arenaXp >= 30 &&
+        user.arenaXp <= 499 &&
+        !user.hasUsedBronzeBoost
 
-      if (hasDowntime) {
-        nextGameMultiplier = 2.0
-      } else {
-        const isBronze = user.arenaXp >= 30 && user.arenaXp <= 499
-        if (isBronze && !user.hasUsedBronzeBoost) {
-          nextGameMultiplier = 1.5
-        } else if (hasReferral) {
-          nextGameMultiplier = 1.2
+      const candidates: Array<{ type: string; multiplier: number }> = []
+
+      if (isBronzeEligible) {
+        candidates.push({ type: "bronze", multiplier: 1.5 })
+      }
+
+      for (const b of activeBoosts) {
+        if (b.type === "match_based" && b.matchesRemaining > 0) {
+          candidates.push({ type: b.source, multiplier: b.multiplier })
         }
+      }
+
+      if (candidates.length > 0) {
+        const typePriority: Record<string, number> = {
+          downtime: 8,
+          mission: 6,
+          bronze: 4,
+          referral: 2,
+        }
+
+        candidates.sort((a, b) => {
+          if (b.multiplier !== a.multiplier) {
+            return b.multiplier - a.multiplier
+          }
+          const prioA = typePriority[a.type] || 0
+          const prioB = typePriority[b.type] || 0
+          return prioB - prioA
+        })
+
+        nextGameMultiplier = candidates[0].multiplier
       }
     }
 

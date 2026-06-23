@@ -9,8 +9,8 @@ export class Mission {
   title: string
 
 
-  @Prop({ type: Number, required: true, min: 0 })
-  xpReward: number
+  @Prop({ type: Number, default: null, min: 0 })
+  xpReward: number | null
 
   @Prop({ type: String, required: true, trim: true })
   actionUrl: string
@@ -23,6 +23,12 @@ export class Mission {
 
   @Prop({ type: Boolean, default: true, index: true })
   isActive: boolean
+
+  @Prop({ type: Number, default: null })
+  rewardMultiplier: number | null
+
+  @Prop({ type: Number, default: null })
+  rewardMatchesCount: number | null
 
   createdAt?: Date
   updatedAt?: Date

@@ -8,10 +8,11 @@ export class CreateMissionDto {
   title: string
 
 
-  @ApiProperty({ example: 100 })
+  @ApiPropertyOptional({ example: 100 })
   @IsNumber()
   @Min(0)
-  xpReward: number
+  @IsOptional()
+  xpReward?: number | null
 
   @ApiProperty({ example: "https://twitter.com/verity" })
   @IsString()
@@ -27,6 +28,16 @@ export class CreateMissionDto {
   @IsString()
   @IsOptional()
   verificationKey?: string | null
+
+  @ApiPropertyOptional({ example: 1.5 })
+  @IsNumber()
+  @IsOptional()
+  rewardMultiplier?: number | null
+
+  @ApiPropertyOptional({ example: 3 })
+  @IsNumber()
+  @IsOptional()
+  rewardMatchesCount?: number | null
 }
 
 export class UpdateMissionDto {
@@ -40,7 +51,7 @@ export class UpdateMissionDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  xpReward?: number
+  xpReward?: number | null
 
   @ApiPropertyOptional()
   @IsString()
@@ -61,4 +72,14 @@ export class UpdateMissionDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  rewardMultiplier?: number | null
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  rewardMatchesCount?: number | null
 }

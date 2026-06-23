@@ -16,6 +16,7 @@ import { LiquidityService } from "../src/modules/liquidity/liquidity.service"
 import { AgentService } from "../src/modules/agent/agent.service"
 import { BadRequestException } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
+import { CouponsService } from "../src/modules/coupons/coupons.service"
 
 import { Types } from "mongoose"
 import { calculatePvpResultXp } from "../src/modules/pvp/pvp-scoring"
@@ -84,6 +85,12 @@ describe("PvpService", () => {
                 return "2026-06-16T00:00:00.000Z"
               return null
             }),
+          },
+        },
+        {
+          provide: CouponsService,
+          useValue: {
+            validateCoupon: jest.fn(),
           },
         },
       ],
@@ -627,6 +634,102 @@ describe("PvpService", () => {
           hasUsedBronzeBoost: false,
         }),
         expect.objectContaining({ $set: { hasUsedBronzeBoost: true } }),
+        expect.any(Object),
+      )
+    })
+  })
+
+  describe("dynamic mission boost logic", () => {
+    it("should assign and consume dynamic mission boost with highest multiplier", async () => {
+      const mockUser = {
+        _id: new Types.ObjectId(),
+        createdAt: new Date("2020-01-01"),
+        activeBoosts: [
+          {
+            type: "match_based",
+            multiplier: 1.8,
+            matchesRemaining: 3,
+            source: "mission",
+            sourceId: "mission-id-123",
+          },
+          {
+            type: "match_based",
+            multiplier: 1.2,
+            matchesRemaining: 5,
+            source: "referral",
+            sourceId: null,
+          }
+        ],
+        arenaXp: 10,
+        hasUsedBronzeBoost: false,
+      }
+      const mockParentMarket = {
+        _id: new Types.ObjectId(),
+        marketType: "parent",
+        category: "pvp",
+        deadline: new Date(Date.now() + 1000 * 60 * 60),
+      }
+
+      const child1Id = new Types.ObjectId()
+      const child2Id = new Types.ObjectId()
+      const child3Id = new Types.ObjectId()
+
+      userModel.findById.mockImplementation((id: any) => {
+        if (id && id.toString() === mockUser._id.toString()) {
+          return Promise.resolve(mockUser)
+        }
+        return Promise.resolve(mockParentMarket)
+      })
+      userModel.findOneAndUpdate.mockResolvedValue(mockUser)
+      userModel.updateOne.mockResolvedValue({ modifiedCount: 1 })
+      marketModel.find.mockResolvedValue([
+        { _id: child1Id, optionGroup: "group-1" },
+        { _id: child2Id, optionGroup: "group-2" },
+        { _id: child3Id, optionGroup: "group-3" },
+      ])
+      pvpTicketModel.findOne.mockResolvedValue(null)
+
+      const mockTicket = {
+        _id: new Types.ObjectId(),
+        userId: mockUser._id,
+        parentMarketId: mockParentMarket._id,
+        picks: [],
+        status: "queued",
+        doubleBoostActive: true,
+        xpBoostMultiplier: 1.8,
+      }
+      pvpTicketModel.create.mockResolvedValue(mockTicket)
+      jest.spyOn(service as any, "matchmake").mockResolvedValue(null)
+
+      const result = await service.submitTicket(mockUser._id.toString(), {
+        parentMarketId: mockParentMarket._id.toString(),
+        picks: [
+          { marketId: child1Id.toString(), selection: "YES" },
+          { marketId: child2Id.toString(), selection: "NO" },
+          { marketId: child3Id.toString(), selection: "YES" },
+        ],
+      })
+
+      expect(result.doubleBoostActive).toBe(true)
+      expect(pvpTicketModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          xpBoostMultiplier: 1.8,
+          doubleBoostActive: true,
+        }),
+      )
+      expect(userModel.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          _id: mockUser._id,
+          activeBoosts: expect.objectContaining({
+            $elemMatch: {
+              source: "mission",
+              type: "match_based",
+              matchesRemaining: { $gt: 0 },
+              sourceId: "mission-id-123",
+            }
+          })
+        }),
+        expect.objectContaining({ $inc: { "activeBoosts.$.matchesRemaining": -1 } }),
         expect.any(Object),
       )
     })
