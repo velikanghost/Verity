@@ -31,10 +31,15 @@ export class TwitterVerifyService {
     return trimmed
   }
 
-  async checkFollow(userTwitterHandle: string, targetUrlOrHandle: string): Promise<boolean> {
+  async checkFollow(
+    userTwitterHandle: string,
+    targetUrlOrHandle: string,
+  ): Promise<boolean> {
     const apiKey = this.getApiKey()
     if (!apiKey) {
-      this.logger.warn("TWITTER_API_KEY is not set. Skipping follow verification and returning false.")
+      this.logger.warn(
+        "TWITTER_API_KEY is not set. Skipping follow verification and returning false.",
+      )
       return false
     }
 
@@ -42,7 +47,9 @@ export class TwitterVerifyService {
     const target = this.extractTwitterUsername(targetUrlOrHandle)
 
     if (!source || !target) {
-      this.logger.error(`Invalid usernames: source='${source}', target='${target}'`)
+      this.logger.error(
+        `Invalid usernames: source='${source}', target='${target}'`,
+      )
       return false
     }
 
@@ -60,30 +67,43 @@ export class TwitterVerifyService {
 
       if (!response.ok) {
         const errorText = await response.text()
-        this.logger.error(`TwitterAPI.io follow check failed with status ${response.status}: ${errorText}`)
+        this.logger.error(
+          `TwitterAPI.io follow check failed with status ${response.status}: ${errorText}`,
+        )
         return false
       }
 
       const resData = (await response.json()) as any
       return resData?.data?.following === true
     } catch (error) {
-      this.logger.error(`Error during Twitter follow verification: ${error.message}`, error.stack)
+      this.logger.error(
+        `Error during Twitter follow verification: ${error.message}`,
+        error.stack,
+      )
       return false
     }
   }
 
-  async checkRetweet(userTwitterHandle: string, tweetUrlOrId: string): Promise<boolean> {
+  async checkRetweet(
+    userTwitterHandle: string,
+    tweetUrlOrId: string,
+  ): Promise<boolean> {
     const apiKey = this.getApiKey()
     if (!apiKey) {
-      this.logger.warn("TWITTER_API_KEY is not set. Skipping retweet verification and returning false.")
+      this.logger.warn(
+        "TWITTER_API_KEY is not set. Skipping retweet verification and returning false.",
+      )
       return false
     }
 
-    const sourceUser = this.extractTwitterUsername(userTwitterHandle).toLowerCase()
+    const sourceUser =
+      this.extractTwitterUsername(userTwitterHandle).toLowerCase()
     const tweetId = this.extractTweetId(tweetUrlOrId)
 
     if (!sourceUser || !tweetId) {
-      this.logger.error(`Invalid params: sourceUser='${sourceUser}', tweetId='${tweetId}'`)
+      this.logger.error(
+        `Invalid params: sourceUser='${sourceUser}', tweetId='${tweetId}'`,
+      )
       return false
     }
 
@@ -105,7 +125,9 @@ export class TwitterVerifyService {
 
         if (!response.ok) {
           const errorText = await response.text()
-          this.logger.error(`TwitterAPI.io retweeters check failed with status ${response.status}: ${errorText}`)
+          this.logger.error(
+            `TwitterAPI.io retweeters check failed with status ${response.status}: ${errorText}`,
+          )
           return false
         }
 
@@ -113,7 +135,8 @@ export class TwitterVerifyService {
         const users = resData?.users || []
 
         const hasRetweeted = users.some(
-          (user: any) => user?.userName && user.userName.toLowerCase() === sourceUser,
+          (user: any) =>
+            user?.userName && user.userName.toLowerCase() === sourceUser,
         )
 
         if (hasRetweeted) {
@@ -128,7 +151,10 @@ export class TwitterVerifyService {
 
       return false
     } catch (error) {
-      this.logger.error(`Error during Twitter retweet verification: ${error.message}`, error.stack)
+      this.logger.error(
+        `Error during Twitter retweet verification: ${error.message}`,
+        error.stack,
+      )
       return false
     }
   }

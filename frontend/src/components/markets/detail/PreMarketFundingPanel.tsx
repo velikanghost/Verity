@@ -63,8 +63,9 @@ export default function PreMarketFundingPanel({
           <div>
             <span>
               You are currently funding the <strong>{activeOptionName}</strong>{" "}
-              pool. This pool covers all outcomes within this option group and must reach{" "}
-              <strong>{minPoolBalance} USDC</strong> to activate trading.
+              pool. This pool covers all outcomes within this option group and
+              must reach <strong>{minPoolBalance} USDC</strong> to activate
+              trading.
             </span>
           </div>
         </div>
@@ -94,8 +95,8 @@ export default function PreMarketFundingPanel({
               Creator Action Required
             </h3>
             <p className="mb-3 mt-1 text-xs text-ash">
-              The creator must fund the first {creatorLiquidity} USDC to initialize the pool and
-              activate funding.
+              The creator must fund the first {creatorLiquidity} USDC to
+              initialize the pool and activate funding.
             </p>
             {isCurrentUserCreator ? (
               <button

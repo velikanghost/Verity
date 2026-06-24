@@ -305,7 +305,10 @@ export class CreatePostUnifiedDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() outcomeCount?: number
   @ApiPropertyOptional() @IsOptional() outcomes?: string[]
   @ApiPropertyOptional() @IsOptional() @IsNumber() handicap?: number
-  @ApiPropertyOptional() @IsOptional() @IsString() marketType?: "binary" | "parent" | "child"
+  @ApiPropertyOptional() @IsOptional() @IsString() marketType?:
+    | "binary"
+    | "parent"
+    | "child"
   @ApiPropertyOptional() @IsOptional() @IsMongoId() parentMarketId?: string
   @ApiPropertyOptional() @IsOptional() @IsString() optionName?: string
 }

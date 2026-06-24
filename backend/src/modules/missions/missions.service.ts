@@ -55,6 +55,8 @@ export class MissionsService {
         isActive: missionObj.isActive,
         missionType: missionObj.missionType || "social",
         verificationKey: missionObj.verificationKey || null,
+        rewardMultiplier: missionObj.rewardMultiplier ?? null,
+        rewardMatchesCount: missionObj.rewardMatchesCount ?? null,
         completed: completedSet.has(missionObj._id.toString()),
       }
     })
@@ -80,7 +82,6 @@ export class MissionsService {
     )
 
     return {
-      success: true,
       twitterUsername: updatedUser?.twitterUsername || null,
     }
   }
@@ -190,7 +191,7 @@ export class MissionsService {
         if (mission.verificationKey.startsWith("twitter_")) {
           if (!user.twitterUsername) {
             throw new BadRequestException(
-              "Please link your Twitter/X username first.",
+              "Please link your X/Twitter account first.",
             )
           }
 
@@ -211,7 +212,7 @@ export class MissionsService {
             )
             if (!hasRetweeted) {
               throw new BadRequestException(
-                "You have not retweeted the target tweet.",
+                "You have not reposted the target post.",
               )
             }
           } else {
@@ -224,22 +225,38 @@ export class MissionsService {
     }
 
     // Update user's completed missions array and increment their arenaXp
+    const updateQuery: any = {
+      $push: { completedMissions: missionId },
+    }
+
+    if (mission.xpReward && mission.xpReward > 0) {
+      updateQuery.$inc = { arenaXp: mission.xpReward }
+    }
+
+    if (mission.rewardMultiplier && mission.rewardMatchesCount) {
+      updateQuery.$push.activeBoosts = {
+        type: "match_based",
+        multiplier: mission.rewardMultiplier,
+        matchesRemaining: mission.rewardMatchesCount,
+        source: "mission",
+        sourceId: mission._id.toString(),
+        category: null,
+        expiresAt: null,
+      }
+    }
+
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userId,
-      {
-        $push: { completedMissions: missionId },
-        $inc: { arenaXp: mission.xpReward },
-      },
+      updateQuery,
       { new: true },
     )
 
     this.logger.log(
-      `User ${user.username} (${userId}) completed mission ${mission.title} (${missionId}) and earned ${mission.xpReward} XP. Total XP is now ${updatedUser?.arenaXp}.`,
+      `User ${user.username} (${userId}) completed mission ${mission.title} (${missionId}) and earned ${mission.xpReward ?? 0} XP. Total XP is now ${updatedUser?.arenaXp}.`,
     )
 
     return {
-      success: true,
-      xpEarned: mission.xpReward,
+      xpEarned: mission.xpReward ?? 0,
       totalXp: updatedUser?.arenaXp ?? 0,
       completedMissions: updatedUser?.completedMissions ?? [],
     }
@@ -248,12 +265,42 @@ export class MissionsService {
   // --- Admin Methods ---
 
   async createMission(dto: CreateMissionDto) {
+    const hasXpReward =
+      dto.xpReward !== undefined && dto.xpReward !== null && dto.xpReward > 0
+    const hasMultiplierReward =
+      (dto.rewardMultiplier !== undefined && dto.rewardMultiplier !== null) ||
+      (dto.rewardMatchesCount !== undefined && dto.rewardMatchesCount !== null)
+
+    if (hasXpReward && hasMultiplierReward) {
+      throw new BadRequestException(
+        "A mission cannot have both an XP reward and a Multiplier boost reward.",
+      )
+    }
+    if (!hasXpReward && !hasMultiplierReward) {
+      throw new BadRequestException(
+        "A mission must have either an XP reward (> 0) or a Multiplier boost reward.",
+      )
+    }
+    if (
+      hasMultiplierReward &&
+      (dto.rewardMultiplier === null ||
+        dto.rewardMatchesCount === null ||
+        dto.rewardMultiplier === undefined ||
+        dto.rewardMatchesCount === undefined)
+    ) {
+      throw new BadRequestException(
+        "Both rewardMultiplier and rewardMatchesCount must be set if using boost rewards.",
+      )
+    }
+
     const mission = new this.missionModel({
       title: dto.title,
-      xpReward: dto.xpReward,
+      xpReward: hasXpReward ? dto.xpReward : null,
       actionUrl: dto.actionUrl,
       missionType: dto.missionType ?? "social",
       verificationKey: dto.verificationKey ?? null,
+      rewardMultiplier: hasMultiplierReward ? dto.rewardMultiplier : null,
+      rewardMatchesCount: hasMultiplierReward ? dto.rewardMatchesCount : null,
       isActive: true,
     })
     const saved = await mission.save()
@@ -268,13 +315,61 @@ export class MissionsService {
       throw new BadRequestException("Invalid mission ID format.")
     }
 
+    const existing = await this.missionModel.findById(id)
+    if (!existing) throw new NotFoundException("Mission not found.")
+
+    const merged = {
+      xpReward: dto.xpReward !== undefined ? dto.xpReward : existing.xpReward,
+      rewardMultiplier:
+        dto.rewardMultiplier !== undefined
+          ? dto.rewardMultiplier
+          : existing.rewardMultiplier,
+      rewardMatchesCount:
+        dto.rewardMatchesCount !== undefined
+          ? dto.rewardMatchesCount
+          : existing.rewardMatchesCount,
+    }
+
+    const hasXpReward =
+      merged.xpReward !== null &&
+      merged.xpReward !== undefined &&
+      merged.xpReward > 0
+    const hasMultiplierReward =
+      merged.rewardMultiplier !== null || merged.rewardMatchesCount !== null
+
+    if (hasXpReward && hasMultiplierReward) {
+      throw new BadRequestException(
+        "A mission cannot have both an XP reward and a Multiplier boost reward.",
+      )
+    }
+    if (!hasXpReward && !hasMultiplierReward) {
+      throw new BadRequestException(
+        "A mission must have either an XP reward (> 0) or a Multiplier boost reward.",
+      )
+    }
+    if (
+      hasMultiplierReward &&
+      (merged.rewardMultiplier === null || merged.rewardMatchesCount === null)
+    ) {
+      throw new BadRequestException(
+        "Both rewardMultiplier and rewardMatchesCount must be set if using boost rewards.",
+      )
+    }
+
+    const updateSet: any = { ...dto }
+    if (hasMultiplierReward) {
+      updateSet.xpReward = null
+    } else {
+      updateSet.rewardMultiplier = null
+      updateSet.rewardMatchesCount = null
+    }
+
     const updated = await this.missionModel.findByIdAndUpdate(
       id,
-      { $set: dto },
+      { $set: updateSet },
       { new: true },
     )
 
-    if (!updated) throw new NotFoundException("Mission not found.")
     this.logger.log(`Admin updated mission ID: ${id}`)
     return updated
   }

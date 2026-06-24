@@ -83,8 +83,12 @@ export function serializeUser(user: UserDocument): UserResponse {
     isOnboarded: user.isOnboarded || false,
     referredById: user.referredById ? user.referredById.toString() : null,
     arenaXp: user.arenaXp ?? 0,
-    doubleBoostRemaining: user.doubleBoostRemaining ?? 0,
-    downtimeBoostRemaining: user.downtimeBoostRemaining ?? 0,
+    doubleBoostRemaining: (user.activeBoosts || [])
+      .filter((b: any) => b.source === "referral" && b.type === "match_based")
+      .reduce((sum: number, b: any) => sum + (b.matchesRemaining || 0), 0),
+    downtimeBoostRemaining: (user.activeBoosts || [])
+      .filter((b: any) => b.source === "downtime" && b.type === "match_based")
+      .reduce((sum: number, b: any) => sum + (b.matchesRemaining || 0), 0),
     hasWonFirstPvpDuel: user.hasWonFirstPvpDuel ?? false,
     pvpTicketsSubmittedCount: user.pvpTicketsSubmittedCount ?? 0,
     pvpMatchesWonCount: user.pvpMatchesWonCount ?? 0,

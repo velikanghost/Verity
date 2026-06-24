@@ -36,7 +36,8 @@ export default function OutcomesPanel({
 
           if (isChildPreMarket) {
             const currentFunding = child.liquidity ?? 0
-            const minFunding = child.minimumPoolBalance || child.minimum_pool_balance || 20
+            const minFunding =
+              child.minimumPoolBalance || child.minimum_pool_balance || 20
             const progress = Math.min(100, (currentFunding / minFunding) * 100)
 
             return (

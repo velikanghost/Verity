@@ -8,14 +8,18 @@ export class Mission {
   @Prop({ type: String, required: true, trim: true })
   title: string
 
-
-  @Prop({ type: Number, required: true, min: 0 })
-  xpReward: number
+  @Prop({ type: Number, default: null, min: 0 })
+  xpReward: number | null
 
   @Prop({ type: String, required: true, trim: true })
   actionUrl: string
 
-  @Prop({ type: String, enum: ["social", "activity"], default: "social", index: true })
+  @Prop({
+    type: String,
+    enum: ["social", "activity"],
+    default: "social",
+    index: true,
+  })
   missionType: "social" | "activity"
 
   @Prop({ type: String, default: null, index: true })
@@ -23,6 +27,12 @@ export class Mission {
 
   @Prop({ type: Boolean, default: true, index: true })
   isActive: boolean
+
+  @Prop({ type: Number, default: null })
+  rewardMultiplier: number | null
+
+  @Prop({ type: Number, default: null })
+  rewardMatchesCount: number | null
 
   createdAt?: Date
   updatedAt?: Date

@@ -10,6 +10,8 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  Query,
+  Res,
 } from "@nestjs/common"
 import { MissionsService } from "./missions.service"
 import { CreateMissionDto, UpdateMissionDto } from "./missions.dto"
@@ -50,8 +52,14 @@ export class MissionsController {
   @ApiOperation({
     summary: "Link the authenticated user's Twitter/X username",
   })
-  async linkTwitter(@Request() req: any, @Body() body: { twitterUsername: string }) {
-    return this.missionsService.linkTwitterUsername(req.user.id, body.twitterUsername)
+  async linkTwitter(
+    @Request() req: any,
+    @Body() body: { twitterUsername: string },
+  ) {
+    return this.missionsService.linkTwitterUsername(
+      req.user.id,
+      body.twitterUsername,
+    )
   }
 
   @Post(":id/complete")

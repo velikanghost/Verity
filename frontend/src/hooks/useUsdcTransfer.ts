@@ -2,7 +2,12 @@
 
 import { useAuth } from "@/components/providers/AuthModals"
 import { type Address } from "viem"
-import { arcUsdcAddress, FACTORY_ADDRESS, publicClient, factoryAbi } from "@/lib/arc"
+import {
+  arcUsdcAddress,
+  FACTORY_ADDRESS,
+  publicClient,
+  factoryAbi,
+} from "@/lib/arc"
 
 export function useUsdcTransfer() {
   const { user, executeTxBatch } = useAuth()
@@ -60,7 +65,8 @@ export function useUsdcTransfer() {
       console.error("Failed to read marketCreationFee from contract:", e)
     }
 
-    const totalRequired = BigInt(Math.round(creatorLpAmount * 1e6)) + creationFee
+    const totalRequired =
+      BigInt(Math.round(creatorLpAmount * 1e6)) + creationFee
     const formattedMarketId = ("0x" + marketId.padEnd(64, "0")) as Address
     const calls: Array<{
       contractAddress: string

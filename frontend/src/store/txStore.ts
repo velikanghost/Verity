@@ -1,7 +1,6 @@
 import { create } from "zustand"
 import { apiRequest } from "@/store/apiClient"
 import type { Profile } from "@/lib/verity"
-import { toast } from "@/lib/toast"
 import { queryClient } from "@/lib/queryClient"
 import { useAuthStore } from "@/store/authStore"
 

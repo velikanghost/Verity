@@ -54,8 +54,10 @@ describe("MissionsService", () => {
       save: jest.fn().mockResolvedValue(mockMission),
     }
 
-    const mockMissionModel = jest.fn().mockImplementation(() => mockMissionInstance) as any
-    
+    const mockMissionModel = jest
+      .fn()
+      .mockImplementation(() => mockMissionInstance) as any
+
     // Mock query builder for find().sort() chaining
     const mockFindQuery = {
       sort: jest.fn().mockReturnThis(),
@@ -74,7 +76,10 @@ describe("MissionsService", () => {
     const mockLikeModel = { findOne: jest.fn() }
     const mockLPPositionModel = { findOne: jest.fn() }
     const mockPostModel = { findOne: jest.fn() }
-    const mockTwitterVerifyService = { checkFollow: jest.fn(), checkRetweet: jest.fn() }
+    const mockTwitterVerifyService = {
+      checkFollow: jest.fn(),
+      checkRetweet: jest.fn(),
+    }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -153,7 +158,9 @@ describe("MissionsService", () => {
 
     it("should throw NotFoundException if user not found", async () => {
       userModelMock.findById.mockResolvedValue(null)
-      await expect(service.getMissions(mockUserId)).rejects.toThrow(NotFoundException)
+      await expect(service.getMissions(mockUserId)).rejects.toThrow(
+        NotFoundException,
+      )
     })
   })
 
@@ -180,7 +187,6 @@ describe("MissionsService", () => {
         { new: true },
       )
       expect(result).toEqual({
-        success: true,
         xpEarned: 100,
         totalXp: 150,
         completedMissions: [mockMissionId],
@@ -212,7 +218,9 @@ describe("MissionsService", () => {
   describe("admin operations", () => {
     it("should update a mission", async () => {
       missionModelMock.findByIdAndUpdate.mockResolvedValue(mockMission)
-      const result = await service.updateMission(mockMissionId, { title: "Updated Title" })
+      const result = await service.updateMission(mockMissionId, {
+        title: "Updated Title",
+      })
       expect(missionModelMock.findByIdAndUpdate).toHaveBeenCalled()
       expect(result).toEqual(mockMission)
     })

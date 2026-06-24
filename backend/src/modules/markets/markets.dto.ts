@@ -107,7 +107,8 @@ export class ExecuteTradeDto {
   profileId: string
 
   @ApiProperty({
-    description: "Side of the prediction trade (YES, NO, or custom outcome name)",
+    description:
+      "Side of the prediction trade (YES, NO, or custom outcome name)",
     example: "YES",
   })
   @IsString({ message: "Trade side must be a string." })
@@ -164,7 +165,8 @@ export class ResolveMarketDto {
   winningOutcome: string
 
   @ApiPropertyOptional({
-    description: "Transaction hash of the resolution on-chain (optional, backend resolves if blank)",
+    description:
+      "Transaction hash of the resolution on-chain (optional, backend resolves if blank)",
     example: "0x123abc...",
   })
   @IsOptional()

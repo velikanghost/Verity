@@ -26,8 +26,14 @@ export interface Profile {
   isOnboarded?: boolean
   referredById?: string | null
   arenaXp?: number
-  doubleBoostRemaining?: number
-  downtimeBoostRemaining?: number
+  activeBoosts?: Array<{
+    type: string
+    multiplier: number
+    expiresAt: string | null
+    matchesRemaining: number
+    category: string | null
+    source: string
+  }>
   hasWonFirstPvpDuel?: boolean
   pvpMatchesWonCount?: number
   pvpMatchesLostCount?: number

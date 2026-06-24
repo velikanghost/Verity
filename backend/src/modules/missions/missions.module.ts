@@ -5,7 +5,12 @@ import { Mission, MissionSchema } from "./missions.model"
 import { MissionsService } from "./missions.service"
 import { MissionsController } from "./missions.controller"
 import { TwitterVerifyService } from "./twitter-verify.service"
-import { Vote, VoteSchema, MarketTrade, MarketTradeSchema } from "../markets/markets.model"
+import {
+  Vote,
+  VoteSchema,
+  MarketTrade,
+  MarketTradeSchema,
+} from "../markets/markets.model"
 import { Comment, CommentSchema } from "../comments/comments.model"
 import { Like, LikeSchema } from "../interactions/interactions.model"
 import { LPPosition, LPPositionSchema } from "../liquidity/liquidity.model"

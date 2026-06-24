@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { LogOut, TrendingUp, BarChart4, Sparkles, Ticket } from "lucide-react"
+import { LogOut, TrendingUp, BarChart4, Sparkles, Ticket, FolderOpen } from "lucide-react"
 
 // Import modular sub-components
 import LoginPanel from "@/components/LoginPanel"
@@ -23,6 +23,7 @@ import ResolveMarketDrawer from "@/components/ResolveMarketDrawer"
 import MetricsTab from "@/components/MetricsTab"
 import CouponsTab from "@/components/CouponsTab"
 import MissionsTab from "@/components/MissionsTab"
+import CategoriesTab from "@/components/CategoriesTab"
 
 interface Market {
   id: string
@@ -85,7 +86,7 @@ export default function AdminPage() {
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
-    "moderation" | "metrics" | "coupons" | "missions"
+    "moderation" | "metrics" | "coupons" | "missions" | "categories"
   >("moderation")
 
   // Markets state
@@ -447,6 +448,17 @@ export default function AdminPage() {
                 <Sparkles className="h-3.5 w-3.5" />
                 Missions
               </button>
+              <button
+                onClick={() => setActiveTab("categories")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  activeTab === "categories"
+                    ? "bg-white text-stone-950 shadow-xs"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <FolderOpen className="h-3.5 w-3.5" />
+                Categories
+              </button>
             </nav>
           </div>
 
@@ -505,6 +517,7 @@ export default function AdminPage() {
         )}
         {activeTab === "coupons" && <CouponsTab />}
         {activeTab === "missions" && <MissionsTab />}
+        {activeTab === "categories" && <CategoriesTab />}
       </main>
 
       {/* Create PvP Event Drawer */}

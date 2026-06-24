@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from "@nestjs/common"
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
 import { Model } from "mongoose"
 import { Coupon, CouponDocument } from "./coupon.model"
@@ -22,7 +28,9 @@ export class CouponsService {
   async create(adminId: string, dto: CreateCouponDto): Promise<CouponDocument> {
     await this.validateAdmin(adminId)
 
-    const existing = await this.couponModel.findOne({ code: dto.code.toUpperCase() })
+    const existing = await this.couponModel.findOne({
+      code: dto.code.toUpperCase(),
+    })
     if (existing) {
       throw new ConflictException("Coupon code already exists.")
     }
@@ -42,7 +50,11 @@ export class CouponsService {
     return this.couponModel.find().sort({ createdAt: -1 })
   }
 
-  async update(adminId: string, id: string, dto: UpdateCouponDto): Promise<CouponDocument> {
+  async update(
+    adminId: string,
+    id: string,
+    dto: UpdateCouponDto,
+  ): Promise<CouponDocument> {
     await this.validateAdmin(adminId)
 
     const coupon = await this.couponModel.findById(id)
@@ -52,9 +64,11 @@ export class CouponsService {
 
     if (dto.isActive !== undefined) coupon.isActive = dto.isActive
     if (dto.multiplier !== undefined) coupon.multiplier = dto.multiplier
-    if (dto.maxUsesPerUser !== undefined) coupon.maxUsesPerUser = dto.maxUsesPerUser
+    if (dto.maxUsesPerUser !== undefined)
+      coupon.maxUsesPerUser = dto.maxUsesPerUser
     if (dto.maxTotalUses !== undefined) coupon.maxTotalUses = dto.maxTotalUses
-    if (dto.expiresAt !== undefined) coupon.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null
+    if (dto.expiresAt !== undefined)
+      coupon.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null
 
     return coupon.save()
   }
@@ -70,7 +84,10 @@ export class CouponsService {
     if (coupon.expiresAt && new Date() > coupon.expiresAt) {
       throw new BadRequestException("Coupon has expired.")
     }
-    if (coupon.maxTotalUses !== null && coupon.currentTotalUses >= coupon.maxTotalUses) {
+    if (
+      coupon.maxTotalUses !== null &&
+      coupon.currentTotalUses >= coupon.maxTotalUses
+    ) {
       throw new BadRequestException("Coupon usage limit reached.")
     }
 
@@ -80,7 +97,7 @@ export class CouponsService {
   async incrementUsage(code: string): Promise<void> {
     await this.couponModel.updateOne(
       { code: code.toUpperCase() },
-      { $inc: { currentTotalUses: 1 } }
+      { $inc: { currentTotalUses: 1 } },
     )
   }
 }

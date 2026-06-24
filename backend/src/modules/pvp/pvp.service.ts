@@ -260,14 +260,14 @@ export class PvpService {
 
       // We will loop over each option group to register and fund them on-chain first
       const deployedMarkets: Array<{
-        childMarketId: Types.ObjectId;
-        questionSuffix: string;
-        optionName: string;
-        outcomes: string[];
-        handicap: number | null;
-        optionGroup: string;
-        outcomeCount: number;
-        preDepositTxHash: string;
+        childMarketId: Types.ObjectId
+        questionSuffix: string
+        optionName: string
+        outcomes: string[]
+        handicap: number | null
+        optionGroup: string
+        outcomeCount: number
+        preDepositTxHash: string
       }> = []
 
       const lockTime = dto.lockTime
@@ -468,7 +468,9 @@ export class PvpService {
         }
         try {
           const res = await this.marketModel.findByIdAndDelete(childId)
-          this.logger.log(`Rollback: Deleted child market ${childId}. Result: ${JSON.stringify(res)}`)
+          this.logger.log(
+            `Rollback: Deleted child market ${childId}. Result: ${JSON.stringify(res)}`,
+          )
         } catch (dbErr) {
           this.logger.error(
             `Rollback error deleting child market ${childId}: ${dbErr.message}`,
@@ -480,7 +482,9 @@ export class PvpService {
       if (parentMarket) {
         try {
           const res = await this.marketModel.findByIdAndDelete(parentMarket._id)
-          this.logger.log(`Rollback: Deleted parent market ${parentMarket._id}. Result: ${JSON.stringify(res)}`)
+          this.logger.log(
+            `Rollback: Deleted parent market ${parentMarket._id}. Result: ${JSON.stringify(res)}`,
+          )
         } catch (dbErr) {
           this.logger.error(
             `Rollback error deleting parent market ${parentMarket._id}: ${dbErr.message}`,
@@ -492,9 +496,13 @@ export class PvpService {
       if (post) {
         try {
           const res = await this.postModel.findByIdAndDelete(post._id)
-          this.logger.log(`Rollback: Deleted post ${post._id}. Result: ${JSON.stringify(res)}`)
+          this.logger.log(
+            `Rollback: Deleted post ${post._id}. Result: ${JSON.stringify(res)}`,
+          )
         } catch (dbErr) {
-          this.logger.error(`Rollback error deleting post ${post._id}: ${dbErr.message}`)
+          this.logger.error(
+            `Rollback error deleting post ${post._id}: ${dbErr.message}`,
+          )
         }
       }
 
@@ -924,7 +932,7 @@ export class PvpService {
       }
     }
 
-    // Cancel existing queued/matched ticket
+    // Check if user already has an active ticket for this matchup
     const existing = await this.pvpTicketModel.findOne({
       userId: new Types.ObjectId(userId),
       parentMarketId: parent._id,
@@ -932,150 +940,286 @@ export class PvpService {
     })
 
     if (existing) {
-      if (existing.status === "matched") {
-        throw new BadRequestException(
-          "You have already been matched with an opponent for this match. Selections are locked.",
-        )
-      }
-      existing.status = "cancelled"
-      await existing.save()
+      throw new BadRequestException(
+        "You have already submitted a ticket for this matchup.",
+      )
     }
 
-    // Try applying coupon if provided
+    // 1. Calculate active user boost details first
+    let activeUserBoostMultiplier = 1.0
+    let selectedUserBoostType: string | null = null
+    let selectedBoostObject: any = null
+
+    // Check if new user welcome boosts apply
+    const cutoffStr = this.configService.get<string>("NEW_USER_CUTOFF_DATE")
+    const cutoffDate = cutoffStr ? new Date(cutoffStr) : null
+    const isNewUser =
+      cutoffDate && user.createdAt && new Date(user.createdAt) >= cutoffDate
+    let welcomeBoostMultiplier = 1.0
+
+    if (isNewUser) {
+      // Count only tickets where a coupon was NOT used
+      const ticketCount = await this.pvpTicketModel.countDocuments({
+        userId: user._id,
+        status: { $ne: "cancelled" },
+        couponCode: { $in: [null, undefined] },
+      })
+      if (ticketCount === 0) {
+        welcomeBoostMultiplier = 2.0
+      } else if (ticketCount === 1) {
+        welcomeBoostMultiplier = 1.5
+      }
+    }
+
+    const activeBoosts = user.activeBoosts || []
+    const isBronzeEligible =
+      user.arenaXp >= 30 && user.arenaXp <= 499 && !user.hasUsedBronzeBoost
+
+    const candidates: Array<{ type: string; multiplier: number; obj?: any }> =
+      []
+
+    if (welcomeBoostMultiplier > 1.0) {
+      candidates.push({ type: "welcome", multiplier: welcomeBoostMultiplier })
+    }
+
+    if (isBronzeEligible) {
+      candidates.push({ type: "bronze", multiplier: 1.5 })
+    }
+
+    for (const b of activeBoosts) {
+      if (b.type === "match_based" && b.matchesRemaining > 0) {
+        candidates.push({ type: b.source, multiplier: b.multiplier, obj: b })
+      }
+    }
+
+    if (candidates.length > 0) {
+      const typePriority: Record<string, number> = {
+        welcome: 10,
+        downtime: 8,
+        mission: 6,
+        bronze: 4,
+        referral: 2,
+      }
+
+      candidates.sort((a, b) => {
+        if (b.multiplier !== a.multiplier) {
+          return b.multiplier - a.multiplier
+        }
+        const prioA = typePriority[a.type] || 0
+        const prioB = typePriority[b.type] || 0
+        return prioB - prioA
+      })
+
+      const best = candidates[0]
+      activeUserBoostMultiplier = best.multiplier
+      selectedUserBoostType = best.type
+      selectedBoostObject = best.obj
+    }
+
+    // 2. Validate coupon if provided
     let appliedCoupon: string | null = null
     let couponMultiplier: number | null = null
+
     if (dto.couponCode) {
       try {
         const coupon = await this.couponsService.validateCoupon(dto.couponCode)
-        
+
         // Check per-user limit
         const userUsageCount = await this.pvpTicketModel.countDocuments({
           userId: new Types.ObjectId(userId),
           couponCode: coupon.code,
-          status: { $ne: "cancelled" }
+          status: { $ne: "cancelled" },
         })
-        
+
         if (userUsageCount >= coupon.maxUsesPerUser) {
-          throw new BadRequestException(`You have already used this coupon code the maximum allowed number of times (${coupon.maxUsesPerUser}).`)
+          throw new BadRequestException(
+            `You have already used this coupon code the maximum allowed number of times (${coupon.maxUsesPerUser}).`,
+          )
         }
 
         couponMultiplier = coupon.multiplier
         appliedCoupon = coupon.code
       } catch (err: any) {
-        // We can throw if we want the ticket to be blocked, 
-        // but user requested: "if its invalid they can still go ahead and submit their ticket"
-        // so we just log and ignore the invalid coupon
-        this.logger.warn(`User ${userId} provided invalid coupon code ${dto.couponCode}: ${err.message}`)
+        this.logger.warn(
+          `User ${userId} provided invalid coupon code ${dto.couponCode}: ${err.message}`,
+        )
       }
     }
 
+    // 3. Coupon Bypasses Active User Boost
     let xpBoostMultiplier = 1.0
     let doubleBoostActive = false
+    let shouldConsumeUserBoost = false
 
     if (appliedCoupon && couponMultiplier) {
+      // Coupon is applied: use coupon, bypass and preserve active user boosts
       xpBoostMultiplier = couponMultiplier
       doubleBoostActive = true
-      this.logger.log(`User ${userId} applied coupon ${appliedCoupon} (${couponMultiplier}x). Bypassing other boosts.`)
+      this.logger.log(
+        `User ${userId} applied coupon ${appliedCoupon} (${couponMultiplier}x). Bypassing and preserving other boosts.`,
+      )
     } else {
-      // Check if new user welcome boosts apply
-      const cutoffStr = this.configService.get<string>("NEW_USER_CUTOFF_DATE")
-      const cutoffDate = cutoffStr ? new Date(cutoffStr) : null
-      const isNewUser =
-        cutoffDate && user.createdAt && new Date(user.createdAt) >= cutoffDate
-
-      if (isNewUser) {
-        // Count only tickets where a coupon was NOT used
-        const ticketCount = await this.pvpTicketModel.countDocuments({
-          userId: user._id,
-          status: { $ne: "cancelled" },
-          couponCode: { $in: [null, undefined] }
-        })
-        if (ticketCount === 0) {
-          xpBoostMultiplier = 2.0
-          doubleBoostActive = true
-          this.logger.log(
-            `User ${userId} qualifies for Welcome Boost 1 (2.0x XP).`,
-          )
-        } else if (ticketCount === 1) {
-          xpBoostMultiplier = 1.5
-          doubleBoostActive = true
-          this.logger.log(
-            `User ${userId} qualifies for Welcome Boost 2 (1.5x XP).`,
-          )
-        }
+      // No coupon applied: use active user boost (if any) and consume it
+      if (activeUserBoostMultiplier > 1.0) {
+        xpBoostMultiplier = activeUserBoostMultiplier
+        doubleBoostActive = true
+        shouldConsumeUserBoost = true
       }
+    }
 
-      // If welcome boosts were not applied, try to consume 2.0x downtime compensation boost
-      if (!doubleBoostActive) {
+    // 4. Consume user boost if resolved as active
+    let boostConsumed = false
+    if (shouldConsumeUserBoost && selectedUserBoostType) {
+      if (selectedUserBoostType === "welcome") {
+        this.logger.log(
+          `User ${userId} consumed Welcome Boost (${xpBoostMultiplier}x).`,
+        )
+        boostConsumed = true
+      } else if (selectedUserBoostType === "bronze") {
+        await this.userModel.findOneAndUpdate(
+          { _id: user._id, hasUsedBronzeBoost: false },
+          { $set: { hasUsedBronzeBoost: true } },
+          { new: true },
+        )
+        this.logger.log(`User ${userId} consumed one-time Bronze 1.5x boost.`)
+        boostConsumed = true
+      } else if (selectedBoostObject) {
+        const source = selectedBoostObject.source
+        const sourceId = selectedBoostObject.sourceId
+
+        const elemMatchQuery: any = {
+          source,
+          type: "match_based",
+          matchesRemaining: { $gt: 0 },
+        }
+        if (sourceId) {
+          elemMatchQuery.sourceId = sourceId
+        }
+
         const updateResult = await this.userModel.findOneAndUpdate(
-          { _id: user._id, downtimeBoostRemaining: { $gt: 0 } },
-          { $inc: { downtimeBoostRemaining: -1 } },
+          {
+            _id: user._id,
+            activeBoosts: {
+              $elemMatch: elemMatchQuery,
+            },
+          } as any,
+          {
+            $inc: { "activeBoosts.$.matchesRemaining": -1 },
+          },
           { new: true },
         )
         if (updateResult) {
-          doubleBoostActive = true
-          xpBoostMultiplier = 2.0
-          this.logger.log(
-            `User ${userId} consumed a 2.0x downtime compensation boost. remaining: ${updateResult.downtimeBoostRemaining}`,
-          )
-        }
-      }
-
-      // If welcome and downtime boosts were not applied, try to consume Bronze 1.5x boost
-      if (!doubleBoostActive) {
-        if (
-          user.arenaXp >= 30 &&
-          user.arenaXp <= 499 &&
-          !user.hasUsedBronzeBoost
-        ) {
-          const updateResult = await this.userModel.findOneAndUpdate(
-            { _id: user._id, hasUsedBronzeBoost: false },
-            { $set: { hasUsedBronzeBoost: true } },
-            { new: true },
-          )
-          if (updateResult) {
-            doubleBoostActive = true
-            xpBoostMultiplier = 1.5
-            this.logger.log(`User ${userId} consumed one-time Bronze 1.5x boost.`)
+          const pullQuery: any = {
+            source,
+            type: "match_based",
+            matchesRemaining: { $lte: 0 },
           }
-        }
-      }
-
-      // If welcome, downtime, and bronze boosts were not applied, try to consume standard referral boost
-      if (!doubleBoostActive) {
-        const updateResult = await this.userModel.findOneAndUpdate(
-          { _id: user._id, doubleBoostRemaining: { $gt: 0 } },
-          { $inc: { doubleBoostRemaining: -1 } },
-          { new: true },
-        )
-        if (updateResult) {
-          doubleBoostActive = true
-          xpBoostMultiplier = 1.2
+          if (sourceId) {
+            pullQuery.sourceId = sourceId
+          }
+          await this.userModel.updateOne({ _id: user._id }, {
+            $pull: {
+              activeBoosts: pullQuery,
+            },
+          } as any)
           this.logger.log(
-            `User ${userId} consumed an XP boost. remaining: ${updateResult.doubleBoostRemaining}`,
+            `User ${userId} consumed a ${source} boost match (multiplier: ${xpBoostMultiplier}x).`,
           )
+          boostConsumed = true
         }
       }
     }
 
     // Create the ticket
-    const ticket = await this.pvpTicketModel.create({
-      userId: new Types.ObjectId(userId),
-      parentMarketId: parent._id,
-      picks: dto.picks.map((p) => ({
-        marketId: new Types.ObjectId(p.marketId),
-        selection: p.selection,
-        isCorrect: null,
-      })),
-      status: "queued",
-      doubleBoostActive,
-      xpBoostMultiplier,
-      couponCode: appliedCoupon,
-    })
+    let ticket
+    try {
+      ticket = await this.pvpTicketModel.create({
+        userId: new Types.ObjectId(userId),
+        parentMarketId: parent._id,
+        picks: dto.picks.map((p) => ({
+          marketId: new Types.ObjectId(p.marketId),
+          selection: p.selection,
+          isCorrect: null,
+        })),
+        status: "queued",
+        doubleBoostActive,
+        xpBoostMultiplier,
+        couponCode: appliedCoupon,
+        boostType: shouldConsumeUserBoost ? selectedUserBoostType : null,
+        boostSourceId:
+          shouldConsumeUserBoost && selectedBoostObject
+            ? selectedBoostObject.sourceId
+            : null,
+      })
+    } catch (createErr) {
+      // Rollback boost consumption if saving the ticket fails
+      if (boostConsumed && selectedUserBoostType) {
+        if (selectedUserBoostType === "bronze") {
+          await this.userModel.findOneAndUpdate(
+            { _id: user._id },
+            { $set: { hasUsedBronzeBoost: false } },
+          )
+          this.logger.log(
+            `Rolled back Bronze Boost for user ${userId} due to ticket creation failure.`,
+          )
+        } else if (selectedBoostObject) {
+          const source = selectedBoostObject.source
+          const sourceId = selectedBoostObject.sourceId
+          const elemMatchQuery: any = {
+            source,
+            type: "match_based",
+          }
+          if (sourceId) {
+            elemMatchQuery.sourceId = sourceId
+          }
+
+          const updatedUser = await this.userModel.findById(user._id)
+          const existingBoost = (updatedUser?.activeBoosts || []).find(
+            (b) =>
+              b.type === "match_based" &&
+              b.source === source &&
+              (!sourceId || b.sourceId === sourceId),
+          )
+
+          if (existingBoost) {
+            await this.userModel.updateOne(
+              {
+                _id: user._id,
+                activeBoosts: {
+                  $elemMatch: elemMatchQuery,
+                },
+              },
+              {
+                $inc: { "activeBoosts.$.matchesRemaining": 1 },
+              },
+            )
+          } else {
+            const newBoost = {
+              type: "match_based",
+              multiplier: selectedBoostObject.multiplier,
+              matchesRemaining: 1,
+              source,
+              sourceId: sourceId || null,
+              category: null,
+              expiresAt: null,
+            }
+            await this.userModel.findByIdAndUpdate(user._id, {
+              $push: { activeBoosts: newBoost },
+            })
+          }
+          this.logger.log(
+            `Rolled back match-based boost ${source} for user ${userId} due to ticket creation failure.`,
+          )
+        }
+      }
+      throw createErr
+    }
 
     if (appliedCoupon) {
       await this.couponsService.incrementUsage(appliedCoupon)
-      this.logger.log(`User ${userId} successfully applied coupon ${appliedCoupon}. New multiplier: ${xpBoostMultiplier}x.`)
+      this.logger.log(
+        `User ${userId} successfully applied coupon ${appliedCoupon}. New multiplier: ${xpBoostMultiplier}x.`,
+      )
     }
 
     // Perform matchmaking
@@ -1647,11 +1791,29 @@ export class PvpService {
 
     const boostsToAdd = 2 - appliedBoostsCount
     if (boostsToAdd > 0) {
-      referrer.doubleBoostRemaining =
-        (referrer.doubleBoostRemaining ?? 0) + boostsToAdd
+      if (!referrer.activeBoosts) {
+        referrer.activeBoosts = []
+      }
+      const existingRefBoost = referrer.activeBoosts.find(
+        (b) => b.source === "referral" && b.type === "match_based",
+      )
+      if (existingRefBoost) {
+        existingRefBoost.matchesRemaining += boostsToAdd
+      } else {
+        referrer.activeBoosts.push({
+          type: "match_based",
+          multiplier: 1.2,
+          matchesRemaining: boostsToAdd,
+          category: null,
+          source: "referral",
+          sourceId: null,
+          expiresAt: null,
+        } as any)
+      }
+      referrer.markModified("activeBoosts")
       await referrer.save()
       this.logger.log(
-        `Added ${boostsToAdd} boosts to referrer ${referrer._id}'s doubleBoostRemaining (applied ${appliedBoostsCount} retroactively)`,
+        `Added ${boostsToAdd} boosts to referrer ${referrer._id}'s activeBoosts (applied ${appliedBoostsCount} retroactively)`,
       )
     } else {
       this.logger.log(
@@ -1973,7 +2135,7 @@ export class PvpService {
       ticketsCount = await this.pvpTicketModel.countDocuments({
         userId: user._id,
         status: { $ne: "cancelled" },
-        couponCode: { $in: [null, undefined] }
+        couponCode: { $in: [null, undefined] },
       })
       if (ticketsCount === 0) {
         isEligible = true
@@ -1985,22 +2147,46 @@ export class PvpService {
     }
 
     if (nextGameMultiplier === 1.0) {
-      if ((user.downtimeBoostRemaining ?? 0) > 0) {
-        nextGameMultiplier = 2.0
-      } else {
-        const isBronze = user.arenaXp >= 30 && user.arenaXp <= 499
-        if (isBronze && !user.hasUsedBronzeBoost) {
-          nextGameMultiplier = 1.5
-        } else if ((user.doubleBoostRemaining ?? 0) > 0) {
-          nextGameMultiplier = 1.2
+      const activeBoosts = user.activeBoosts || []
+      const isBronzeEligible =
+        user.arenaXp >= 30 && user.arenaXp <= 499 && !user.hasUsedBronzeBoost
+
+      const candidates: Array<{ type: string; multiplier: number }> = []
+
+      if (isBronzeEligible) {
+        candidates.push({ type: "bronze", multiplier: 1.5 })
+      }
+
+      for (const b of activeBoosts) {
+        if (b.type === "match_based" && b.matchesRemaining > 0) {
+          candidates.push({ type: b.source, multiplier: b.multiplier })
         }
+      }
+
+      if (candidates.length > 0) {
+        const typePriority: Record<string, number> = {
+          downtime: 8,
+          mission: 6,
+          bronze: 4,
+          referral: 2,
+        }
+
+        candidates.sort((a, b) => {
+          if (b.multiplier !== a.multiplier) {
+            return b.multiplier - a.multiplier
+          }
+          const prioA = typePriority[a.type] || 0
+          const prioB = typePriority[b.type] || 0
+          return prioB - prioA
+        })
+
+        nextGameMultiplier = candidates[0].multiplier
       }
     }
 
     return {
       referralLink: user.username,
-      doubleBoostRemaining: user.doubleBoostRemaining ?? 0,
-      downtimeBoostRemaining: user.downtimeBoostRemaining ?? 0,
+      activeBoosts: user.activeBoosts || [],
       hasWonFirstPvpDuel: user.hasWonFirstPvpDuel ?? false,
       welcomeBoosts: {
         isEligible,

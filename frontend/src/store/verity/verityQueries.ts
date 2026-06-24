@@ -651,6 +651,7 @@ export function useSubmitPvpTicketMutation() {
       void qc.invalidateQueries({ queryKey: ["pvp-my-active-tickets"] })
       void qc.invalidateQueries({ queryKey: ["wallet-profile"] })
       void qc.invalidateQueries({ queryKey: ["pvp-active-events"] })
+      void qc.invalidateQueries({ queryKey: ["pvp-referrals"] })
     },
   })
 }
@@ -678,8 +679,14 @@ export function useReferralsQuery() {
     queryFn: () =>
       apiRequest<{
         referralLink: string
-        doubleBoostRemaining: number
-        downtimeBoostRemaining?: number
+        activeBoosts: Array<{
+          type: string
+          multiplier: number
+          expiresAt: string | null
+          matchesRemaining: number
+          category: string | null
+          source: string
+        }>
         hasWonFirstPvpDuel: boolean
         welcomeBoosts?: {
           isEligible: boolean
@@ -778,11 +785,13 @@ export function usePublicMetricsQuery() {
 export interface Mission {
   id: string
   title: string
-  xpReward: number
+  xpReward?: number | null
   actionUrl: string
   completed: boolean
   missionType: "social" | "activity"
   verificationKey?: string | null
+  rewardMultiplier?: number | null
+  rewardMatchesCount?: number | null
 }
 
 export function useMissionsQuery() {
@@ -864,3 +873,18 @@ export function useLinkTwitterMutation() {
   })
 }
 
+export interface Category {
+  _id: string
+  slug: string
+  displayName: string
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export function useGetCategoriesQuery() {
+  return useQuery({
+    queryKey: ["categories"] as const,
+    queryFn: () => apiRequest<Category[]>("/categories"),
+  })
+}

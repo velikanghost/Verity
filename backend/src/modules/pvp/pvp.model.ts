@@ -18,10 +18,20 @@ export class PvpPick {
 
 @Schema({ timestamps: true, versionKey: false })
 export class PvpTicket {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  })
   userId: Types.ObjectId
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Market", required: true, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "Market",
+    required: true,
+    index: true,
+  })
   parentMarketId: Types.ObjectId
 
   @Prop({ type: [PvpPick], required: true })
@@ -35,10 +45,19 @@ export class PvpTicket {
   })
   status: "queued" | "matched" | "resolved" | "cancelled"
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "PvpMatch", default: null, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "PvpMatch",
+    default: null,
+    index: true,
+  })
   matchId: Types.ObjectId | null
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "PvpTicket", default: null })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "PvpTicket",
+    default: null,
+  })
   opponentTicketId: Types.ObjectId | null
 
   @Prop({ type: Number, default: 0 })
@@ -56,6 +75,12 @@ export class PvpTicket {
   @Prop({ type: String, default: null })
   couponCode: string | null
 
+  @Prop({ type: String, default: null })
+  boostType: string | null
+
+  @Prop({ type: String, default: null })
+  boostSourceId: string | null
+
   createdAt?: Date
   updatedAt?: Date
 }
@@ -65,19 +90,42 @@ PvpTicketSchema.index({ userId: 1, parentMarketId: 1, status: 1 })
 
 @Schema({ timestamps: true, versionKey: false })
 export class PvpMatch {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Market", required: true, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "Market",
+    required: true,
+    index: true,
+  })
   parentMarketId: Types.ObjectId
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "PvpTicket", required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "PvpTicket",
+    required: true,
+  })
   ticket1Id: Types.ObjectId
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "PvpTicket", required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "PvpTicket",
+    required: true,
+  })
   ticket2Id: Types.ObjectId
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  })
   user1Id: Types.ObjectId
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  })
   user2Id: Types.ObjectId
 
   @Prop({ type: Number, required: true })

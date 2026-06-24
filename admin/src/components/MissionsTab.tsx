@@ -24,6 +24,8 @@ interface Mission {
   isActive: boolean
   missionType: "social" | "activity"
   verificationKey?: string | null
+  rewardMultiplier?: number | null
+  rewardMatchesCount?: number | null
 }
 
 export default function MissionsTab() {
@@ -38,6 +40,8 @@ export default function MissionsTab() {
   const [actionUrl, setActionUrl] = useState("")
   const [missionType, setMissionType] = useState<"social" | "activity">("social")
   const [verificationKey, setVerificationKey] = useState("")
+  const [rewardMultiplier, setRewardMultiplier] = useState("")
+  const [rewardMatchesCount, setRewardMatchesCount] = useState("")
 
   // Editing states
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -46,6 +50,8 @@ export default function MissionsTab() {
   const [editActionUrl, setEditActionUrl] = useState("")
   const [editMissionType, setEditMissionType] = useState<"social" | "activity">("social")
   const [editVerificationKey, setEditVerificationKey] = useState("")
+  const [editRewardMultiplier, setEditRewardMultiplier] = useState("")
+  const [editRewardMatchesCount, setEditRewardMatchesCount] = useState("")
 
   // Fetch all missions for admin management
   async function fetchMissions() {
@@ -72,9 +78,37 @@ export default function MissionsTab() {
       return
     }
 
-    const reward = parseInt(xpReward, 10)
+    const reward = xpReward.trim() ? parseInt(xpReward, 10) : 0
     if (isNaN(reward) || reward < 0) {
-      toast.error("XP Reward must be a positive number.")
+      toast.error("XP Reward must be a non-negative number.")
+      return
+    }
+
+    const mult = rewardMultiplier.trim() ? parseFloat(rewardMultiplier) : null
+    const matches = rewardMatchesCount.trim() ? parseInt(rewardMatchesCount, 10) : null
+
+    if (reward > 0 && (mult !== null || matches !== null)) {
+      toast.error("A mission cannot have both an XP reward and a Multiplier boost reward.")
+      return
+    }
+
+    if (reward === 0 && mult === null && matches === null) {
+      toast.error("A mission must have either an XP reward (> 0) or a Multiplier boost reward.")
+      return
+    }
+
+    if ((mult !== null && matches === null) || (mult === null && matches !== null)) {
+      toast.error("Both Reward Multiplier and Matches Count must be set, or both left empty.")
+      return
+    }
+
+    if (mult !== null && (isNaN(mult) || mult < 1.0)) {
+      toast.error("Reward Multiplier must be at least 1.0.")
+      return
+    }
+
+    if (matches !== null && (isNaN(matches) || matches <= 0)) {
+      toast.error("Reward Matches Count must be a positive integer.")
       return
     }
 
@@ -84,10 +118,12 @@ export default function MissionsTab() {
         method: "POST",
         body: JSON.stringify({
           title: title.trim(),
-          xpReward: reward,
+          xpReward: reward > 0 ? reward : null,
           actionUrl: actionUrl.trim(),
           missionType,
           verificationKey: verificationKey || null,
+          rewardMultiplier: mult,
+          rewardMatchesCount: matches,
         }),
       })
 
@@ -97,6 +133,8 @@ export default function MissionsTab() {
       setActionUrl("")
       setMissionType("social")
       setVerificationKey("")
+      setRewardMultiplier("")
+      setRewardMatchesCount("")
       setShowCreateForm(false)
       void fetchMissions()
     } catch (err: any) {
@@ -147,17 +185,47 @@ export default function MissionsTab() {
   function startEditing(mission: Mission) {
     setEditingId(mission.id)
     setEditTitle(mission.title)
-    setEditXpReward(mission.xpReward.toString())
+    setEditXpReward(mission.xpReward ? mission.xpReward.toString() : "")
     setEditActionUrl(mission.actionUrl)
     setEditMissionType(mission.missionType || "social")
     setEditVerificationKey(mission.verificationKey || "")
+    setEditRewardMultiplier(mission.rewardMultiplier ? mission.rewardMultiplier.toString() : "")
+    setEditRewardMatchesCount(mission.rewardMatchesCount ? mission.rewardMatchesCount.toString() : "")
   }
 
   // Save edited mission
   async function handleSaveEdit(id: string) {
-    const reward = parseInt(editXpReward, 10)
+    const reward = editXpReward.trim() ? parseInt(editXpReward, 10) : 0
     if (isNaN(reward) || reward < 0) {
-      toast.error("XP Reward must be a positive number.")
+      toast.error("XP Reward must be a non-negative number.")
+      return
+    }
+
+    const mult = editRewardMultiplier.trim() ? parseFloat(editRewardMultiplier) : null
+    const matches = editRewardMatchesCount.trim() ? parseInt(editRewardMatchesCount, 10) : null
+
+    if (reward > 0 && (mult !== null || matches !== null)) {
+      toast.error("A mission cannot have both an XP reward and a Multiplier boost reward.")
+      return
+    }
+
+    if (reward === 0 && mult === null && matches === null) {
+      toast.error("A mission must have either an XP reward (> 0) or a Multiplier boost reward.")
+      return
+    }
+
+    if ((mult !== null && matches === null) || (mult === null && matches !== null)) {
+      toast.error("Both Reward Multiplier and Matches Count must be set, or both left empty.")
+      return
+    }
+
+    if (mult !== null && (isNaN(mult) || mult < 1.0)) {
+      toast.error("Reward Multiplier must be at least 1.0.")
+      return
+    }
+
+    if (matches !== null && (isNaN(matches) || matches <= 0)) {
+      toast.error("Reward Matches Count must be a positive integer.")
       return
     }
 
@@ -167,10 +235,12 @@ export default function MissionsTab() {
         method: "PUT",
         body: JSON.stringify({
           title: editTitle.trim(),
-          xpReward: reward,
+          xpReward: reward > 0 ? reward : null,
           actionUrl: editActionUrl.trim(),
           missionType: editMissionType,
           verificationKey: editVerificationKey || null,
+          rewardMultiplier: mult,
+          rewardMatchesCount: matches,
         }),
       })
       toast.success("Mission updated successfully!")
@@ -220,7 +290,7 @@ export default function MissionsTab() {
       {showCreateForm && (
         <form
           onSubmit={handleCreateMission}
-          className="bg-stone-50 p-5 rounded-2xl border border-stone-200/60 flex flex-col gap-4 max-w-2xl"
+          className="bg-stone-50 p-5 rounded-2xl border border-stone-200/60 flex flex-col gap-4 w-full"
         >
           <h4 className="text-sm font-bold text-stone-900">New XP Mission</h4>
 
@@ -242,10 +312,16 @@ export default function MissionsTab() {
               <input
                 type="number"
                 min="0"
-                placeholder="100"
+                placeholder="Optional if boost reward is set"
                 value={xpReward}
-                onChange={(e) => setXpReward(e.target.value)}
-                required
+                onChange={(e) => {
+                  const val = e.target.value
+                  setXpReward(val)
+                  if (val.trim() && parseInt(val, 10) > 0) {
+                    setRewardMultiplier("")
+                    setRewardMatchesCount("")
+                  }
+                }}
                 className="h-9 px-3 border border-stone-200 bg-white text-xs rounded-lg outline-none focus:border-indigo-500"
               />
             </div>
@@ -309,7 +385,44 @@ export default function MissionsTab() {
             />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-stone-600">Reward Multiplier (XP Boost, e.g. 1.5)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="1.0"
+                placeholder="Optional (e.g. 1.5)"
+                value={rewardMultiplier}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setRewardMultiplier(val)
+                  if (val.trim()) {
+                    setXpReward("0")
+                  }
+                }}
+                className="h-9 px-3 border border-stone-200 bg-white text-xs rounded-lg outline-none focus:border-indigo-500"
+              />
+            </div>
 
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-stone-600">Matches Count (Boost Duration)</label>
+              <input
+                type="number"
+                min="1"
+                placeholder="Optional (e.g. 3)"
+                value={rewardMatchesCount}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setRewardMatchesCount(val)
+                  if (val.trim()) {
+                    setXpReward("0")
+                  }
+                }}
+                className="h-9 px-3 border border-stone-200 bg-white text-xs rounded-lg outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button
@@ -338,7 +451,7 @@ export default function MissionsTab() {
             <thead>
               <tr className="border-b border-stone-200 bg-stone-50 text-stone-500 font-bold uppercase tracking-wider text-[10px]">
                 <th className="p-4 w-[250px]">Mission</th>
-                <th className="p-4 w-[100px]">XP Reward</th>
+                <th className="p-4 w-[200px]">Reward</th>
                 <th className="p-4 w-[100px]">Status</th>
                 <th className="p-4 text-right w-[180px]">Actions</th>
               </tr>
@@ -430,19 +543,74 @@ export default function MissionsTab() {
                       )}
                     </td>
 
-
-
-                    {/* XP Reward */}
-                    <td className="p-4 align-top font-mono font-bold text-amber-600 text-sm">
+                    {/* Reward Column */}
+                    <td className="p-4 align-top">
                       {isEditing ? (
-                        <input
-                          type="number"
-                          value={editXpReward}
-                          onChange={(e) => setEditXpReward(e.target.value)}
-                          className="h-8 w-20 px-2 border border-stone-250 bg-white text-xs rounded-md outline-none focus:border-indigo-500"
-                        />
+                        <div className="flex flex-col gap-2 min-w-[160px]">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] font-bold text-stone-500">XP Reward</span>
+                            <input
+                              type="number"
+                              value={editXpReward}
+                              placeholder="e.g. 100"
+                              onChange={(e) => {
+                                const val = e.target.value
+                                setEditXpReward(val)
+                                if (val.trim() && parseInt(val, 10) > 0) {
+                                  setEditRewardMultiplier("")
+                                  setEditRewardMatchesCount("")
+                                }
+                              }}
+                              className="h-8 w-full px-2 border border-stone-250 bg-white text-xs rounded-md outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] font-bold text-stone-500">Boost Reward</span>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="1.0"
+                                placeholder="Multiplier"
+                                value={editRewardMultiplier}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  setEditRewardMultiplier(val)
+                                  if (val.trim()) {
+                                    setEditXpReward("")
+                                  }
+                                }}
+                                className="h-8 w-full px-2 border border-stone-250 bg-white text-[10px] rounded-md outline-none focus:border-indigo-500"
+                              />
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="Matches"
+                                value={editRewardMatchesCount}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  setEditRewardMatchesCount(val)
+                                  if (val.trim()) {
+                                    setEditXpReward("")
+                                  }
+                                }}
+                                className="h-8 w-full px-2 border border-stone-250 bg-white text-[10px] rounded-md outline-none focus:border-indigo-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       ) : (
-                        `+${mission.xpReward} XP`
+                        mission.xpReward && mission.xpReward > 0 ? (
+                          <span className="font-mono font-bold text-amber-600 text-sm">
+                            +{mission.xpReward} XP
+                          </span>
+                        ) : mission.rewardMultiplier && mission.rewardMatchesCount ? (
+                          <span className="inline-flex px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-amber-50 border border-amber-100 text-amber-700">
+                            {mission.rewardMultiplier}x boost ({mission.rewardMatchesCount} matches)
+                          </span>
+                        ) : (
+                          <span className="text-stone-400 font-bold">-</span>
+                        )
                       )}
                     </td>
 

@@ -17,49 +17,9 @@ import { toast } from "@/lib/toast"
 import {
   useCastFreeVoteMutation,
   useDailyVotesQuery,
+  useGetCategoriesQuery,
 } from "@/store/verity/verityQueries"
 import { calculateYesPercent, displayHandle } from "@/lib/verity"
-
-function getPhaseTag(status: string) {
-  switch (status) {
-    case "open_for_votes":
-      return {
-        label: "Voting",
-        color:
-          "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-      }
-    case "qualified":
-      return {
-        label: "Qualified",
-        color:
-          "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-      }
-    case "funding_pool":
-      return {
-        label: "Funding",
-        color:
-          "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-      }
-    case "tradable":
-      return {
-        label: "Trading",
-        color:
-          "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-      }
-    case "resolved":
-      return {
-        label: "Resolved",
-        color:
-          "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
-      }
-    default:
-      return {
-        label: status.replace("_", " "),
-        color:
-          "bg-stone-500/10 text-stone-600 dark:text-stone-400 border-stone-500/20",
-      }
-  }
-}
 
 interface StandardMarketsFeedProps {
   feedItems: any[]
@@ -86,6 +46,7 @@ export default function StandardMarketsFeed({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const castFreeVoteMutation = useCastFreeVoteMutation()
   const { data: dailyVotesData } = useDailyVotesQuery(profile?.id || "")
+  const { data: categoriesData } = useGetCategoriesQuery()
   const dailyVotesRemaining = dailyVotesData?.votesRemaining ?? 10
 
   // Filtered standard markets
@@ -121,7 +82,8 @@ export default function StandardMarketsFeed({
         .toLowerCase()
         .includes(searchQuery.toLowerCase())
       const matchesCategory =
-        !selectedCategory || item.market.category === selectedCategory
+        !selectedCategory ||
+        item.market.category?.toLowerCase() === selectedCategory.toLowerCase()
       return matchesSearch && matchesCategory
     })
   }, [feedItems, searchQuery, selectedCategory])
@@ -172,26 +134,33 @@ export default function StandardMarketsFeed({
           >
             All
           </button>
-          {[
-            "Crypto",
-            "Culture",
-            "Economics",
-            "Politics",
-            "Sports",
-            "Miscellaneous",
-          ].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-full border transition-all ${
-                selectedCategory === cat
-                  ? "bg-inverse text-inverse-text border-inverse"
-                  : "bg-white-surface border-border text-graphite hover:border-ash dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+          {(categoriesData && categoriesData.length > 0
+            ? categoriesData
+            : [
+                { slug: "crypto", displayName: "Crypto" },
+                { slug: "culture", displayName: "Culture" },
+                { slug: "economics", displayName: "Economics" },
+                { slug: "politics", displayName: "Politics" },
+                { slug: "sports", displayName: "Sports" },
+                { slug: "miscellaneous", displayName: "Miscellaneous" },
+              ]
+          ).map((cat) => {
+            const isSelected =
+              selectedCategory?.toLowerCase() === cat.slug.toLowerCase()
+            return (
+              <button
+                key={cat.slug}
+                onClick={() => setSelectedCategory(cat.slug)}
+                className={`px-3 py-1.5 rounded-full border transition-all ${
+                  isSelected
+                    ? "bg-inverse text-inverse-text border-inverse"
+                    : "bg-white-surface border-border text-graphite hover:border-ash dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {cat.displayName}
+              </button>
+            )
+          })}
         </div>
       </div>
 

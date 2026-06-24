@@ -171,7 +171,7 @@ export class AgentService {
     const rYearMatch = resolutionSource
       ? resolutionSource.match(/\b\d{4}\b/)
       : null
-    
+
     let year = qYearMatch ? qYearMatch[0] : rYearMatch ? rYearMatch[0] : null
     if (!year && deadline) {
       year = String(new Date(deadline).getFullYear())

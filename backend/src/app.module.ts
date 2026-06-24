@@ -19,6 +19,7 @@ import { CircleWalletModule } from "./modules/circle-wallet/circle-wallet.module
 import { PvpModule } from "./modules/pvp/pvp.module"
 import { CouponsModule } from "./modules/coupons/coupons.module"
 import { MissionsModule } from "./modules/missions/missions.module"
+import { CategoriesModule } from "./modules/categories/categories.module"
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { MissionsModule } from "./modules/missions/missions.module"
     PvpModule,
     CouponsModule,
     MissionsModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [
