@@ -2,7 +2,10 @@ import { IsString, IsBoolean, IsOptional } from "class-validator"
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
 
 export class CreateCategoryDto {
-  @ApiProperty({ description: "Category unique slug (lowercase)", example: "football" })
+  @ApiProperty({
+    description: "Category unique slug (lowercase)",
+    example: "football",
+  })
   @IsString()
   slug: string
 
@@ -12,12 +15,18 @@ export class CreateCategoryDto {
 }
 
 export class UpdateCategoryDto {
-  @ApiPropertyOptional({ description: "Category display name", example: "Football" })
+  @ApiPropertyOptional({
+    description: "Category display name",
+    example: "Football",
+  })
   @IsOptional()
   @IsString()
   displayName?: string
 
-  @ApiPropertyOptional({ description: "Is the category active?", example: true })
+  @ApiPropertyOptional({
+    description: "Is the category active?",
+    example: true,
+  })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean

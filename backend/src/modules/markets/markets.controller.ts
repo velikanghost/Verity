@@ -262,12 +262,15 @@ export class MarketsController {
     schema: {
       type: "object",
       properties: {
-        amount: { type: "number", example: 40 }
+        amount: { type: "number", example: 40 },
       },
-      required: ["amount"]
-    }
+      required: ["amount"],
+    },
   })
-  @ApiResponse({ status: 200, description: "Liquidity deposited successfully." })
+  @ApiResponse({
+    status: 200,
+    description: "Liquidity deposited successfully.",
+  })
   async adminDepositLiquidity(
     @Param("marketId") marketId: string,
     @Body("amount") amount: number,

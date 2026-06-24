@@ -49,14 +49,16 @@ export class UsersService {
     user.displayName = input.display_name || null
     user.avatarUrl = input.avatar_url || null
     user.bio = input.bio || null
-    
+
     if (input.isOnboarded !== undefined) {
       user.isOnboarded = input.isOnboarded
     }
 
     if (input.referrerUsername && !user.referredById) {
       const referrer = await this.userModel.findOne({
-        username: { $regex: new RegExp(`^${input.referrerUsername.trim()}$`, "i") }
+        username: {
+          $regex: new RegExp(`^${input.referrerUsername.trim()}$`, "i"),
+        },
       })
       if (referrer && referrer._id.toString() !== id) {
         user.referredById = referrer._id

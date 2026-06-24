@@ -52,8 +52,14 @@ export class MissionsController {
   @ApiOperation({
     summary: "Link the authenticated user's Twitter/X username",
   })
-  async linkTwitter(@Request() req: any, @Body() body: { twitterUsername: string }) {
-    return this.missionsService.linkTwitterUsername(req.user.id, body.twitterUsername)
+  async linkTwitter(
+    @Request() req: any,
+    @Body() body: { twitterUsername: string },
+  ) {
+    return this.missionsService.linkTwitterUsername(
+      req.user.id,
+      body.twitterUsername,
+    )
   }
 
   @Post(":id/complete")

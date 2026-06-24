@@ -217,7 +217,9 @@ export default function MarketCard({
             <div className="h-2 overflow-hidden rounded-full bg-white-surface shadow-subtle">
               <div
                 className="h-full bg-meadow-green transition-all duration-500"
-                style={{ width: `${Math.min(100, (liquidity / minimumPoolBalance) * 100)}%` }}
+                style={{
+                  width: `${Math.min(100, (liquidity / minimumPoolBalance) * 100)}%`,
+                }}
               />
             </div>
           </div>

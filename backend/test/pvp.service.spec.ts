@@ -658,7 +658,7 @@ describe("PvpService", () => {
             matchesRemaining: 5,
             source: "referral",
             sourceId: null,
-          }
+          },
         ],
         arenaXp: 10,
         hasUsedBronzeBoost: false,
@@ -726,10 +726,12 @@ describe("PvpService", () => {
               type: "match_based",
               matchesRemaining: { $gt: 0 },
               sourceId: "mission-id-123",
-            }
-          })
+            },
+          }),
         }),
-        expect.objectContaining({ $inc: { "activeBoosts.$.matchesRemaining": -1 } }),
+        expect.objectContaining({
+          $inc: { "activeBoosts.$.matchesRemaining": -1 },
+        }),
         expect.any(Object),
       )
     })

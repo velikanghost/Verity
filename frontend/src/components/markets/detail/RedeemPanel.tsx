@@ -152,14 +152,19 @@ export function RefundPanel({
   })
 
   const myLPPosition = lpPositions?.find((pos) => pos.userId === profileId)
-  const onChainRefundAmount = onChainPreDeposit != null ? Number(onChainPreDeposit) / 1e6 : null
-  const hasDeposited = onChainRefundAmount !== null
-    ? onChainRefundAmount > 0
-    : Boolean(myLPPosition && myLPPosition.lpShares > 0)
+  const onChainRefundAmount =
+    onChainPreDeposit != null ? Number(onChainPreDeposit) / 1e6 : null
+  const hasDeposited =
+    onChainRefundAmount !== null
+      ? onChainRefundAmount > 0
+      : Boolean(myLPPosition && myLPPosition.lpShares > 0)
 
   if (!hasDeposited) return null
 
-  const refundShares = onChainRefundAmount !== null ? onChainRefundAmount : (myLPPosition?.lpShares || 0)
+  const refundShares =
+    onChainRefundAmount !== null
+      ? onChainRefundAmount
+      : myLPPosition?.lpShares || 0
 
   return (
     <section className="verity-card p-4 sm:p-5">

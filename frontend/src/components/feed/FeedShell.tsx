@@ -428,7 +428,9 @@ function FeedCard({
           outcomeCount={market.outcomeCount}
           outcomes={market.outcomes}
           outcomePrices={market.outcomePrices}
-          minimumPoolBalance={market.minimumPoolBalance || market.minimum_pool_balance}
+          minimumPoolBalance={
+            market.minimumPoolBalance || market.minimum_pool_balance
+          }
           isConnected={isConnected}
           actionLoading={actionLoading === market.id}
           onAddLP={(amount) => onAddLP(market, amount)}

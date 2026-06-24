@@ -52,5 +52,4 @@ export async function apiRequest<T>(
     return json.data as T
   }
   return json as T
-
 }

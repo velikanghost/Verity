@@ -11,7 +11,7 @@ import {
   OnModuleInit,
 } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
-import { Model, Types, /*SortOrder*/ } from "mongoose"
+import { Model, Types /*SortOrder*/ } from "mongoose"
 import {
   Market,
   MarketDocument,
@@ -131,7 +131,7 @@ export class MarketsService implements OnModuleInit {
     private readonly notificationsService: NotificationsService,
     private readonly pvpService: PvpService,
     private readonly liquidityService: LiquidityService,
-  ) { }
+  ) {}
 
   private todayKey(date = new Date()): string {
     return date.toISOString().slice(0, 10)
@@ -443,8 +443,8 @@ export class MarketsService implements OnModuleInit {
     const allChildMarkets =
       parentMarketIds.length > 0
         ? await this.marketModel.find({
-          parentMarketId: { $in: parentMarketIds },
-        })
+            parentMarketId: { $in: parentMarketIds },
+          })
         : []
 
     const childMarketsMap = new Map<string, MarketDocument[]>()
@@ -1357,10 +1357,14 @@ export class MarketsService implements OnModuleInit {
         signalPoints: user.signalPoints,
         arenaXp: user.arenaXp,
         doubleBoostRemaining: (user.activeBoosts || [])
-          .filter((b: any) => b.source === "referral" && b.type === "match_based")
+          .filter(
+            (b: any) => b.source === "referral" && b.type === "match_based",
+          )
           .reduce((sum: number, b: any) => sum + (b.matchesRemaining || 0), 0),
         downtimeBoostRemaining: (user.activeBoosts || [])
-          .filter((b: any) => b.source === "downtime" && b.type === "match_based")
+          .filter(
+            (b: any) => b.source === "downtime" && b.type === "match_based",
+          )
           .reduce((sum: number, b: any) => sum + (b.matchesRemaining || 0), 0),
         hasWonFirstPvpDuel: user.hasWonFirstPvpDuel,
         pvpMatchesWonCount: user.pvpMatchesWonCount,

@@ -240,7 +240,7 @@ export default function PvpArenaTab({
           marketIds.forEach((id) => next.add(id))
           return next
         })
-        
+
         // Invalidate all relevant queries to keep UI in sync
         void queryClient.invalidateQueries({
           queryKey: ["pvp-claimable-winnings"],

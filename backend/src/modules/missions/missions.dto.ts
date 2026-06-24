@@ -1,12 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsNotEmpty, IsNumber, IsString, IsUrl, IsBoolean, IsOptional, Min } from "class-validator"
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  IsUrl,
+  IsBoolean,
+  IsOptional,
+  Min,
+} from "class-validator"
 
 export class CreateMissionDto {
   @ApiProperty({ example: "Follow Twitter" })
   @IsString()
   @IsNotEmpty()
   title: string
-
 
   @ApiPropertyOptional({ example: 100 })
   @IsNumber()
@@ -45,7 +52,6 @@ export class UpdateMissionDto {
   @IsString()
   @IsOptional()
   title?: string
-
 
   @ApiPropertyOptional()
   @IsNumber()

@@ -260,14 +260,14 @@ export class PvpService {
 
       // We will loop over each option group to register and fund them on-chain first
       const deployedMarkets: Array<{
-        childMarketId: Types.ObjectId;
-        questionSuffix: string;
-        optionName: string;
-        outcomes: string[];
-        handicap: number | null;
-        optionGroup: string;
-        outcomeCount: number;
-        preDepositTxHash: string;
+        childMarketId: Types.ObjectId
+        questionSuffix: string
+        optionName: string
+        outcomes: string[]
+        handicap: number | null
+        optionGroup: string
+        outcomeCount: number
+        preDepositTxHash: string
       }> = []
 
       const lockTime = dto.lockTime
@@ -468,7 +468,9 @@ export class PvpService {
         }
         try {
           const res = await this.marketModel.findByIdAndDelete(childId)
-          this.logger.log(`Rollback: Deleted child market ${childId}. Result: ${JSON.stringify(res)}`)
+          this.logger.log(
+            `Rollback: Deleted child market ${childId}. Result: ${JSON.stringify(res)}`,
+          )
         } catch (dbErr) {
           this.logger.error(
             `Rollback error deleting child market ${childId}: ${dbErr.message}`,
@@ -480,7 +482,9 @@ export class PvpService {
       if (parentMarket) {
         try {
           const res = await this.marketModel.findByIdAndDelete(parentMarket._id)
-          this.logger.log(`Rollback: Deleted parent market ${parentMarket._id}. Result: ${JSON.stringify(res)}`)
+          this.logger.log(
+            `Rollback: Deleted parent market ${parentMarket._id}. Result: ${JSON.stringify(res)}`,
+          )
         } catch (dbErr) {
           this.logger.error(
             `Rollback error deleting parent market ${parentMarket._id}: ${dbErr.message}`,
@@ -492,9 +496,13 @@ export class PvpService {
       if (post) {
         try {
           const res = await this.postModel.findByIdAndDelete(post._id)
-          this.logger.log(`Rollback: Deleted post ${post._id}. Result: ${JSON.stringify(res)}`)
+          this.logger.log(
+            `Rollback: Deleted post ${post._id}. Result: ${JSON.stringify(res)}`,
+          )
         } catch (dbErr) {
-          this.logger.error(`Rollback error deleting post ${post._id}: ${dbErr.message}`)
+          this.logger.error(
+            `Rollback error deleting post ${post._id}: ${dbErr.message}`,
+          )
         }
       }
 
@@ -954,7 +962,7 @@ export class PvpService {
       const ticketCount = await this.pvpTicketModel.countDocuments({
         userId: user._id,
         status: { $ne: "cancelled" },
-        couponCode: { $in: [null, undefined] }
+        couponCode: { $in: [null, undefined] },
       })
       if (ticketCount === 0) {
         welcomeBoostMultiplier = 2.0
@@ -965,11 +973,10 @@ export class PvpService {
 
     const activeBoosts = user.activeBoosts || []
     const isBronzeEligible =
-      user.arenaXp >= 30 &&
-      user.arenaXp <= 499 &&
-      !user.hasUsedBronzeBoost
+      user.arenaXp >= 30 && user.arenaXp <= 499 && !user.hasUsedBronzeBoost
 
-    const candidates: Array<{ type: string; multiplier: number; obj?: any }> = []
+    const candidates: Array<{ type: string; multiplier: number; obj?: any }> =
+      []
 
     if (welcomeBoostMultiplier > 1.0) {
       candidates.push({ type: "welcome", multiplier: welcomeBoostMultiplier })
@@ -1016,22 +1023,26 @@ export class PvpService {
     if (dto.couponCode) {
       try {
         const coupon = await this.couponsService.validateCoupon(dto.couponCode)
-        
+
         // Check per-user limit
         const userUsageCount = await this.pvpTicketModel.countDocuments({
           userId: new Types.ObjectId(userId),
           couponCode: coupon.code,
-          status: { $ne: "cancelled" }
+          status: { $ne: "cancelled" },
         })
-        
+
         if (userUsageCount >= coupon.maxUsesPerUser) {
-          throw new BadRequestException(`You have already used this coupon code the maximum allowed number of times (${coupon.maxUsesPerUser}).`)
+          throw new BadRequestException(
+            `You have already used this coupon code the maximum allowed number of times (${coupon.maxUsesPerUser}).`,
+          )
         }
 
         couponMultiplier = coupon.multiplier
         appliedCoupon = coupon.code
       } catch (err: any) {
-        this.logger.warn(`User ${userId} provided invalid coupon code ${dto.couponCode}: ${err.message}`)
+        this.logger.warn(
+          `User ${userId} provided invalid coupon code ${dto.couponCode}: ${err.message}`,
+        )
       }
     }
 
@@ -1044,7 +1055,9 @@ export class PvpService {
       // Coupon is applied: use coupon, bypass and preserve active user boosts
       xpBoostMultiplier = couponMultiplier
       doubleBoostActive = true
-      this.logger.log(`User ${userId} applied coupon ${appliedCoupon} (${couponMultiplier}x). Bypassing and preserving other boosts.`)
+      this.logger.log(
+        `User ${userId} applied coupon ${appliedCoupon} (${couponMultiplier}x). Bypassing and preserving other boosts.`,
+      )
     } else {
       // No coupon applied: use active user boost (if any) and consume it
       if (activeUserBoostMultiplier > 1.0) {
@@ -1058,24 +1071,26 @@ export class PvpService {
     let boostConsumed = false
     if (shouldConsumeUserBoost && selectedUserBoostType) {
       if (selectedUserBoostType === "welcome") {
-        this.logger.log(`User ${userId} consumed Welcome Boost (${xpBoostMultiplier}x).`)
+        this.logger.log(
+          `User ${userId} consumed Welcome Boost (${xpBoostMultiplier}x).`,
+        )
         boostConsumed = true
       } else if (selectedUserBoostType === "bronze") {
         await this.userModel.findOneAndUpdate(
           { _id: user._id, hasUsedBronzeBoost: false },
           { $set: { hasUsedBronzeBoost: true } },
-          { new: true }
+          { new: true },
         )
         this.logger.log(`User ${userId} consumed one-time Bronze 1.5x boost.`)
         boostConsumed = true
       } else if (selectedBoostObject) {
         const source = selectedBoostObject.source
         const sourceId = selectedBoostObject.sourceId
-        
+
         const elemMatchQuery: any = {
           source,
           type: "match_based",
-          matchesRemaining: { $gt: 0 }
+          matchesRemaining: { $gt: 0 },
         }
         if (sourceId) {
           elemMatchQuery.sourceId = sourceId
@@ -1085,32 +1100,31 @@ export class PvpService {
           {
             _id: user._id,
             activeBoosts: {
-              $elemMatch: elemMatchQuery
-            }
+              $elemMatch: elemMatchQuery,
+            },
           } as any,
           {
-            $inc: { "activeBoosts.$.matchesRemaining": -1 }
+            $inc: { "activeBoosts.$.matchesRemaining": -1 },
           },
-          { new: true }
+          { new: true },
         )
         if (updateResult) {
           const pullQuery: any = {
             source,
             type: "match_based",
-            matchesRemaining: { $lte: 0 }
+            matchesRemaining: { $lte: 0 },
           }
           if (sourceId) {
             pullQuery.sourceId = sourceId
           }
-          await this.userModel.updateOne(
-            { _id: user._id },
-            {
-              $pull: {
-                activeBoosts: pullQuery
-              }
-            } as any
+          await this.userModel.updateOne({ _id: user._id }, {
+            $pull: {
+              activeBoosts: pullQuery,
+            },
+          } as any)
+          this.logger.log(
+            `User ${userId} consumed a ${source} boost match (multiplier: ${xpBoostMultiplier}x).`,
           )
-          this.logger.log(`User ${userId} consumed a ${source} boost match (multiplier: ${xpBoostMultiplier}x).`)
           boostConsumed = true
         }
       }
@@ -1132,7 +1146,10 @@ export class PvpService {
         xpBoostMultiplier,
         couponCode: appliedCoupon,
         boostType: shouldConsumeUserBoost ? selectedUserBoostType : null,
-        boostSourceId: (shouldConsumeUserBoost && selectedBoostObject) ? selectedBoostObject.sourceId : null,
+        boostSourceId:
+          shouldConsumeUserBoost && selectedBoostObject
+            ? selectedBoostObject.sourceId
+            : null,
       })
     } catch (createErr) {
       // Rollback boost consumption if saving the ticket fails
@@ -1140,9 +1157,11 @@ export class PvpService {
         if (selectedUserBoostType === "bronze") {
           await this.userModel.findOneAndUpdate(
             { _id: user._id },
-            { $set: { hasUsedBronzeBoost: false } }
+            { $set: { hasUsedBronzeBoost: false } },
           )
-          this.logger.log(`Rolled back Bronze Boost for user ${userId} due to ticket creation failure.`)
+          this.logger.log(
+            `Rolled back Bronze Boost for user ${userId} due to ticket creation failure.`,
+          )
         } else if (selectedBoostObject) {
           const source = selectedBoostObject.source
           const sourceId = selectedBoostObject.sourceId
@@ -1155,10 +1174,11 @@ export class PvpService {
           }
 
           const updatedUser = await this.userModel.findById(user._id)
-          const existingBoost = (updatedUser?.activeBoosts || []).find(b =>
-            b.type === "match_based" &&
-            b.source === source &&
-            (!sourceId || b.sourceId === sourceId)
+          const existingBoost = (updatedUser?.activeBoosts || []).find(
+            (b) =>
+              b.type === "match_based" &&
+              b.source === source &&
+              (!sourceId || b.sourceId === sourceId),
           )
 
           if (existingBoost) {
@@ -1166,12 +1186,12 @@ export class PvpService {
               {
                 _id: user._id,
                 activeBoosts: {
-                  $elemMatch: elemMatchQuery
-                }
+                  $elemMatch: elemMatchQuery,
+                },
               },
               {
-                $inc: { "activeBoosts.$.matchesRemaining": 1 }
-              }
+                $inc: { "activeBoosts.$.matchesRemaining": 1 },
+              },
             )
           } else {
             const newBoost = {
@@ -1181,13 +1201,15 @@ export class PvpService {
               source,
               sourceId: sourceId || null,
               category: null,
-              expiresAt: null
+              expiresAt: null,
             }
             await this.userModel.findByIdAndUpdate(user._id, {
-              $push: { activeBoosts: newBoost }
+              $push: { activeBoosts: newBoost },
             })
           }
-          this.logger.log(`Rolled back match-based boost ${source} for user ${userId} due to ticket creation failure.`)
+          this.logger.log(
+            `Rolled back match-based boost ${source} for user ${userId} due to ticket creation failure.`,
+          )
         }
       }
       throw createErr
@@ -1195,7 +1217,9 @@ export class PvpService {
 
     if (appliedCoupon) {
       await this.couponsService.incrementUsage(appliedCoupon)
-      this.logger.log(`User ${userId} successfully applied coupon ${appliedCoupon}. New multiplier: ${xpBoostMultiplier}x.`)
+      this.logger.log(
+        `User ${userId} successfully applied coupon ${appliedCoupon}. New multiplier: ${xpBoostMultiplier}x.`,
+      )
     }
 
     // Perform matchmaking
@@ -2111,7 +2135,7 @@ export class PvpService {
       ticketsCount = await this.pvpTicketModel.countDocuments({
         userId: user._id,
         status: { $ne: "cancelled" },
-        couponCode: { $in: [null, undefined] }
+        couponCode: { $in: [null, undefined] },
       })
       if (ticketsCount === 0) {
         isEligible = true
@@ -2125,9 +2149,7 @@ export class PvpService {
     if (nextGameMultiplier === 1.0) {
       const activeBoosts = user.activeBoosts || []
       const isBronzeEligible =
-        user.arenaXp >= 30 &&
-        user.arenaXp <= 499 &&
-        !user.hasUsedBronzeBoost
+        user.arenaXp >= 30 && user.arenaXp <= 499 && !user.hasUsedBronzeBoost
 
       const candidates: Array<{ type: string; multiplier: number }> = []
 

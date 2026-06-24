@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from "@nestjs/common"
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+} from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
 import { Model } from "mongoose"
 import { Category, CategoryDocument } from "./categories.model"
@@ -19,7 +24,10 @@ export class CategoriesService {
     }
   }
 
-  async create(adminId: string, dto: CreateCategoryDto): Promise<CategoryDocument> {
+  async create(
+    adminId: string,
+    dto: CreateCategoryDto,
+  ): Promise<CategoryDocument> {
     await this.validateAdmin(adminId)
 
     const cleanSlug = dto.slug.toLowerCase().trim()
@@ -45,7 +53,11 @@ export class CategoriesService {
     return this.categoryModel.find({ isActive: true }).sort({ slug: 1 })
   }
 
-  async update(adminId: string, id: string, dto: UpdateCategoryDto): Promise<CategoryDocument> {
+  async update(
+    adminId: string,
+    id: string,
+    dto: UpdateCategoryDto,
+  ): Promise<CategoryDocument> {
     await this.validateAdmin(adminId)
 
     const category = await this.categoryModel.findById(id)
@@ -53,7 +65,8 @@ export class CategoriesService {
       throw new NotFoundException("Category not found.")
     }
 
-    if (dto.displayName !== undefined) category.displayName = dto.displayName.trim()
+    if (dto.displayName !== undefined)
+      category.displayName = dto.displayName.trim()
     if (dto.isActive !== undefined) category.isActive = dto.isActive
 
     return category.save()

@@ -6,7 +6,11 @@ export type FollowDocument = HydratedDocument<Follow>
 
 @Schema({ _id: false })
 export class ActiveBoost {
-  @Prop({ type: String, required: true, enum: ["time_based", "match_based", "category_specific"] })
+  @Prop({
+    type: String,
+    required: true,
+    enum: ["time_based", "match_based", "category_specific"],
+  })
   type: string
 
   @Prop({ type: Number, required: true, min: 1.0 })

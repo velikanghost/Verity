@@ -461,7 +461,11 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
 
         if (isMultiOption) {
           const validOptions = options.filter((o) => o.trim().length > 0)
-          const payment = await createMarketPreDeposit(marketId, creatorLp, true)
+          const payment = await createMarketPreDeposit(
+            marketId,
+            creatorLp,
+            true,
+          )
           txHash = payment.hash
 
           await createMarketPost({
@@ -478,7 +482,11 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
           })
         } else {
           // Binary Market Pre-Deposit
-          const payment = await createMarketPreDeposit(marketId, creatorLp, true)
+          const payment = await createMarketPreDeposit(
+            marketId,
+            creatorLp,
+            true,
+          )
           txHash = payment.hash
 
           await createMarketPost({
@@ -667,7 +675,10 @@ export default function ComposeBox({ onCreated }: ComposeBoxProps) {
                           { slug: "culture", displayName: "Culture" },
                           { slug: "crypto", displayName: "Crypto" },
                           { slug: "economics", displayName: "Economics" },
-                          { slug: "miscellaneous", displayName: "Miscellaneous" },
+                          {
+                            slug: "miscellaneous",
+                            displayName: "Miscellaneous",
+                          },
                           { slug: "politics", displayName: "Politics" },
                         ]
                     ).map((cat) => (
