@@ -52,11 +52,11 @@ export default function MissionsPage() {
 
     try {
       await linkTwitter({ twitterUsername: trimmed })
-      toast.success("X username linked successfully!")
+      toast.success("X account linked!")
       setIsModalOpen(false)
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to link Twitter username.",
+        err instanceof Error ? err.message : "Failed to link X account.",
       )
     }
   }
@@ -73,7 +73,7 @@ export default function MissionsPage() {
     verificationKey: string | null | undefined,
   ) => {
     if (verificationKey?.startsWith("twitter_") && !profile?.twitterUsername) {
-      toast.error("Please link your X (Twitter) username first.")
+      toast.error("Please link your X account first.")
       // Revert button state back to "Start" since linking is required first
       setStartedMissions((prev) => prev.filter((id) => id !== missionId))
       setTwitterInput("")
@@ -84,7 +84,7 @@ export default function MissionsPage() {
     setVerifyingMissionId(missionId)
     try {
       await completeMission(missionId)
-      toast.success("Mission completed successfully!")
+      toast.success("Mission completed!")
       setVerifyingMissionId(null)
       // Cleanup local started tracking once successfully completed on backend
       setStartedMissions((prev) => prev.filter((id) => id !== missionId))
@@ -123,7 +123,7 @@ export default function MissionsPage() {
       case "twitter_follow":
         return "Follow the target account on X/Twitter."
       case "twitter_retweet":
-        return "Retweet the specified post on X/Twitter."
+        return "Repost the specified post on X/Twitter."
       default:
         return title
           ? `Complete the required activity for ${title}.`

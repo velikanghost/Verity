@@ -36,7 +36,6 @@ export class MissionsService {
     private readonly twitterVerifyService: TwitterVerifyService,
   ) {}
 
-
   async getMissions(userId: string, admin = false) {
     const user = await this.userModel.findById(userId)
     if (!user) throw new NotFoundException("User not found.")
@@ -192,7 +191,7 @@ export class MissionsService {
         if (mission.verificationKey.startsWith("twitter_")) {
           if (!user.twitterUsername) {
             throw new BadRequestException(
-              "Please link your Twitter/X username first.",
+              "Please link your X/Twitter account first.",
             )
           }
 
@@ -213,7 +212,7 @@ export class MissionsService {
             )
             if (!hasRetweeted) {
               throw new BadRequestException(
-                "You have not retweeted the target tweet.",
+                "You have not reposted the target post.",
               )
             }
           } else {
@@ -266,7 +265,8 @@ export class MissionsService {
   // --- Admin Methods ---
 
   async createMission(dto: CreateMissionDto) {
-    const hasXpReward = dto.xpReward !== undefined && dto.xpReward !== null && dto.xpReward > 0
+    const hasXpReward =
+      dto.xpReward !== undefined && dto.xpReward !== null && dto.xpReward > 0
     const hasMultiplierReward =
       (dto.rewardMultiplier !== undefined && dto.rewardMultiplier !== null) ||
       (dto.rewardMatchesCount !== undefined && dto.rewardMatchesCount !== null)
@@ -330,7 +330,10 @@ export class MissionsService {
           : existing.rewardMatchesCount,
     }
 
-    const hasXpReward = merged.xpReward !== null && merged.xpReward !== undefined && merged.xpReward > 0
+    const hasXpReward =
+      merged.xpReward !== null &&
+      merged.xpReward !== undefined &&
+      merged.xpReward > 0
     const hasMultiplierReward =
       merged.rewardMultiplier !== null || merged.rewardMatchesCount !== null
 
