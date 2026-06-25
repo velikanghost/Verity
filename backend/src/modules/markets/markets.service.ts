@@ -824,11 +824,11 @@ export class MarketsService implements OnModuleInit {
     )
 
     // Process creator royalty payment in real-time
-    this.royaltyService.processTradeRoyalty(trade).catch((err) => {
-      this.logger.error(
-        `Failed to process trade royalty for trade ${trade._id}: ${err.message}`,
-      )
-    })
+    // this.royaltyService.processTradeRoyalty(trade).catch((err) => {
+    //   this.logger.error(
+    //     `Failed to process trade royalty for trade ${trade._id}: ${err.message}`,
+    //   )
+    // })
   }
 
   async syncMarketPrices(marketId: string): Promise<void> {
