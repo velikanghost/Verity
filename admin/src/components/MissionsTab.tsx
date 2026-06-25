@@ -356,6 +356,8 @@ export default function MissionsTab() {
                     <option value="">None (3s Timer Verification)</option>
                     <option value="twitter_follow">twitter_follow (Check Follow)</option>
                     <option value="twitter_retweet">twitter_retweet (Check Retweet)</option>
+                    <option value="twitter_comment">twitter_comment (Check Comment/Reply)</option>
+                    <option value="twitter_retweet_and_comment">twitter_retweet_and_comment (Check Repost & Comment)</option>
                   </>
                 ) : (
                   <>
@@ -505,6 +507,8 @@ export default function MissionsTab() {
                                   <option value="">None (Timer)</option>
                                   <option value="twitter_follow">twitter_follow</option>
                                   <option value="twitter_retweet">twitter_retweet</option>
+                                  <option value="twitter_comment">twitter_comment</option>
+                                  <option value="twitter_retweet_and_comment">twitter_retweet_and_comment</option>
                                 </>
                               ) : (
                                 <>

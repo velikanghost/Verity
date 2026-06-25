@@ -1,16 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { Bell, Home, User, Wallet, TrendingUp } from "lucide-react"
+import { Sparkles, Home, User, Wallet, TrendingUp } from "lucide-react"
 import { usePathname } from "next/navigation"
-import { useWalletProfile } from "@/hooks/useWalletProfile"
-import { useNotificationsQuery } from "@/store/verity/verityQueries"
 import { useAuth } from "@/components/providers/AuthModals"
 
 const MOBILE_NAV_ITEMS = [
   { icon: Home, label: "Home", href: "/" },
   { icon: TrendingUp, label: "Markets", href: "/markets" },
-  { icon: Bell, label: "Alerts", href: "/notifications" },
+  { icon: Sparkles, label: "Missions", href: "/missions" },
   { icon: Wallet, label: "Portfolio", href: "/portfolio" },
   { icon: User, label: "Profile", href: "/profile" },
 ]
@@ -18,9 +16,6 @@ const MOBILE_NAV_ITEMS = [
 export default function MobileNav() {
   const pathname = usePathname()
   const { authenticated, login } = useAuth()
-  const { profile } = useWalletProfile()
-  const { data: notifications = [] } = useNotificationsQuery(profile?.id || "")
-  const unreadCount = notifications.filter((n: any) => !n.read).length
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 backdrop-blur sm:hidden">
@@ -50,11 +45,6 @@ export default function MobileNav() {
             >
               <div className="relative flex items-center justify-center shrink-0">
                 <item.icon className="h-5 w-5" />
-                {item.href === "/notifications" && unreadCount > 0 && (
-                  <span className="absolute -right-1.5 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-coral-red text-[8px] font-bold text-white ring-2 ring-background">
-                    {unreadCount}
-                  </span>
-                )}
               </div>
               <span className="max-w-full truncate">{item.label}</span>
             </Link>
