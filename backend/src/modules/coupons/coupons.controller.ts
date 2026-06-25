@@ -12,14 +12,33 @@ import {
 import { CouponsService } from "./coupons.service"
 import { CreateCouponDto, UpdateCouponDto } from "./coupons.dto"
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard"
+import * as jwt from "jsonwebtoken"
 
 @Controller("coupons")
 export class CouponsController {
   constructor(private readonly couponsService: CouponsService) {}
 
   @Get("validate/:code")
-  async validateCoupon(@Param("code") code: string) {
-    const coupon = await this.couponsService.validateCoupon(code)
+  async validateCoupon(@Request() req: any, @Param("code") code: string) {
+    const authHeader = req.headers["authorization"]
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : null
+
+    let userId: string | undefined
+    if (token) {
+      try {
+        const jwtSecret = process.env.JWT_SECRET || ""
+        const decoded = jwt.verify(token, jwtSecret) as any
+        if (decoded && decoded.id) {
+          userId = decoded.id
+        }
+      } catch (e) {
+        // Ignore invalid token, just treat as guest
+      }
+    }
+
+    const coupon = await this.couponsService.validateCoupon(code, userId)
     return {
       success: true,
       data: {

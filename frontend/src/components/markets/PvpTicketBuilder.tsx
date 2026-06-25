@@ -409,7 +409,7 @@ export default function PvpTicketBuilder({
             </div>
 
             <button
-              onClick={() => onSubmitTicket(couponCode.trim() || undefined)}
+              onClick={() => onSubmitTicket((!couponError && couponCode.trim()) || undefined)}
               disabled={isSubmitting || selectionCount < 3}
               className="verity-pill px-6 h-11 bg-indigo-600 text-white hover:bg-indigo-500 font-bold uppercase tracking-wider text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >

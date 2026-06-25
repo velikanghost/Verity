@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
-import { Model } from "mongoose"
+import { Model, Types } from "mongoose"
 import { Coupon, CouponDocument } from "./coupon.model"
 import { CreateCouponDto, UpdateCouponDto } from "./coupons.dto"
 import { User, UserDocument } from "../users/users.model"
@@ -73,7 +73,7 @@ export class CouponsService {
     return coupon.save()
   }
 
-  async validateCoupon(code: string): Promise<CouponDocument> {
+  async validateCoupon(code: string, userId?: string): Promise<CouponDocument> {
     const coupon = await this.couponModel.findOne({ code: code.toUpperCase() })
     if (!coupon) {
       throw new NotFoundException("Invalid coupon code.")
@@ -89,6 +89,17 @@ export class CouponsService {
       coupon.currentTotalUses >= coupon.maxTotalUses
     ) {
       throw new BadRequestException("Coupon usage limit reached.")
+    }
+
+    if (userId) {
+      const userUsageCount = await this.userModel.db.collection("pvptickets").countDocuments({
+        userId: new Types.ObjectId(userId),
+        couponCode: coupon.code,
+        status: { $ne: "cancelled" }
+      })
+      if (userUsageCount >= coupon.maxUsesPerUser) {
+        throw new BadRequestException(`You have already used this coupon code the maximum allowed number of times (${coupon.maxUsesPerUser}).`)
+      }
     }
 
     return coupon
