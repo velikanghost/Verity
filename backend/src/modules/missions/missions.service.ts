@@ -215,6 +215,36 @@ export class MissionsService {
                 "You have not reposted the target post.",
               )
             }
+          } else if (mission.verificationKey === "twitter_comment") {
+            const hasCommented = await this.twitterVerifyService.checkComment(
+              user.twitterUsername,
+              mission.actionUrl,
+            )
+            if (!hasCommented) {
+              throw new BadRequestException(
+                "You have not commented on the target post.",
+              )
+            }
+          } else if (mission.verificationKey === "twitter_retweet_and_comment") {
+            const hasRetweeted = await this.twitterVerifyService.checkRetweet(
+              user.twitterUsername,
+              mission.actionUrl,
+            )
+            if (!hasRetweeted) {
+              throw new BadRequestException(
+                "You have not reposted the target post.",
+              )
+            }
+
+            const hasCommented = await this.twitterVerifyService.checkComment(
+              user.twitterUsername,
+              mission.actionUrl,
+            )
+            if (!hasCommented) {
+              throw new BadRequestException(
+                "You have not commented on the target post.",
+              )
+            }
           } else {
             throw new BadRequestException(
               `Unknown social verification key: ${mission.verificationKey}`,
@@ -335,7 +365,8 @@ export class MissionsService {
       merged.xpReward !== undefined &&
       merged.xpReward > 0
     const hasMultiplierReward =
-      merged.rewardMultiplier !== null || merged.rewardMatchesCount !== null
+      (merged.rewardMultiplier !== null && merged.rewardMultiplier !== undefined) ||
+      (merged.rewardMatchesCount !== null && merged.rewardMatchesCount !== undefined)
 
     if (hasXpReward && hasMultiplierReward) {
       throw new BadRequestException(

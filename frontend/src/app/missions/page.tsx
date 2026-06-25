@@ -124,6 +124,10 @@ export default function MissionsPage() {
         return "Follow the target account on X/Twitter."
       case "twitter_retweet":
         return "Repost the specified post on X/Twitter."
+      case "twitter_comment":
+        return "Reply to the specified post on X/Twitter."
+      case "twitter_retweet_and_comment":
+        return "Repost and reply to the specified post on X/Twitter."
       default:
         return title
           ? `Complete the required activity for ${title}.`
@@ -238,16 +242,16 @@ export default function MissionsPage() {
             return (
               <div
                 key={mission.id}
-                className="verity-card flex items-center justify-between gap-4 p-5 bg-white-surface border border-stone-200/40 dark:border-zinc-800/40 shadow-sm rounded-2xl transition-all duration-200 hover:shadow-md"
+                className="verity-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 md:p-5 bg-white-surface border border-stone-200/40 dark:border-zinc-800/40 shadow-sm rounded-2xl transition-all duration-200 hover:shadow-md"
               >
                 {/* Left Section: Status Dot & Title Details */}
-                <div className="flex items-center gap-3.5 min-w-0">
+                <div className="flex items-start gap-3.5 min-w-0">
                   <div
-                    className={`h-2.5 w-2.5 rounded-full shrink-0 ${dotColor}`}
+                    className={`h-2.5 w-2.5 rounded-full shrink-0 mt-1.5 ${dotColor}`}
                   />
                   <div className="flex flex-col min-w-0">
                     <h3
-                      className={`text-base font-semibold tracking-tight leading-snug truncate ${
+                      className={`text-base font-semibold tracking-tight leading-snug ${
                         isCompleted
                           ? "text-ash line-through opacity-60"
                           : "text-midnight dark:text-white"
@@ -265,7 +269,7 @@ export default function MissionsPage() {
                 </div>
 
                 {/* Right Section: Rewards & Actions */}
-                <div className="flex items-center gap-6 shrink-0 ml-auto">
+                <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 shrink-0 w-full sm:w-auto pt-3 sm:pt-0 border-t border-stone-100 dark:border-zinc-800/20 sm:border-none">
                   {/* Reward Label */}
                   <span
                     className={`text-base font-bold tracking-tight ${

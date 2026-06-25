@@ -16,6 +16,7 @@ describe("MissionsService", () => {
   let service: MissionsService
   let userModelMock: any
   let missionModelMock: any
+  let twitterVerifyServiceMock: any
 
   const mockUserId = "60d0fe4f5311236168a109ca"
   const mockUser = {
@@ -79,6 +80,7 @@ describe("MissionsService", () => {
     const mockTwitterVerifyService = {
       checkFollow: jest.fn(),
       checkRetweet: jest.fn(),
+      checkComment: jest.fn(),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -126,6 +128,7 @@ describe("MissionsService", () => {
     service = module.get<MissionsService>(MissionsService)
     userModelMock = module.get(getModelToken(User.name))
     missionModelMock = module.get(getModelToken(Mission.name))
+    twitterVerifyServiceMock = module.get<TwitterVerifyService>(TwitterVerifyService)
   })
 
   it("should be defined", () => {
@@ -152,6 +155,8 @@ describe("MissionsService", () => {
         isActive: true,
         missionType: "social",
         verificationKey: null,
+        rewardMultiplier: null,
+        rewardMatchesCount: null,
         completed: true,
       })
     })
@@ -213,14 +218,89 @@ describe("MissionsService", () => {
         service.completeMission(mockUserId, mockMissionId),
       ).rejects.toThrow(NotFoundException)
     })
+
+    it("should successfully complete a twitter_comment mission", async () => {
+      const commentMission = {
+        ...mockMission,
+        missionType: "social",
+        verificationKey: "twitter_comment",
+      }
+      userModelMock.findById.mockResolvedValue({
+        ...mockUser,
+        twitterUsername: "testuser",
+      })
+      missionModelMock.findById.mockResolvedValue(commentMission)
+      twitterVerifyServiceMock.checkComment.mockResolvedValue(true)
+      userModelMock.findByIdAndUpdate.mockResolvedValue({
+        ...mockUser,
+        completedMissions: [mockMissionId],
+      })
+
+      const result = await service.completeMission(mockUserId, mockMissionId)
+      expect(twitterVerifyServiceMock.checkComment).toHaveBeenCalledWith(
+        "testuser",
+        commentMission.actionUrl,
+      )
+      expect(result.completedMissions).toContain(mockMissionId)
+    })
+
+    it("should throw BadRequestException if user hasn't commented on a twitter_comment mission", async () => {
+      const commentMission = {
+        ...mockMission,
+        missionType: "social",
+        verificationKey: "twitter_comment",
+      }
+      userModelMock.findById.mockResolvedValue({
+        ...mockUser,
+        twitterUsername: "testuser",
+      })
+      missionModelMock.findById.mockResolvedValue(commentMission)
+      twitterVerifyServiceMock.checkComment.mockResolvedValue(false)
+
+      await expect(
+        service.completeMission(mockUserId, mockMissionId),
+      ).rejects.toThrow(BadRequestException)
+    })
+
+    it("should successfully complete a twitter_retweet_and_comment mission", async () => {
+      const compoundMission = {
+        ...mockMission,
+        missionType: "social",
+        verificationKey: "twitter_retweet_and_comment",
+      }
+      userModelMock.findById.mockResolvedValue({
+        ...mockUser,
+        twitterUsername: "testuser",
+      })
+      missionModelMock.findById.mockResolvedValue(compoundMission)
+      twitterVerifyServiceMock.checkRetweet.mockResolvedValue(true)
+      twitterVerifyServiceMock.checkComment.mockResolvedValue(true)
+      userModelMock.findByIdAndUpdate.mockResolvedValue({
+        ...mockUser,
+        completedMissions: [mockMissionId],
+      })
+
+      const result = await service.completeMission(mockUserId, mockMissionId)
+      expect(twitterVerifyServiceMock.checkRetweet).toHaveBeenCalledWith(
+        "testuser",
+        compoundMission.actionUrl,
+      )
+      expect(twitterVerifyServiceMock.checkComment).toHaveBeenCalledWith(
+        "testuser",
+        compoundMission.actionUrl,
+      )
+      expect(result.completedMissions).toContain(mockMissionId)
+    })
   })
 
   describe("admin operations", () => {
     it("should update a mission", async () => {
+      missionModelMock.findById.mockResolvedValue(mockMission)
       missionModelMock.findByIdAndUpdate.mockResolvedValue(mockMission)
       const result = await service.updateMission(mockMissionId, {
         title: "Updated Title",
       })
+      expect(missionModelMock.findById).toHaveBeenCalledWith(mockMissionId)
       expect(missionModelMock.findByIdAndUpdate).toHaveBeenCalled()
       expect(result).toEqual(mockMission)
     })
