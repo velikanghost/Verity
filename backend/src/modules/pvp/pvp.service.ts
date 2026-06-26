@@ -162,6 +162,22 @@ export class PvpService {
     return 4 // Platinum
   }
 
+  async getTop20UserIds(): Promise<Set<string>> {
+    const top20Query = this.userModel.find({ isOnboarded: true })
+    let top20Users: any[] = []
+    if (typeof top20Query.sort === "function") {
+      top20Users = await top20Query
+        .sort({ arenaXp: -1 })
+        .limit(20)
+        .select("_id")
+        .lean()
+    } else {
+      const res = await top20Query
+      top20Users = Array.isArray(res) ? res : []
+    }
+    return new Set(top20Users.map((u: any) => u._id.toString()))
+  }
+
   constructor(
     @InjectModel(PvpTicket.name)
     private pvpTicketModel: Model<PvpTicketDocument>,
@@ -1261,6 +1277,9 @@ export class PvpService {
     const submitterXp = submitter?.arenaXp ?? 0
     const submitterTier = this.getRankTier(submitterXp)
 
+    const top20UserIds = await this.getTop20UserIds()
+    const isSubmitterTop20 = top20UserIds.has(ticket.userId.toString())
+
     const eligibleCandidates: Array<{
       ticket: PvpTicketDocument
       divergence: number
@@ -1269,6 +1288,15 @@ export class PvpService {
     }> = []
 
     for (const candidate of candidates) {
+      const candidateUser = candidate.userId as any
+      const candidateUserIdStr =
+        candidateUser?._id?.toString() || candidate.userId.toString()
+      const isCandidateTop20 = top20UserIds.has(candidateUserIdStr)
+
+      if (isSubmitterTop20 !== isCandidateTop20) {
+        continue // Top 20 can only match with Top 20, non-Top 20 can only match with non-Top 20
+      }
+
       let divergence = 0
       for (const pick of ticket.picks) {
         const candidatePick = candidate.picks.find(
@@ -1283,7 +1311,6 @@ export class PvpService {
         continue // Skip exact same picks to avoid pre-determined draws!
       }
 
-      const candidateUser = candidate.userId as any
       const candidateXp = candidateUser?.arenaXp ?? 0
       const candidateTier = this.getRankTier(candidateXp)
       const tierDistance = Math.abs(submitterTier - candidateTier)

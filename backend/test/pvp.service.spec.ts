@@ -578,6 +578,170 @@ describe("PvpService", () => {
     })
   })
 
+  describe("top 20 matching constraint", () => {
+    it("should match a top 20 player only with another top 20 player", async () => {
+      const parentMarketId = new Types.ObjectId()
+      const submitterId = new Types.ObjectId()
+      const top20CandidateId = new Types.ObjectId()
+      const normalCandidateId = new Types.ObjectId()
+
+      const ticket: any = {
+        _id: new Types.ObjectId(),
+        userId: submitterId,
+        parentMarketId,
+        picks: [
+          { marketId: "market-1", selection: "YES" },
+          { marketId: "market-2", selection: "NO" },
+        ],
+        status: "queued",
+        save: jest.fn(),
+      }
+
+      const top20Candidate: any = {
+        _id: new Types.ObjectId(),
+        userId: { _id: top20CandidateId, arenaXp: 4000 },
+        parentMarketId,
+        picks: [
+          { marketId: "market-1", selection: "NO" },
+          { marketId: "market-2", selection: "YES" },
+        ],
+        status: "queued",
+        save: jest.fn(),
+        createdAt: new Date(),
+      }
+
+      const normalCandidate: any = {
+        _id: new Types.ObjectId(),
+        userId: { _id: normalCandidateId, arenaXp: 100 },
+        parentMarketId,
+        picks: [
+          { marketId: "market-1", selection: "NO" },
+          { marketId: "market-2", selection: "YES" },
+        ],
+        status: "queued",
+        save: jest.fn(),
+        createdAt: new Date(),
+      }
+
+      jest.spyOn(service, "getTop20UserIds").mockResolvedValue(
+        new Set([submitterId.toString(), top20CandidateId.toString()]),
+      )
+
+      userModel.findById.mockImplementation((id: any) => {
+        if (id && id.toString() === submitterId.toString()) {
+          return Promise.resolve({ arenaXp: 4500 })
+        }
+        return Promise.resolve(null)
+      })
+
+      pvpTicketModel.find.mockReturnValue({
+        populate: jest.fn().mockResolvedValue([normalCandidate, top20Candidate]),
+      })
+
+      const mockPvpMatch = {
+        _id: new Types.ObjectId(),
+        parentMarketId,
+        ticket1Id: ticket._id,
+        ticket2Id: top20Candidate._id,
+        user1Id: ticket.userId,
+        user2Id: top20CandidateId,
+        divergenceScore: 2,
+        status: "matched",
+      }
+
+      const mockPvpMatchModel = (service as any).pvpMatchModel
+      jest.spyOn(mockPvpMatchModel, "create").mockResolvedValue(mockPvpMatch as any)
+
+      const result = await service.matchmake(ticket)
+
+      expect(result).toEqual(mockPvpMatch)
+      expect(ticket.status).toBe("matched")
+      expect(top20Candidate.status).toBe("matched")
+      expect(normalCandidate.status).toBe("queued")
+    })
+
+    it("should match a non-top 20 player only with another non-top 20 player", async () => {
+      const parentMarketId = new Types.ObjectId()
+      const submitterId = new Types.ObjectId()
+      const top20CandidateId = new Types.ObjectId()
+      const normalCandidateId = new Types.ObjectId()
+
+      const ticket: any = {
+        _id: new Types.ObjectId(),
+        userId: submitterId,
+        parentMarketId,
+        picks: [
+          { marketId: "market-1", selection: "YES" },
+          { marketId: "market-2", selection: "NO" },
+        ],
+        status: "queued",
+        save: jest.fn(),
+      }
+
+      const top20Candidate: any = {
+        _id: new Types.ObjectId(),
+        userId: { _id: top20CandidateId, arenaXp: 4000 },
+        parentMarketId,
+        picks: [
+          { marketId: "market-1", selection: "NO" },
+          { marketId: "market-2", selection: "YES" },
+        ],
+        status: "queued",
+        save: jest.fn(),
+        createdAt: new Date(),
+      }
+
+      const normalCandidate: any = {
+        _id: new Types.ObjectId(),
+        userId: { _id: normalCandidateId, arenaXp: 100 },
+        parentMarketId,
+        picks: [
+          { marketId: "market-1", selection: "NO" },
+          { marketId: "market-2", selection: "YES" },
+        ],
+        status: "queued",
+        save: jest.fn(),
+        createdAt: new Date(),
+      }
+
+      jest.spyOn(service, "getTop20UserIds").mockResolvedValue(
+        new Set([top20CandidateId.toString()]),
+      )
+
+      userModel.findById.mockImplementation((id: any) => {
+        if (id && id.toString() === submitterId.toString()) {
+          return Promise.resolve({ arenaXp: 500 })
+        }
+        return Promise.resolve(null)
+      })
+
+      pvpTicketModel.find.mockReturnValue({
+        populate: jest.fn().mockResolvedValue([top20Candidate, normalCandidate]),
+      })
+
+      const mockPvpMatch = {
+        _id: new Types.ObjectId(),
+        parentMarketId,
+        ticket1Id: ticket._id,
+        ticket2Id: normalCandidate._id,
+        user1Id: ticket.userId,
+        user2Id: normalCandidateId,
+        divergenceScore: 2,
+        status: "matched",
+      }
+
+      const mockPvpMatchModel = (service as any).pvpMatchModel
+      jest.spyOn(mockPvpMatchModel, "create").mockResolvedValue(mockPvpMatch as any)
+
+      const result = await service.matchmake(ticket)
+
+      expect(result).toEqual(mockPvpMatch)
+      expect(ticket.status).toBe("matched")
+      expect(normalCandidate.status).toBe("matched")
+      expect(top20Candidate.status).toBe("queued")
+    })
+  })
+
   describe("welcome boosts logic", () => {
     it("should calculate correct XP using custom welcome boost multipliers", () => {
       // 2x boost: (win (100) + no perfect bonus (0)) * 2 = 200 XP
