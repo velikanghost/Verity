@@ -41,6 +41,9 @@ importers:
       shadcn:
         specifier: ^4.11.0
         version: 4.11.0(typescript@5.9.3)
+      socket.io-client:
+        specifier: ^4.8.3
+        version: 4.8.3(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0

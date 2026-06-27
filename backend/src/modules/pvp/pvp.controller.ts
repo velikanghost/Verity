@@ -146,16 +146,16 @@ export class PvpController {
   @ApiOperation({
     summary: "Admin-only: Get system database metrics and platform statistics",
   })
-  async getAdminMetrics(@Request() req: any) {
-    return this.pvpService.getAdminMetrics(req.user.id)
+  async getAdminMetrics(@Request() req: any, @Query("timeframe") timeframe?: string) {
+    return this.pvpService.getAdminMetrics(req.user.id, timeframe)
   }
 
   @Get("public-metrics")
   @ApiOperation({
     summary: "Public: Get system database metrics and platform statistics",
   })
-  async getPublicMetrics() {
-    return this.pvpService.getPublicMetrics()
+  async getPublicMetrics(@Query("timeframe") timeframe?: string) {
+    return this.pvpService.getPublicMetrics(timeframe)
   }
 
   @Get("contract-balances")

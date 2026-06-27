@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import React, { useMemo } from "react"
 import {
   RefreshCw,
   Trophy,
@@ -9,8 +9,13 @@ import {
   Layers,
   Coins,
   DollarSign,
-  BarChart4
+  BarChart4,
+  TrendingUp,
+  Clock,
+  Briefcase,
 } from "lucide-react"
+import VolumeLineChart from "./VolumeLineChart"
+import UserActivityBarChart from "./UserActivityBarChart"
 
 interface AdminMetrics {
   users: {
@@ -41,22 +46,60 @@ interface AdminMetrics {
     creationFeesCollected: number
     combinedFees: number
   }
+  recentTrades: {
+    marketId: string
+    marketQuestion: string
+    amountUsdc: number
+    createdAt: string
+  }[]
+  activityTimeline: {
+    label: string
+    signups: number
+    trades: number
+    tickets: number
+  }[]
 }
 
 interface MetricsTabProps {
   metricsLoading: boolean
   metricsData: AdminMetrics | null
   fetchMetricsData: () => void
+  timeframe: string
+  setTimeframe: (tf: string) => void
+  contractBalances: {
+    fpmmUsdcBalance: number
+    factoryUsdcBalance: number
+    adminUsdcBalance: number
+    adminAddress: string
+  } | null
+  contractBalancesLoading: boolean
 }
 
 export default function MetricsTab({
   metricsLoading,
   metricsData,
-  fetchMetricsData
+  fetchMetricsData,
+  timeframe,
+  setTimeframe,
+  contractBalances,
+  contractBalancesLoading,
 }: MetricsTabProps) {
+  // Calculate unique active markets count
+  const activeMarketsCount = useMemo(() => {
+    if (!metricsData?.recentTrades) return 0
+    const ids = new Set(metricsData.recentTrades.map((t) => t.marketId))
+    return ids.size
+  }, [metricsData])
+
+  // Calculate unclaimed rewards / payout contract balances
+  const unclaimedRewards = useMemo(() => {
+    if (!contractBalances) return 0
+    return contractBalances.fpmmUsdcBalance + contractBalances.factoryUsdcBalance
+  }, [contractBalances])
+
   if (metricsLoading && !metricsData) {
     return (
-      <div className="verity-card p-16 text-center text-sm text-stone-500 animate-pulse font-medium bg-white border border-stone-200">
+      <div className="verity-card p-16 text-center text-sm text-stone-500 animate-pulse font-medium bg-white border border-stone-200 shadow-xs rounded-2xl">
         Loading database metrics...
       </div>
     )
@@ -64,200 +107,234 @@ export default function MetricsTab({
 
   if (!metricsData) {
     return (
-      <div className="verity-card p-16 text-center text-sm text-stone-400 font-medium bg-white border border-stone-200">
+      <div className="verity-card p-16 text-center text-sm text-stone-400 font-medium bg-white border border-stone-200 shadow-xs rounded-2xl">
         Failed to load platform metrics. Click refresh to retry.
-        <Button onClick={fetchMetricsData} className="mt-4 bg-indigo-600 text-white cursor-pointer mx-auto block">
+        <button
+          onClick={fetchMetricsData}
+          className="mt-4 px-5 py-2 bg-indigo-650 hover:bg-indigo-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer mx-auto block"
+        >
           Refresh Metrics
-        </Button>
+        </button>
       </div>
     )
   }
 
+  // Format bets count: PvP tickets count + standard trades count
+  const totalBetsCount = metricsData.pvpMatchesCount + (metricsData.recentTrades?.length || 0)
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
-      {/* Metrics top section */}
-      <div className="flex items-center justify-between">
+      {/* Metrics Header & Timeframe Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-stone-150 pb-5">
         <div>
           <h2 className="text-xl font-extrabold text-stone-900 tracking-tight flex items-center gap-2">
             <BarChart4 className="h-5 w-5 text-indigo-600" />
-            Verity Analytics & Revenue Overview
+            Platform Analytics
           </h2>
           <p className="text-xs text-stone-500 mt-0.5">
-            Platform statistics, real-time user breakdown, total volume, and administrative fee metrics.
+            Real-time on-chain volume, active wallets, trading stats, and contract balances.
           </p>
         </div>
 
-        <button
-          onClick={fetchMetricsData}
-          disabled={metricsLoading}
-          className="h-9 w-9 rounded-lg hover:bg-stone-100 bg-white border border-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-950 transition-colors shadow-2xs cursor-pointer"
-        >
-          <RefreshCw
-            className={`h-4 w-4 ${metricsLoading ? "animate-spin" : ""}`}
-          />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Timeframe selector pills */}
+          <div className="bg-stone-100 p-0.5 rounded-xl border border-stone-200 flex items-center">
+            {["1h", "1d", "7d", "30d"].map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setTimeframe(tf)}
+                className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                  timeframe === tf
+                    ? "bg-white text-stone-900 shadow-xs border border-stone-200/50"
+                    : "text-stone-500 hover:text-stone-800"
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={fetchMetricsData}
+            disabled={metricsLoading}
+            className="h-8.5 w-8.5 rounded-xl hover:bg-stone-50 bg-white border border-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-950 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${metricsLoading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
-      {/* Metrics Summary Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* Metrics Summary Row (Inspiration style - 5 Columns) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Total Volume */}
+        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-stone-400">
+            <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider">
+              Total Volume
+            </span>
+            <TrendingUp className="h-4.5 w-4.5 text-indigo-600" />
+          </div>
+          <span className="text-2xl font-black text-stone-950 font-mono tracking-tight">
+            {metricsData.volumeAndFees.overallVolume.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}{" "}
+            USDC
+          </span>
+          <span className="text-[10px] font-semibold text-stone-450 mt-1">
+            {activeMarketsCount} active markets
+          </span>
+        </div>
+
         {/* Total Users */}
-        <div className="verity-card p-5 bg-white flex flex-col gap-2 shadow-xs border border-stone-200">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Total Registered Users</span>
+        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-stone-400">
+            <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider">
+              Total Users
+            </span>
             <Users className="h-4.5 w-4.5 text-indigo-600" />
           </div>
-          <span className="text-2xl font-extrabold text-stone-900 font-mono">
-            {metricsData.users.total}
+          <span className="text-2xl font-black text-stone-950 font-mono tracking-tight">
+            {metricsData.users.real}
           </span>
-          <div className="flex items-center justify-between text-[11px] text-stone-500 mt-1 border-t border-stone-100 pt-2">
-            <span>Real: <strong className="text-stone-800 font-semibold">{metricsData.users.real}</strong></span>
-            <span>Bots: <strong className="text-stone-800 font-semibold">{metricsData.users.bots}</strong></span>
-          </div>
+          <span className="text-[10px] font-semibold text-stone-450 mt-1">
+            Unique registered wallets
+          </span>
         </div>
 
-        {/* PvP Active Players */}
-        <div className="verity-card p-5 bg-white flex flex-col gap-2 shadow-xs border border-stone-200">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">PvP Arena Players</span>
-            <Swords className="h-4.5 w-4.5 text-indigo-600" />
-          </div>
-          <span className="text-2xl font-extrabold text-stone-900 font-mono">
-            {metricsData.pvpUsers.played.total}
-          </span>
-          <div className="flex items-center justify-between text-[11px] text-stone-500 mt-1 border-t border-stone-100 pt-2">
-            <span>Real Played: <strong className="text-indigo-600 font-semibold">{metricsData.pvpUsers.played.real}</strong></span>
-            <span>Bots: <strong className="text-stone-800 font-semibold">{metricsData.pvpUsers.played.bots}</strong></span>
-          </div>
-        </div>
-
-        {/* Total PvP Duels */}
-        <div className="verity-card p-5 bg-white flex flex-col gap-2 shadow-xs border border-stone-200">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">PvP Matches Count</span>
+        {/* Total Bets */}
+        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-stone-400">
+            <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider">
+              Total Bets
+            </span>
             <Trophy className="h-4.5 w-4.5 text-indigo-600" />
           </div>
-          <span className="text-2xl font-extrabold text-stone-900 font-mono">
-            {metricsData.pvpMatchesCount}
+          <span className="text-2xl font-black text-stone-950 font-mono tracking-tight">
+            {totalBetsCount}
           </span>
-          <div className="text-[11px] text-stone-500 mt-1 border-t border-stone-100 pt-2">
-            Total unique PvP ticket submissions: <strong className="text-stone-800 font-semibold">{metricsData.pvpUsers.submitted.total}</strong>
-          </div>
+          <span className="text-[10px] font-semibold text-stone-450 mt-1">
+            Across all active markets
+          </span>
         </div>
 
-        {/* Combined revenue */}
-        <div className="verity-card p-5 bg-emerald-50/50 border border-emerald-100 flex flex-col gap-2 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Total Platform Revenue</span>
-            <Coins className="h-4.5 w-4.5 text-emerald-600" />
+        {/* Platform Fees Collected */}
+        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-stone-400">
+            <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider">
+              Fees Collected
+            </span>
+            <Coins className="h-4.5 w-4.5 text-indigo-600" />
           </div>
-          <span className="text-2xl font-extrabold text-emerald-950 font-mono">
+          <span className="text-2xl font-black text-stone-950 font-mono tracking-tight">
             {metricsData.volumeAndFees.combinedFees.toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
-            })} USDC
+            })}{" "}
+            USDC
           </span>
-          <div className="flex items-center justify-between text-[11px] text-emerald-800 mt-1 border-t border-emerald-100 pt-2">
-            <span>Trades: {metricsData.volumeAndFees.overallFees.toFixed(2)} USDC</span>
-            <span>Creation: {metricsData.volumeAndFees.creationFeesCollected.toFixed(2)} USDC</span>
+          <span className="text-[10px] font-semibold text-stone-450 mt-1">
+            Standard & Creation fees
+          </span>
+        </div>
+
+        {/* Unclaimed Rewards (Contract balances) */}
+        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-stone-400">
+            <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider">
+              Unclaimed Rewards
+            </span>
+            <Clock className="h-4.5 w-4.5 text-indigo-600" />
           </div>
+          <span className="text-2xl font-black text-stone-950 font-mono tracking-tight">
+            {contractBalancesLoading ? (
+              <span className="text-xs text-stone-400 animate-pulse">Loading...</span>
+            ) : (
+              `${unclaimedRewards.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })} USDC`
+            )}
+          </span>
+          <span className="text-[10px] font-semibold text-stone-450 mt-1">
+            Balances in payout contracts
+          </span>
         </div>
       </div>
 
-      {/* Sub row detail cards */}
+      {/* Main Cumulative Volume Chart (Full width) */}
+      <VolumeLineChart trades={metricsData.recentTrades} timeframe={timeframe} />
+
+      {/* Grouped User Activity & Funnel Row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Financial performance detail card */}
-        <div className="verity-card p-6 bg-white lg:col-span-7 flex flex-col gap-5 border border-stone-200 shadow-xs">
-          <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-stone-100 pb-3">
-            <DollarSign className="h-4.5 w-4.5 text-indigo-600" />
-            Detailed USDC Trading Volume & Fee Breakdowns
-          </h3>
-
-          <div className="grid grid-cols-2 gap-8">
-            {/* Volume breakdown */}
-            <div className="flex flex-col gap-3">
-              <h4 className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">USDC Trading Volume</h4>
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center bg-stone-50 p-3 rounded-lg">
-                  <span className="text-xs text-stone-600 font-semibold">Standard Markets</span>
-                  <span className="text-xs font-bold font-mono text-stone-900">{metricsData.volumeAndFees.standardVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC</span>
-                </div>
-                <div className="flex justify-between items-center bg-stone-50 p-3 rounded-lg">
-                  <span className="text-xs text-stone-600 font-semibold">PvP Child Markets</span>
-                  <span className="text-xs font-bold font-mono text-stone-900">{metricsData.volumeAndFees.pvpVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC</span>
-                </div>
-                <div className="flex justify-between items-center bg-indigo-50 border border-indigo-100 p-3 rounded-lg mt-1">
-                  <span className="text-xs text-indigo-800 font-bold">Total Volume</span>
-                  <span className="text-xs font-extrabold font-mono text-indigo-955">{metricsData.volumeAndFees.overallVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Fee breakdown */}
-            <div className="flex flex-col gap-3">
-              <h4 className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Fees Collected</h4>
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center bg-stone-50 p-3 rounded-lg">
-                  <span className="text-xs text-stone-600 font-semibold">Standard Trading Fees</span>
-                  <span className="text-xs font-bold font-mono text-stone-900">{metricsData.volumeAndFees.standardFees.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC</span>
-                </div>
-                <div className="flex justify-between items-center bg-stone-50 p-3 rounded-lg">
-                  <span className="text-xs text-stone-600 font-semibold">PvP Trading Fees</span>
-                  <span className="text-xs font-bold font-mono text-stone-900">{metricsData.volumeAndFees.pvpFees.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC</span>
-                </div>
-                <div className="flex justify-between items-center bg-stone-50 p-3 rounded-lg">
-                  <span className="text-xs text-stone-600 font-semibold">Market Creation Fees</span>
-                  <span className="text-xs font-bold font-mono text-stone-900">{metricsData.volumeAndFees.creationFeesCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* User Activity Bar Chart */}
+        <div className="lg:col-span-7">
+          <UserActivityBarChart activityTimeline={metricsData.activityTimeline} />
         </div>
 
-        {/* PvP ticket submission stats card */}
-        <div className="verity-card p-6 bg-white lg:col-span-5 flex flex-col gap-4 border border-stone-200 shadow-xs">
-          <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-stone-100 pb-3">
-            <Layers className="h-4.5 w-4.5 text-indigo-600" />
+        {/* PvP Funnel Chart */}
+        <div className="verity-card p-6 bg-white lg:col-span-5 flex flex-col gap-4 border border-stone-200 shadow-xs rounded-2xl">
+          <h3 className="text-xs font-black text-stone-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-stone-100 pb-3">
+            <Layers className="h-4 w-4 text-indigo-600" />
             PvP Arena Player Funnel
           </h3>
 
           <div className="flex flex-col gap-4 py-2">
-            {/* Ticket submission funnel bars */}
+            {/* Registered -> Submitted -> Played Funnel */}
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between text-xs font-semibold">
-                <span className="text-stone-600">Total Users Registered</span>
-                <span className="text-stone-950 font-mono">{metricsData.users.total}</span>
+                <span className="text-stone-500">Registered Accounts</span>
+                <span className="text-stone-950 font-mono font-bold">{metricsData.users.real}</span>
               </div>
               <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-indigo-600 h-full rounded-full w-full" />
+                <div className="bg-indigo-650 h-full rounded-full w-full" />
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5 mt-1">
               <div className="flex justify-between text-xs font-semibold">
-                <span className="text-stone-600">Submitted at Least One Ticket</span>
-                <span className="text-stone-950 font-mono">
-                  {metricsData.pvpUsers.submitted.total} ({((metricsData.pvpUsers.submitted.total / (metricsData.users.total || 1)) * 100).toFixed(0)}%)
+                <span className="text-stone-500">Submitted tickets</span>
+                <span className="text-stone-950 font-mono font-bold">
+                  {metricsData.pvpUsers.submitted.real} (
+                  {(
+                    (metricsData.pvpUsers.submitted.real / (metricsData.users.real || 1)) *
+                    100
+                  ).toFixed(0)}
+                  %)
                 </span>
               </div>
               <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
                 <div
                   className="bg-indigo-500 h-full rounded-full"
-                  style={{ width: `${(metricsData.pvpUsers.submitted.total / (metricsData.users.total || 1)) * 100}%` }}
+                  style={{
+                    width: `${
+                      (metricsData.pvpUsers.submitted.real / (metricsData.users.real || 1)) * 100
+                    }%`,
+                  }}
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5 mt-1">
               <div className="flex justify-between text-xs font-semibold">
-                <span className="text-stone-600">Matched/Played PvP Match</span>
-                <span className="text-stone-950 font-mono">
-                  {metricsData.pvpUsers.played.total} ({((metricsData.pvpUsers.played.total / (metricsData.users.total || 1)) * 100).toFixed(0)}%)
+                <span className="text-stone-500">Matched/Played matches</span>
+                <span className="text-stone-950 font-mono font-bold">
+                  {metricsData.pvpUsers.played.real} (
+                  {(
+                    (metricsData.pvpUsers.played.real / (metricsData.users.real || 1)) *
+                    100
+                  ).toFixed(0)}
+                  %)
                 </span>
               </div>
               <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
                 <div
                   className="bg-emerald-500 h-full rounded-full"
-                  style={{ width: `${(metricsData.pvpUsers.played.total / (metricsData.users.total || 1)) * 100}%` }}
+                  style={{
+                    width: `${
+                      (metricsData.pvpUsers.played.real / (metricsData.users.real || 1)) * 100
+                    }%`,
+                  }}
                 />
               </div>
             </div>
