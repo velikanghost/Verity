@@ -9,11 +9,14 @@ import { User, UserDocument, Follow, FollowDocument } from "./users.model"
 import { serializeUser } from "../auth/auth.service"
 import { UpdateUserDto } from "./users.dto"
 
+import { SocketGateway } from "../socket/socket.gateway"
+
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Follow.name) private followModel: Model<FollowDocument>,
+    private readonly socketGateway: SocketGateway,
   ) {}
 
   private normalizeWallet(address: string): string {
@@ -35,6 +38,9 @@ export class UsersService {
       username: this.defaultUsername(wallet),
       displayName: `V_${wallet.slice(-4).toUpperCase()}`,
     })
+
+    // Broadcast new user creation in real-time
+    this.socketGateway.broadcastToRoom("feed", "feed-updated", {})
 
     return serializeUser(created)
   }

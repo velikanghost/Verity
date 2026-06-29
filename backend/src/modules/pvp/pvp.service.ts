@@ -2832,8 +2832,21 @@ export class PvpService {
     }
   }
 
-  private async calculateSystemMetrics() {
+  private async calculateSystemMetrics(timeframe?: string) {
     const botUsernames = BOT_PROFILES.map((b) => b.username)
+
+    // Parse timeframe
+    const tf = timeframe || "7d";
+    const cutoff = new Date();
+    if (tf === "1h") {
+      cutoff.setHours(cutoff.getHours() - 1);
+    } else if (tf === "1d") {
+      cutoff.setDate(cutoff.getDate() - 1);
+    } else if (tf === "30d") {
+      cutoff.setDate(cutoff.getDate() - 30);
+    } else {
+      cutoff.setDate(cutoff.getDate() - 7);
+    }
 
     // 1. Users count
     const totalUsers = await this.userModel.countDocuments()
@@ -2847,7 +2860,6 @@ export class PvpService {
     const realUsersCount = Math.max(0, totalUsers - botsCount)
 
     // 2. PvP User Stats
-    // Group tickets by userId and status using aggregation to avoid downloading thousands of documents
     const ticketStatsList = await this.pvpTicketModel.aggregate([
       { $match: { status: { $ne: "cancelled" } } },
       {
@@ -2894,7 +2906,6 @@ export class PvpService {
     const totalPvpMatches = await this.pvpMatchModel.countDocuments()
 
     // 4. Sum USDC volume and fees from MarketTrades
-    // We group by market category by looking up in markets collection
     const tradeStatsList = await this.marketTradeModel.aggregate([
       {
         $lookup: {
@@ -2960,6 +2971,130 @@ export class PvpService {
     ])
     const creationFeesCollected = creationFeeStatsList[0]?.total || 0
 
+    // 6. Recent Trades (within timeframe, max 1000) for line charts
+    const recentTrades = await this.marketTradeModel.aggregate([
+      { $match: { createdAt: { $gte: cutoff } } },
+      { $sort: { createdAt: -1 } },
+      { $limit: 1000 },
+      {
+        $lookup: {
+          from: "markets",
+          localField: "marketId",
+          foreignField: "_id",
+          as: "market",
+        },
+      },
+      {
+        $unwind: {
+          path: "$market",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "markets",
+          localField: "market.parentMarketId",
+          foreignField: "_id",
+          as: "parentMarket",
+        },
+      },
+      {
+        $unwind: {
+          path: "$parentMarket",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          marketId: {
+            $cond: {
+              if: { $ne: [{ $ifNull: ["$market.parentMarketId", null] }, null] },
+              then: "$market.parentMarketId",
+              else: "$marketId",
+            },
+          },
+          marketQuestion: {
+            $cond: {
+              if: { $ne: [{ $ifNull: ["$market.parentMarketId", null] }, null] },
+              then: { $ifNull: ["$parentMarket.question", "Unknown Parent Market"] },
+              else: { $ifNull: ["$market.question", "Unknown Market"] },
+            },
+          },
+          amountUsdc: 1,
+          createdAt: 1,
+        },
+      },
+      { $sort: { createdAt: 1 } },
+    ])
+
+    // 7. Activity Timeline data
+    const signups = await this.userModel.find({ createdAt: { $gte: cutoff } }, { createdAt: 1 }).lean()
+    const trades = await this.marketTradeModel.find({ createdAt: { $gte: cutoff } }, { createdAt: 1 }).lean()
+    const tickets = await this.pvpTicketModel.find({ createdAt: { $gte: cutoff } }, { createdAt: 1 }).lean()
+
+    const timeline: { label: string; signups: number; trades: number; tickets: number; start: number; end: number }[] = []
+    const nowMs = Date.now()
+
+    if (tf === "1h") {
+      // 12 intervals of 5 minutes
+      for (let i = 11; i >= 0; i--) {
+        const start = nowMs - (i + 1) * 5 * 60 * 1000
+        const end = i === 0 ? Infinity : nowMs - i * 5 * 60 * 1000
+        const dateObj = new Date(start)
+        const label = `${String(dateObj.getHours()).padStart(2, "0")}:${String(dateObj.getMinutes() - (dateObj.getMinutes() % 5)).padStart(2, "0")}`
+        timeline.push({ label, signups: 0, trades: 0, tickets: 0, start, end })
+      }
+    } else if (tf === "1d") {
+      // 24 intervals of 1 hour
+      for (let i = 23; i >= 0; i--) {
+        const start = nowMs - (i + 1) * 60 * 60 * 1000
+        const end = i === 0 ? Infinity : nowMs - i * 60 * 60 * 1000
+        const dateObj = new Date(start)
+        const label = `${String(dateObj.getHours()).padStart(2, "0")}:00`
+        timeline.push({ label, signups: 0, trades: 0, tickets: 0, start, end })
+      }
+    } else if (tf === "30d") {
+      // 30 intervals of 1 day
+      for (let i = 29; i >= 0; i--) {
+        const start = nowMs - (i + 1) * 24 * 60 * 60 * 1000
+        const end = i === 0 ? Infinity : nowMs - i * 24 * 60 * 60 * 1000
+        const dateObj = new Date(start)
+        const label = `${dateObj.getDate()} ${dateObj.toLocaleString("default", { month: "short" })}`
+        timeline.push({ label, signups: 0, trades: 0, tickets: 0, start, end })
+      }
+    } else {
+      // 7 intervals of 1 day (7d default)
+      for (let i = 6; i >= 0; i--) {
+        const start = nowMs - (i + 1) * 24 * 60 * 60 * 1000
+        const end = i === 0 ? Infinity : nowMs - i * 24 * 60 * 60 * 1000
+        const dateObj = new Date(start)
+        const label = dateObj.toLocaleDateString("default", { weekday: "short" })
+        timeline.push({ label, signups: 0, trades: 0, tickets: 0, start, end })
+      }
+    }
+
+    const fillTimeline = (items: any[], key: "signups" | "trades" | "tickets") => {
+      for (const item of items) {
+        if (!item.createdAt) continue
+        const t = new Date(item.createdAt).getTime()
+        const bucket = timeline.find((b) => t >= b.start && t < b.end)
+        if (bucket) {
+          bucket[key]++
+        }
+      }
+    }
+
+    fillTimeline(signups, "signups")
+    fillTimeline(trades, "trades")
+    fillTimeline(tickets, "tickets")
+
+    const activityTimeline = timeline.map(({ label, signups, trades, tickets }) => ({
+      label,
+      signups,
+      trades,
+      tickets,
+    }))
+
     return {
       users: {
         total: totalUsers,
@@ -2989,18 +3124,20 @@ export class PvpService {
         creationFeesCollected,
         combinedFees: tradeStats.overallFees + creationFeesCollected,
       },
+      recentTrades,
+      activityTimeline,
     }
   }
 
-  async getAdminMetrics(adminId: string) {
+  async getAdminMetrics(adminId: string, timeframe?: string) {
     const admin = await this.userModel.findById(adminId)
     if (!admin || admin.role !== "admin") {
       throw new ForbiddenException("Only admins can fetch admin metrics.")
     }
-    return this.calculateSystemMetrics()
+    return this.calculateSystemMetrics(timeframe)
   }
 
-  async getPublicMetrics() {
-    return this.calculateSystemMetrics()
+  async getPublicMetrics(timeframe?: string) {
+    return this.calculateSystemMetrics(timeframe)
   }
 }

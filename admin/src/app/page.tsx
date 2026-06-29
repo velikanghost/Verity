@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { apiRequest } from "@/store/apiClient"
+import { io } from "socket.io-client"
 import { toast } from "react-hot-toast"
 import { Button } from "@/components/ui/button"
 import {
@@ -77,6 +78,18 @@ interface AdminMetrics {
     creationFeesCollected: number
     combinedFees: number
   }
+  recentTrades: {
+    marketId: string
+    marketQuestion: string
+    amountUsdc: number
+    createdAt: string
+  }[]
+  activityTimeline: {
+    label: string
+    signups: number
+    trades: number
+    tickets: number
+  }[]
 }
 
 export default function AdminPage() {
@@ -129,6 +142,7 @@ export default function AdminPage() {
   // Metrics Data State
   const [metricsData, setMetricsData] = useState<AdminMetrics | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(false)
+  const [metricsTimeframe, setMetricsTimeframe] = useState<string>("7d")
 
   // Arbitration / Settle State
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null)
@@ -169,10 +183,11 @@ export default function AdminPage() {
   }
 
   // Fetch metrics data
-  async function fetchMetricsData() {
+  async function fetchMetricsData(timeframe?: string) {
     setMetricsLoading(true)
     try {
-      const data = await apiRequest<AdminMetrics>("/pvp/admin-metrics")
+      const tf = timeframe || metricsTimeframe
+      const data = await apiRequest<AdminMetrics>(`/pvp/admin-metrics?timeframe=${tf}`)
       setMetricsData(data)
     } catch (err: any) {
       toast.error(err.message || "Failed to load admin metrics.")
@@ -234,6 +249,40 @@ export default function AdminPage() {
       void fetchContractBalances()
     }
   }, [])
+
+  // Re-fetch metrics when timeframe changes
+  useEffect(() => {
+    if (isAuthorized) {
+      void fetchMetricsData(metricsTimeframe)
+    }
+  }, [metricsTimeframe, isAuthorized])
+
+  // Real-time socket updates listener
+  useEffect(() => {
+    if (!isAuthorized) return
+
+    const socketUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5080"
+    const socket = io(`${socketUrl}/socket`, {
+      transports: ["websocket"],
+    })
+
+    socket.on("connect", () => {
+      console.log("Admin socket client connected successfully")
+      socket.emit("join-room", "feed")
+    })
+
+    socket.on("feed-updated", () => {
+      console.log("Feed updated, refreshing admin dashboard in real-time...")
+      void fetchMetricsData()
+      void fetchMarkets()
+      void fetchAdminStatus()
+      void fetchContractBalances()
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [isAuthorized, metricsTimeframe])
 
   // Fetch standard & PvP child markets for moderation
   async function fetchMarkets() {
@@ -513,6 +562,10 @@ export default function AdminPage() {
             metricsLoading={metricsLoading}
             metricsData={metricsData}
             fetchMetricsData={fetchMetricsData}
+            timeframe={metricsTimeframe}
+            setTimeframe={setMetricsTimeframe}
+            contractBalances={contractBalances}
+            contractBalancesLoading={contractBalancesLoading}
           />
         )}
         {activeTab === "coupons" && <CouponsTab />}

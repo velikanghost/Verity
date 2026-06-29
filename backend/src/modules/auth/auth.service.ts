@@ -17,6 +17,7 @@ import { CircleWalletService } from "../circle-wallet/circle-wallet.service"
 import { JwtService } from "@nestjs/jwt"
 import { ConfigService } from "@nestjs/config"
 import { Resend } from "resend"
+import { SocketGateway } from "../socket/socket.gateway"
 
 export interface UserResponse {
   id: string
@@ -146,6 +147,7 @@ export class AuthService {
     private circleWalletService: CircleWalletService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private readonly socketGateway: SocketGateway,
   ) {}
 
   async me(userId: string) {
@@ -282,6 +284,9 @@ export class AuthService {
         displayName: username.charAt(0).toUpperCase() + username.slice(1),
         isOnboarded: false,
       })
+
+      // Broadcast new user creation in real-time
+      this.socketGateway.broadcastToRoom("feed", "feed-updated", {})
     }
 
     // Provision Circle SCA Wallet if the user doesn't have one
