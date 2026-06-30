@@ -135,6 +135,16 @@ export function getCategoryMeta(groupKey: string): CatMeta {
       unselectedBg:
         "bg-yellow-50/80 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-300 border border-yellow-100 dark:border-yellow-900/40",
     },
+    extra_time_penalties: {
+      title: "Extra Time / Penalties Winner",
+      subtitle: "3-way: Shootout / Decided in ET / Shootout",
+      icon: <Swords className="h-4 w-4" />,
+      accent: "emerald",
+      selectedBg: "bg-emerald-600",
+      ring: "ring-emerald-400/30",
+      unselectedBg:
+        "bg-emerald-50/80 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900/40",
+    },
   }
 
   const fallback: CatMeta = {

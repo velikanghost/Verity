@@ -17,6 +17,15 @@ export const cleanOutcomeName = (
   const lowerA = teamA.toLowerCase().trim()
   const lowerB = teamB.toLowerCase().trim()
 
+  if (lowerName.includes("wins on penalties") || lowerName.includes("wins shootout")) {
+    if (lowerName.includes(lowerA)) return teamA
+    if (lowerName.includes(lowerB)) return teamB
+  }
+
+  if (lowerName === "no penalties" || lowerName.includes("no penalties")) {
+    return "No Penalty"
+  }
+
   if (
     lowerName === "both teams to score - yes" ||
     lowerName === "both teams to score-yes" ||

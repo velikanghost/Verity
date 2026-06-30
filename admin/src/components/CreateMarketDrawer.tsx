@@ -136,6 +136,16 @@ function determineOptionGroup(
     return "offsides"
   }
 
+  if (
+    name.includes("on penalties") ||
+    name.includes("penalty shootout") ||
+    name.includes("wins shootout") ||
+    name.includes("no penalties") ||
+    name.includes("decided in extra time")
+  ) {
+    return "extra_time_penalties"
+  }
+
   return `unique_${optionName.replace(/\s+/g, "_").toLowerCase()}`
 }
 
@@ -164,6 +174,7 @@ export default function CreateMarketDrawer({
     redCard: { enabled: false },
     btts: { enabled: false },
     offsides: { enabled: false, line: 3.5 },
+    extraTimePenalties: { enabled: false },
   })
 
   // Custom propositions
@@ -224,6 +235,12 @@ export default function CreateMarketDrawer({
       const line = categories.offsides.line
       opts.push(`Match has under ${line} offsides`)
       opts.push(`Match has over ${line} offsides`)
+    }
+
+    if (categories.extraTimePenalties?.enabled) {
+      opts.push(`${a} wins on penalties`)
+      opts.push(`No penalties`)
+      opts.push(`${b} wins on penalties`)
     }
 
     return [...opts, ...customOptions]
@@ -319,6 +336,7 @@ export default function CreateMarketDrawer({
         redCard: { enabled: false },
         btts: { enabled: false },
         offsides: { enabled: false, line: 3.5 },
+        extraTimePenalties: { enabled: false },
       })
       setCustomOptions([])
       onClose()
@@ -483,6 +501,43 @@ export default function CreateMarketDrawer({
                     Away
                   </span>
                   <span className="text-xs font-bold text-rose-700 text-center leading-tight">
+                    {hasTeams ? teamB : "Team B"}
+                  </span>
+                </div>
+              </div>
+            </CategoryCard>
+
+            {/* Extra Time / Penalties Winner */}
+            <CategoryCard
+              title="Extra Time / Penalties Winner"
+              subtitle="Shootout / Decided in ET / Shootout"
+              icon={<Swords className="h-4 w-4" />}
+              enabled={categories.extraTimePenalties?.enabled}
+              onToggle={() => toggleCategory("extraTimePenalties")}
+              accentColor="emerald"
+            >
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                  <span className="text-[9px] font-bold uppercase text-stone-400">
+                    Pens Winner
+                  </span>
+                  <span className="text-xs font-bold text-emerald-700 text-center leading-tight">
+                    {hasTeams ? teamA : "Team A"}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-stone-50 border border-stone-200">
+                  <span className="text-[9px] font-bold uppercase text-stone-400">
+                    No Shootout
+                  </span>
+                  <span className="text-xs font-bold text-stone-600 text-center leading-tight">
+                    No Penalty
+                  </span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                  <span className="text-[9px] font-bold uppercase text-stone-400">
+                    Pens Winner
+                  </span>
+                  <span className="text-xs font-bold text-emerald-700 text-center leading-tight">
                     {hasTeams ? teamB : "Team B"}
                   </span>
                 </div>
