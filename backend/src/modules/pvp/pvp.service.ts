@@ -135,6 +135,16 @@ export function determineOptionGroup(
     return "offsides"
   }
 
+  if (
+    name.includes("on penalties") ||
+    name.includes("penalty shootout") ||
+    name.includes("wins shootout") ||
+    name.includes("no penalties") ||
+    name.includes("decided in extra time")
+  ) {
+    return "extra_time_penalties"
+  }
+
   return `unique_${optionName.replace(/\s+/g, "_").toLowerCase()}`
 }
 
@@ -318,6 +328,9 @@ export class PvpService {
         } else if (optionGroup === "offsides") {
           questionSuffix = "Offsides"
           optionName = "Offsides"
+        } else if (optionGroup === "extra_time_penalties") {
+          questionSuffix = "Extra Time / Penalties Winner"
+          optionName = "Extra Time / Penalties"
         } else {
           const capitalized = optionGroup
             .split("_")
