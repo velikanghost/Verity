@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { HydratedDocument } from "mongoose"
+import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose"
 
 export type MissionDocument = HydratedDocument<Mission>
 
@@ -11,8 +11,8 @@ export class Mission {
   @Prop({ type: Number, default: null, min: 0 })
   xpReward: number | null
 
-  @Prop({ type: String, required: true, trim: true })
-  actionUrl: string
+  @Prop({ type: String, default: null, trim: true })
+  actionUrl: string | null
 
   @Prop({
     type: String,
@@ -33,6 +33,14 @@ export class Mission {
 
   @Prop({ type: Number, default: null })
   rewardMatchesCount: number | null
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: "Market",
+    default: null,
+    index: true,
+  })
+  marketId: Types.ObjectId | null
 
   createdAt?: Date
   updatedAt?: Date

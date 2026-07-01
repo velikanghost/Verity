@@ -494,6 +494,33 @@ export function useRemoveLiquidityMutation() {
   })
 }
 
+export function useAccruedLpFeesQuery(userId?: string) {
+  return useQuery({
+    queryKey: ["accrued-lp-fees", userId],
+    queryFn: () =>
+      apiRequest<{ accruedFeesUsdc: number; totalPaidFeesUsdc: number }>(
+        "/markets/lp-fees/accrued",
+      ),
+    enabled: Boolean(userId),
+  })
+}
+
+export function useClaimLpFeesMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      apiRequest<{ txHash: string; amountClaimed: number }>(
+        "/markets/lp-fees/claim",
+        { method: "POST" },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["accrued-lp-fees"] })
+      void qc.invalidateQueries({ queryKey: ["wallet-profile"] })
+      void qc.invalidateQueries({ queryKey: ["profile"] })
+    },
+  })
+}
+
 export function useDevQualifyMutation() {
   const qc = useQueryClient()
   return useMutation({

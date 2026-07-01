@@ -63,8 +63,18 @@ export default function MissionsPage() {
     }
   }
 
-  const handleStart = (missionId: string, actionUrl: string) => {
-    window.open(actionUrl, "_blank", "noopener,noreferrer")
+  const handleStart = (
+    missionId: string,
+    actionUrl: string | null | undefined,
+    missionType: string,
+  ) => {
+    if (missionType !== "activity" && actionUrl) {
+      if (actionUrl.startsWith("http://") || actionUrl.startsWith("https://")) {
+        window.open(actionUrl, "_blank", "noopener,noreferrer")
+      } else {
+        window.location.href = actionUrl
+      }
+    }
     if (!startedMissions.includes(missionId)) {
       setStartedMissions((prev) => [...prev, missionId])
     }
@@ -308,7 +318,7 @@ export default function MissionsPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleStart(mission.id, mission.actionUrl)}
+                      onClick={() => handleStart(mission.id, mission.actionUrl, mission.missionType)}
                       className="text-[#FF4D00] hover:underline font-semibold text-sm bg-transparent border-none outline-none cursor-pointer p-1"
                     >
                       Start

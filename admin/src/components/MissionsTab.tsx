@@ -26,10 +26,12 @@ interface Mission {
   verificationKey?: string | null
   rewardMultiplier?: number | null
   rewardMatchesCount?: number | null
+  marketId?: string | null
 }
 
 export default function MissionsTab() {
   const [missions, setMissions] = useState<Mission[]>([])
+  const [markets, setMarkets] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
@@ -42,6 +44,7 @@ export default function MissionsTab() {
   const [verificationKey, setVerificationKey] = useState("")
   const [rewardMultiplier, setRewardMultiplier] = useState("")
   const [rewardMatchesCount, setRewardMatchesCount] = useState("")
+  const [marketId, setMarketId] = useState("")
 
   // Editing states
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -52,6 +55,7 @@ export default function MissionsTab() {
   const [editVerificationKey, setEditVerificationKey] = useState("")
   const [editRewardMultiplier, setEditRewardMultiplier] = useState("")
   const [editRewardMatchesCount, setEditRewardMatchesCount] = useState("")
+  const [editMarketId, setEditMarketId] = useState("")
 
   // Fetch all missions for admin management
   async function fetchMissions() {
@@ -66,15 +70,25 @@ export default function MissionsTab() {
     }
   }
 
+  async function fetchMarkets() {
+    try {
+      const data = await apiRequest<any[]>("/markets?admin=true")
+      setMarkets(data)
+    } catch (err: any) {
+      console.error("Failed to load markets:", err)
+    }
+  }
+
   useEffect(() => {
     void fetchMissions()
+    void fetchMarkets()
   }, [])
 
   // Create new mission
   async function handleCreateMission(e: React.FormEvent) {
     e.preventDefault()
-    if (!title.trim() || !actionUrl.trim()) {
-      toast.error("Please fill in title and action URL.")
+    if (!title.trim()) {
+      toast.error("Please fill in the mission title.")
       return
     }
 
@@ -119,11 +133,12 @@ export default function MissionsTab() {
         body: JSON.stringify({
           title: title.trim(),
           xpReward: reward > 0 ? reward : null,
-          actionUrl: actionUrl.trim(),
+          actionUrl: actionUrl.trim() || null,
           missionType,
           verificationKey: verificationKey || null,
           rewardMultiplier: mult,
           rewardMatchesCount: matches,
+          marketId: missionType === "activity" && marketId ? marketId : null,
         }),
       })
 
@@ -135,6 +150,7 @@ export default function MissionsTab() {
       setVerificationKey("")
       setRewardMultiplier("")
       setRewardMatchesCount("")
+      setMarketId("")
       setShowCreateForm(false)
       void fetchMissions()
     } catch (err: any) {
@@ -191,6 +207,7 @@ export default function MissionsTab() {
     setEditVerificationKey(mission.verificationKey || "")
     setEditRewardMultiplier(mission.rewardMultiplier ? mission.rewardMultiplier.toString() : "")
     setEditRewardMatchesCount(mission.rewardMatchesCount ? mission.rewardMatchesCount.toString() : "")
+    setEditMarketId(mission.marketId || "")
   }
 
   // Save edited mission
@@ -236,11 +253,12 @@ export default function MissionsTab() {
         body: JSON.stringify({
           title: editTitle.trim(),
           xpReward: reward > 0 ? reward : null,
-          actionUrl: editActionUrl.trim(),
+          actionUrl: editActionUrl.trim() || null,
           missionType: editMissionType,
           verificationKey: editVerificationKey || null,
           rewardMultiplier: mult,
           rewardMatchesCount: matches,
+          marketId: editMissionType === "activity" && editMarketId ? editMarketId : null,
         }),
       })
       toast.success("Mission updated successfully!")
@@ -376,16 +394,33 @@ export default function MissionsTab() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-stone-600">Action URL</label>
+            <label className="text-xs font-bold text-stone-600">Action URL (Optional)</label>
             <input
               type="text"
               placeholder="e.g. /markets or https://x.com/verity"
               value={actionUrl}
               onChange={(e) => setActionUrl(e.target.value)}
-              required
               className="h-9 px-3 border border-stone-200 bg-white text-xs rounded-lg outline-none focus:border-indigo-500"
             />
           </div>
+
+          {missionType === "activity" && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-stone-600">Target Market (Optional)</label>
+              <select
+                value={marketId}
+                onChange={(e) => setMarketId(e.target.value)}
+                className="h-9 px-3 border border-stone-200 bg-white text-xs rounded-lg outline-none focus:border-indigo-500"
+              >
+                <option value="">Any Market / Not Applicable</option>
+                {markets.map((m) => (
+                  <option key={m.id || m._id} value={m.id || m._id}>
+                    {m.question}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
@@ -524,6 +559,20 @@ export default function MissionsTab() {
                               )}
                             </select>
                           </div>
+                          {editMissionType === "activity" && (
+                            <select
+                              value={editMarketId}
+                              onChange={(e) => setEditMarketId(e.target.value)}
+                              className="h-8 px-2 border border-stone-250 bg-white text-[10px] rounded-md outline-none focus:border-indigo-500 w-full mt-1"
+                            >
+                              <option value="">Any Market / Not Applicable</option>
+                              {markets.map((m) => (
+                                <option key={m.id || m._id} value={m.id || m._id}>
+                                  {m.question}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                       ) : (
                         <div>
@@ -533,13 +582,18 @@ export default function MissionsTab() {
                           <span className="text-[10px] text-indigo-600 block mt-1 font-mono truncate max-w-[200px]">
                             {mission.actionUrl}
                           </span>
-                          <span className="inline-flex gap-1.5 mt-1.5">
+                          <span className="inline-flex gap-1.5 mt-1.5 flex-wrap">
                             <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-bold uppercase bg-stone-100 text-stone-600 border border-stone-200">
                               {mission.missionType || "social"}
                             </span>
                             {mission.verificationKey && (
                               <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-mono bg-indigo-50 border border-indigo-100 text-indigo-600">
                                 {mission.verificationKey}
+                              </span>
+                            )}
+                            {mission.marketId && (
+                              <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-mono bg-amber-50 border border-amber-100 text-amber-600 truncate max-w-[150px]">
+                                Market ID: {mission.marketId}
                               </span>
                             )}
                           </span>

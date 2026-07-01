@@ -746,7 +746,10 @@ export class MarketsService implements OnModuleInit {
 
     const amountUsdc = dto.amount
     const grossUsdc = dto.grossAmount || dto.amount
-    const feeUsdc = dto.feeAmount || 0
+    let feeUsdc = dto.feeAmount || 0
+    if (feeUsdc === 0 && amountUsdc > 0) {
+      feeUsdc = Number((amountUsdc * 0.02).toFixed(6))
+    }
 
     // Create MarketTrade record
     const shares = dto.grossAmount || dto.amount

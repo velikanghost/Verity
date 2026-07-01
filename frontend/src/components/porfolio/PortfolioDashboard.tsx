@@ -13,7 +13,12 @@ import {
 import { useDailyVotes } from "@/hooks/useDailyVotes"
 import { useFeed } from "@/hooks/useFeed"
 import { useUserPortfolio } from "@/hooks/useUserPortfolio"
-import { useUserTradesQuery } from "@/store/verity/verityQueries"
+import {
+  useUserTradesQuery,
+  useAccruedLpFeesQuery,
+  useClaimLpFeesMutation,
+} from "@/store/verity/verityQueries"
+import toast from "@/lib/toast"
 import Link from "next/link"
 import { useAuth } from "@/components/providers/AuthModals"
 import SendUsdcModal from "./SendUsdcModal"
@@ -32,6 +37,20 @@ export default function PortfolioDashboard() {
   const userId = profile?.id || ""
   const { data: trades, isLoading: isTradesLoading } =
     useUserTradesQuery(userId)
+  const { data: accruedData } = useAccruedLpFeesQuery(userId)
+  const { mutateAsync: claimLpFees, isPending: isClaiming } = useClaimLpFeesMutation()
+
+  const accruedLpFees = accruedData?.accruedFeesUsdc || 0
+
+  const handleClaimLpFees = async () => {
+    try {
+      const result = await claimLpFees()
+      toast.success(`Successfully claimed ${result.amountClaimed.toFixed(4)} USDC in LP fees!`)
+      refetch()
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to claim LP fees.")
+    }
+  }
   const { dailyVotes, isLoading: isDailyVotesLoading } = useDailyVotes(
     profile?.id,
   )
@@ -125,7 +144,7 @@ export default function PortfolioDashboard() {
                 </h2>
               </div>
 
-              <div className="mt-6 grid grid-cols-3 gap-4 border-t border-stone-surface pt-4">
+              <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-stone-surface pt-4">
                 <div>
                   <span className="block font-mono text-[9px] font-semibold text-ash uppercase tracking-wider">
                     USDC Balance
@@ -152,6 +171,25 @@ export default function PortfolioDashboard() {
                     {stats.unrealizedPnL >= 0 ? "+" : ""}
                     {stats.unrealizedPnL.toFixed(2)} USDC
                   </span>
+                </div>
+                <div>
+                  <span className="block font-mono text-[9px] font-semibold text-ash uppercase tracking-wider">
+                    Accrued LP Fees
+                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="font-mono text-base font-semibold text-charcoal-primary">
+                      ${accruedLpFees.toFixed(4)}
+                    </span>
+                    {accruedLpFees > 0 && (
+                      <button
+                        onClick={handleClaimLpFees}
+                        disabled={isClaiming}
+                        className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#FF4D00] text-white font-bold hover:bg-[#E04400] transition-colors outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isClaiming ? "..." : "Claim"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

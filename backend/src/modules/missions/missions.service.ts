@@ -9,11 +9,10 @@ import { Model, Types } from "mongoose"
 import { User, UserDocument } from "../users/users.model"
 import { Mission, MissionDocument } from "./missions.model"
 import { CreateMissionDto, UpdateMissionDto } from "./missions.dto"
-import { Vote } from "../markets/markets.model"
-import { MarketTrade } from "../markets/markets.model"
+import { Vote, Market, MarketTrade } from "../markets/markets.model"
 import { Comment } from "../comments/comments.model"
 import { Like } from "../interactions/interactions.model"
-import { LPPosition } from "../liquidity/liquidity.model"
+import { LPPosition, LiquidityPool, LiquidityEvent } from "../liquidity/liquidity.model"
 import { Post } from "../posts/posts.model"
 import { TwitterVerifyService } from "./twitter-verify.service"
 
@@ -26,12 +25,17 @@ export class MissionsService {
     @InjectModel(Mission.name)
     private readonly missionModel: Model<MissionDocument>,
     @InjectModel(Vote.name) private readonly voteModel: Model<Vote>,
+    @InjectModel(Market.name) private readonly marketModel: Model<any>,
     @InjectModel(MarketTrade.name)
     private readonly marketTradeModel: Model<MarketTrade>,
     @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
     @InjectModel(Like.name) private readonly likeModel: Model<Like>,
     @InjectModel(LPPosition.name)
     private readonly lpPositionModel: Model<LPPosition>,
+    @InjectModel(LiquidityPool.name)
+    private readonly liquidityPoolModel: Model<LiquidityPool>,
+    @InjectModel(LiquidityEvent.name)
+    private readonly liquidityEventModel: Model<LiquidityEvent>,
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
     private readonly twitterVerifyService: TwitterVerifyService,
   ) {}
@@ -111,41 +115,63 @@ export class MissionsService {
       if (mission.missionType === "activity") {
         switch (mission.verificationKey) {
           case "has_voted": {
-            const hasVoted = await this.voteModel.findOne({
+            const query: any = {
               userId: new Types.ObjectId(userId),
               createdAt: { $gt: missionCreatedAt },
-            })
+            }
+            if (mission.marketId) {
+              query.marketId = mission.marketId
+            }
+            const hasVoted = await this.voteModel.findOne(query)
             if (!hasVoted) {
               throw new BadRequestException("You must place a vote first.")
             }
             break
           }
           case "has_commented": {
-            const hasCommented = await this.commentModel.findOne({
+            const query: any = {
               authorId: new Types.ObjectId(userId),
               createdAt: { $gt: missionCreatedAt },
-            })
+            }
+            if (mission.marketId) {
+              const m = await this.marketModel.findById(mission.marketId)
+              if (m) {
+                query.postId = m.postId
+              }
+            }
+            const hasCommented = await this.commentModel.findOne(query)
             if (!hasCommented) {
               throw new BadRequestException("You must post a comment first.")
             }
             break
           }
           case "has_liked": {
-            const hasLiked = await this.likeModel.findOne({
+            const query: any = {
               userId: new Types.ObjectId(userId),
               createdAt: { $gt: missionCreatedAt },
-            })
+            }
+            if (mission.marketId) {
+              const m = await this.marketModel.findById(mission.marketId)
+              if (m) {
+                query.postId = m.postId
+              }
+            }
+            const hasLiked = await this.likeModel.findOne(query)
             if (!hasLiked) {
               throw new BadRequestException("You must like a post first.")
             }
             break
           }
           case "has_traded": {
-            const hasTraded = await this.marketTradeModel.findOne({
+            const query: any = {
               userId: new Types.ObjectId(userId),
               action: "BUY",
               createdAt: { $gt: missionCreatedAt },
-            })
+            }
+            if (mission.marketId) {
+              query.marketId = mission.marketId
+            }
+            const hasTraded = await this.marketTradeModel.findOne(query)
             if (!hasTraded) {
               throw new BadRequestException(
                 "You must place a trade (buy share) first.",
@@ -154,10 +180,22 @@ export class MissionsService {
             break
           }
           case "has_added_liquidity": {
-            const hasLP = await this.lpPositionModel.findOne({
+            const query: any = {
               userId: new Types.ObjectId(userId),
+              type: { $in: ["creator_deposit", "lp_deposit"] },
               createdAt: { $gt: missionCreatedAt },
-            })
+            }
+            if (mission.marketId) {
+              const pool = await this.liquidityPoolModel.findOne({
+                marketId: mission.marketId,
+              })
+              if (pool) {
+                query.poolId = pool._id
+              } else {
+                throw new BadRequestException("No liquidity pool exists for this market.")
+              }
+            }
+            const hasLP = await this.liquidityEventModel.findOne(query)
             if (!hasLP) {
               throw new BadRequestException("You must add liquidity first.")
             }
@@ -198,7 +236,7 @@ export class MissionsService {
           if (mission.verificationKey === "twitter_follow") {
             const isFollowing = await this.twitterVerifyService.checkFollow(
               user.twitterUsername,
-              mission.actionUrl,
+              mission.actionUrl || "",
             )
             if (!isFollowing) {
               throw new BadRequestException(
@@ -208,7 +246,7 @@ export class MissionsService {
           } else if (mission.verificationKey === "twitter_retweet") {
             const hasRetweeted = await this.twitterVerifyService.checkRetweet(
               user.twitterUsername,
-              mission.actionUrl,
+              mission.actionUrl || "",
             )
             if (!hasRetweeted) {
               throw new BadRequestException(
@@ -218,7 +256,7 @@ export class MissionsService {
           } else if (mission.verificationKey === "twitter_comment") {
             const hasCommented = await this.twitterVerifyService.checkComment(
               user.twitterUsername,
-              mission.actionUrl,
+              mission.actionUrl || "",
             )
             if (!hasCommented) {
               throw new BadRequestException(
@@ -228,7 +266,7 @@ export class MissionsService {
           } else if (mission.verificationKey === "twitter_retweet_and_comment") {
             const hasRetweeted = await this.twitterVerifyService.checkRetweet(
               user.twitterUsername,
-              mission.actionUrl,
+              mission.actionUrl || "",
             )
             if (!hasRetweeted) {
               throw new BadRequestException(
@@ -238,7 +276,7 @@ export class MissionsService {
 
             const hasCommented = await this.twitterVerifyService.checkComment(
               user.twitterUsername,
-              mission.actionUrl,
+              mission.actionUrl || "",
             )
             if (!hasCommented) {
               throw new BadRequestException(

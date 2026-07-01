@@ -221,11 +221,19 @@ export class LiquidityService {
     // Verify transaction on-chain
     await this.blockchainService.getTransactionReceipt(txHash as `0x${string}`)
 
-    // Read new LP share balance from chain
-    const onChainShares = await this.blockchainService.readLPShares(
-      marketId as `0x${string}`,
-      user.walletAddress as `0x${string}`,
-    )
+    // Read new LP share balance/pre-deposit from chain depending on pool status
+    let onChainShares: bigint
+    if (pool.status === "funding") {
+      onChainShares = await this.blockchainService.getPreMarketDeposit(
+        marketId,
+        user.walletAddress,
+      )
+    } else {
+      onChainShares = await this.blockchainService.readLPShares(
+        marketId as `0x${string}`,
+        user.walletAddress as `0x${string}`,
+      )
+    }
     const newShares = Number(onChainShares) / 1e6
 
     let position = await this.lpPositionModel.findOne({

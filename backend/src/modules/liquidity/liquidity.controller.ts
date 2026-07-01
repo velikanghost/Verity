@@ -11,6 +11,7 @@ import {
   Request,
 } from "@nestjs/common"
 import { LiquidityService } from "./liquidity.service"
+import { LpFeeService } from "./lp-fee.service"
 import {
   ApiTags,
   ApiOperation,
@@ -27,10 +28,13 @@ import {
 } from "./liquidity.dto"
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard"
 
-@ApiTags("liquidity")
+@ApiTags("markets")
 @Controller("markets")
 export class LiquidityController {
-  constructor(private readonly liquidityService: LiquidityService) {}
+  constructor(
+    private readonly liquidityService: LiquidityService,
+    private readonly lpFeeService: LpFeeService,
+  ) {}
 
   @Post(":marketId/fund-pool")
   @UseGuards(JwtAuthGuard)
@@ -162,5 +166,28 @@ export class LiquidityController {
     @Query("userId") userId: string,
   ) {
     return this.liquidityService.getUserPositions(marketId, userId)
+  }
+
+  @Get("lp-fees/accrued")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Get accrued and lifetime paid LP fees for the authenticated user",
+  })
+  @ApiResponse({ status: 200, description: "Accrued LP fees fetched successfully." })
+  async getAccruedLpFees(@Request() req: any) {
+    return this.lpFeeService.getAccruedFees(req.user.id)
+  }
+
+  @Post("lp-fees/claim")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Manually claim accrued LP fees, executing on-chain USDC transfer",
+  })
+  @ApiResponse({ status: 200, description: "LP fees claimed successfully." })
+  async claimLpFees(@Request() req: any) {
+    return this.lpFeeService.claimAccruedFees(req.user.id)
   }
 }

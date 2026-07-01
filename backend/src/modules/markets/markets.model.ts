@@ -375,6 +375,15 @@ export class MarketTrade {
   @Prop({ type: Number, default: 0 })
   royaltyAmountUsdc: number
 
+  @Prop({ type: Boolean, default: true, index: true })
+  lpFeesPending: boolean
+
+  @Prop({ type: Boolean, default: false })
+  lpFeesPaid: boolean
+
+  @Prop({ type: String, default: null })
+  lpFeesPaidTxHash: string | null
+
   @Prop({ type: Date, default: Date.now, index: true })
   createdAt: Date
 }
