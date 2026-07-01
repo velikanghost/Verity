@@ -45,25 +45,52 @@ export class MissionsService {
     if (!user) throw new NotFoundException("User not found.")
 
     const query = admin ? {} : { isActive: true }
-    const missions = await this.missionModel.find(query).sort({ createdAt: -1 })
+    const missions = await this.missionModel
+      .find(query)
+      .populate("marketId")
+      .sort({ createdAt: -1 })
+
+    // Lazy sync deactivation for resolved/voided market missions
+    for (const m of missions) {
+      const market = m.marketId as any
+      if (
+        market &&
+        (market.status === "resolved" || market.status === "voided") &&
+        m.isActive
+      ) {
+        m.isActive = false
+        await m.save()
+      }
+    }
 
     const completedSet = new Set(user.completedMissions || [])
 
-    return missions.map((m) => {
+    const mapped = missions.map((m) => {
       const missionObj = m.toObject()
+      const market = m.marketId as any
+      const isMarketResolvedOrVoided =
+        market && (market.status === "resolved" || market.status === "voided")
+      const isActive = isMarketResolvedOrVoided ? false : missionObj.isActive
+
       return {
         id: missionObj._id.toString(),
         title: missionObj.title,
         xpReward: missionObj.xpReward,
         actionUrl: missionObj.actionUrl,
-        isActive: missionObj.isActive,
+        isActive: isActive,
         missionType: missionObj.missionType || "social",
         verificationKey: missionObj.verificationKey || null,
         rewardMultiplier: missionObj.rewardMultiplier ?? null,
         rewardMatchesCount: missionObj.rewardMatchesCount ?? null,
         completed: completedSet.has(missionObj._id.toString()),
+        marketId: missionObj.marketId
+          ? (missionObj.marketId._id || missionObj.marketId).toString()
+          : null,
+        marketQuestion: (missionObj.marketId as any)?.question || null,
       }
     })
+
+    return mapped.filter((m) => admin || m.isActive || m.completed)
   }
 
   async linkTwitterUsername(userId: string, twitterUsername: string) {
@@ -98,9 +125,18 @@ export class MissionsService {
       throw new BadRequestException("Invalid mission ID format.")
     }
 
-    const mission = await this.missionModel.findById(missionId)
+    const mission = await this.missionModel.findById(missionId).populate("marketId")
     if (!mission || !mission.isActive) {
       throw new NotFoundException("Mission not found or inactive.")
+    }
+
+    const market = mission.marketId as any
+    if (market && (market.status === "resolved" || market.status === "voided")) {
+      mission.isActive = false
+      await mission.save()
+      throw new BadRequestException(
+        "This mission is no longer active because its target market has been resolved or voided.",
+      )
     }
 
     const completedMissions = user.completedMissions || []
@@ -369,6 +405,7 @@ export class MissionsService {
       verificationKey: dto.verificationKey ?? null,
       rewardMultiplier: hasMultiplierReward ? dto.rewardMultiplier : null,
       rewardMatchesCount: hasMultiplierReward ? dto.rewardMatchesCount : null,
+      marketId: dto.marketId ? new Types.ObjectId(dto.marketId) : null,
       isActive: true,
     })
     const saved = await mission.save()
@@ -426,6 +463,10 @@ export class MissionsService {
     }
 
     const updateSet: any = { ...dto }
+    if (dto.marketId !== undefined) {
+      updateSet.marketId = dto.marketId ? new Types.ObjectId(dto.marketId) : null
+    }
+
     if (hasMultiplierReward) {
       updateSet.xpReward = null
     } else {
