@@ -595,6 +595,7 @@ export default function PvpArenaTab({
                 onSelectChildMarketForTrade={(market) =>
                   openTradeDrawer(market.id)
                 }
+                onAddLiquidity={(id) => setLiquidityMarketId(id)}
               />
             </div>
           )}

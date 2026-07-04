@@ -256,7 +256,7 @@ export default function PvpTicketBuilder({
     }
 
     const rawTotalLiquidity = BigInt(Math.round(totalLiquidity * 1e6))
-    
+
     setIsMobileDrawerOpen(false)
 
     if (rawTotalLiquidity > (rawBalance || BigInt(0))) {
@@ -460,7 +460,7 @@ export default function PvpTicketBuilder({
                   ? "Submitting..."
                   : selectionCount < 3
                     ? `Select ${3 - selectionCount} More Categories`
-                    : "Place Bet"}
+                    : "Submit Picks"}
               </button>
             </div>
           ) : (
@@ -482,7 +482,7 @@ export default function PvpTicketBuilder({
                       const val = e.target.value
                       const num = parseFloat(val)
                       setLiquidityPerSelection(isNaN(num) ? 0 : num)
-                      
+
                       const newAmounts = { ...liquidityAmounts }
                       Object.keys(pvpSelections).forEach((optId) => {
                         newAmounts[optId] = val

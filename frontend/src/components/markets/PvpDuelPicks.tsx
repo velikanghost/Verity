@@ -3,9 +3,10 @@ import { cleanOutcomeName } from "./PvpTicketBuilder"
 interface PvpDuelPicksProps {
   pvpStatus: any
   onSelectChildMarketForTrade?: (market: any) => void
+  onAddLiquidity?: (marketId: string) => void
 }
 
-export default function PvpDuelPicks({ pvpStatus, onSelectChildMarketForTrade }: PvpDuelPicksProps) {
+export default function PvpDuelPicks({ pvpStatus, onSelectChildMarketForTrade, onAddLiquidity }: PvpDuelPicksProps) {
   const userPicks = pvpStatus.ticket?.picks || []
   const oppPicks = pvpStatus.opponent?.picks || []
 
@@ -107,9 +108,22 @@ export default function PvpDuelPicks({ pvpStatus, onSelectChildMarketForTrade }:
                     "Pick"
                   ).toUpperCase()}
                 </span>
-                <span className="text-[10px] text-stone-400 dark:text-zinc-500 font-inter shrink-0">
-                  Shares: <strong>{invested.toFixed(2)}</strong>
-                </span>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[10px] text-stone-400 dark:text-zinc-500 font-inter">
+                    Shares: <strong>{invested.toFixed(2)}</strong>
+                  </span>
+                  {childOpt && !isResolved && onAddLiquidity && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onAddLiquidity(marketId)
+                      }}
+                      className="px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors uppercase tracking-wider"
+                    >
+                      + LP
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Bottom row: Selections */}
