@@ -357,7 +357,7 @@ export default function PortfolioDashboard() {
         {activeTab === "overview" && (
           <div className="grid gap-6 md:grid-cols-5">
             {/* Active Positions Summary */}
-            <div className="md:col-span-3 verity-card p-5 bg-surface-solid border border-border">
+            <div className="md:col-span-3 verity-card p-5 bg-surface-solid border border-border overflow-x-auto hide-scrollbar">
               <div className="flex items-center justify-between pb-3 border-b border-stone-surface mb-4">
                 <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-charcoal-primary">
                   Active Positions
@@ -458,7 +458,7 @@ export default function PortfolioDashboard() {
             </div>
 
             {/* Recent Activity Summary */}
-            <div className="md:col-span-2 verity-card p-5 bg-surface-solid border border-border">
+            <div className="md:col-span-2 verity-card p-5 bg-surface-solid border border-border overflow-x-auto hide-scrollbar">
               <div className="flex items-center justify-between pb-3 border-b border-stone-surface mb-4">
                 <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-charcoal-primary">
                   Recent Activity
@@ -517,7 +517,7 @@ export default function PortfolioDashboard() {
         )}
 
         {activeTab === "tokens" && (
-          <div className="verity-card p-5 bg-surface-solid border border-border overflow-x-auto">
+          <div className="verity-card p-5 bg-surface-solid border border-border overflow-x-auto hide-scrollbar">
             <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-charcoal-primary mb-4 pb-3 border-b border-stone-surface">
               All Outcome Position Stakes
             </h3>
@@ -620,7 +620,7 @@ export default function PortfolioDashboard() {
         )}
 
         {activeTab === "activity" && (
-          <div className="verity-card p-5 bg-surface-solid border border-border">
+          <div className="verity-card p-5 bg-surface-solid border border-border overflow-x-auto hide-scrollbar">
             <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-charcoal-primary mb-4 pb-3 border-b border-stone-surface">
               Trade Activity History
             </h3>

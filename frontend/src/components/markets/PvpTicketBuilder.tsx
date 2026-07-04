@@ -15,6 +15,7 @@ import {
 import { useUsdcBalance } from "@/hooks/useUsdcBalance"
 import ArenaCategory, { getCategoryMeta } from "./PvpArenaCategory"
 import { getCountryFlag } from "./PvpMatchupCarousel"
+import { DraggableFAB } from "@/components/ui/draggable-fab"
 
 export const cleanOutcomeName = (
   name: string,
@@ -575,17 +576,18 @@ export default function PvpTicketBuilder({
 
           {/* Ticket Slip (Mobile) */}
           <div className="sm:hidden">
-            <button
+            <DraggableFAB
+              id="pvp-ticket-drawer"
               onClick={() => setIsMobileDrawerOpen(true)}
-              className="fixed bottom-[calc(env(safe-area-inset-bottom)+82px)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-sm clickable border-2 border-white/10"
+              className="fixed bottom-[calc(env(safe-area-inset-bottom)+82px)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-sm cursor-pointer border-2 border-white/10"
             >
-              <Receipt className="h-6 w-6" />
+              <Receipt className="h-6 w-6 pointer-events-none" />
               {selectionCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-zinc-900">
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-zinc-900 pointer-events-none">
                   {selectionCount}
                 </span>
               )}
-            </button>
+            </DraggableFAB>
 
             <Drawer
               open={isMobileDrawerOpen}
