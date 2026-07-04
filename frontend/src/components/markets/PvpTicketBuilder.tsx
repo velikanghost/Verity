@@ -594,11 +594,11 @@ export default function PvpTicketBuilder({
               onOpenChange={setIsMobileDrawerOpen}
             >
               <DrawerContent className="max-h-[92vh] flex flex-col rounded-t-3xl border-t border-stone-surface bg-warm-canvas pb-4 outline-none">
-                <DrawerHeader className="relative flex-shrink-0 flex items-center justify-between border-b border-stone-surface pb-3 pt-2 mb-2 px-4">
-                  <DrawerTitle className="font-heading text-lg font-bold text-charcoal-primary">
+                <DrawerHeader className="relative flex-shrink-0 flex flex-row items-center justify-between border-b border-stone-surface pb-3 pt-2 mb-2 px-4 text-left">
+                  <DrawerTitle className="font-heading text-lg font-bold text-charcoal-primary m-0">
                     Your Selections
                   </DrawerTitle>
-                  <DrawerClose className="rounded-full p-1.5 hover:bg-stone-surface text-ash hover:text-charcoal-primary transition-colors">
+                  <DrawerClose className="rounded-full p-1.5 hover:bg-stone-surface text-ash hover:text-charcoal-primary transition-colors shrink-0">
                     <X className="h-4.5 w-4.5" />
                   </DrawerClose>
                 </DrawerHeader>
