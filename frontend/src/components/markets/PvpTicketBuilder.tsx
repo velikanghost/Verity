@@ -25,7 +25,10 @@ export const cleanOutcomeName = (
   const lowerA = teamA.toLowerCase().trim()
   const lowerB = teamB.toLowerCase().trim()
 
-  if (lowerName.includes("wins on penalties") || lowerName.includes("wins shootout")) {
+  if (
+    lowerName.includes("wins on penalties") ||
+    lowerName.includes("wins shootout")
+  ) {
     if (lowerName.includes(lowerA)) return teamA
     if (lowerName.includes(lowerB)) return teamB
   }
@@ -160,7 +163,26 @@ export default function PvpTicketBuilder({
   const [couponError, setCouponError] = useState<string | null>(null)
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<"single" | "liquidity">("single")
-  const [liquidityAmounts, setLiquidityAmounts] = useState<Record<string, string>>({})
+  const [liquidityAmounts, setLiquidityAmounts] = useState<
+    Record<string, string>
+  >({})
+  const [liquidityPerSelection, setLiquidityPerSelection] = useState<number>(0)
+
+  useEffect(() => {
+    if (liquidityPerSelection > 0) {
+      setLiquidityAmounts((prev) => {
+        const next = { ...prev }
+        let changed = false
+        Object.keys(pvpSelections).forEach((optId) => {
+          if (!next[optId]) {
+            next[optId] = liquidityPerSelection.toString()
+            changed = true
+          }
+        })
+        return changed ? next : prev
+      })
+    }
+  }, [pvpSelections, liquidityPerSelection])
 
   useEffect(() => {
     const code = couponCode.trim()
@@ -235,7 +257,7 @@ export default function PvpTicketBuilder({
     const rawTotalLiquidity = BigInt(Math.round(totalLiquidity * 1e6))
     if (rawTotalLiquidity > (rawBalance || BigInt(0))) {
       toast.error(
-        `Insufficient USDC balance. You need at least ${totalLiquidity} USDC, but your balance is ${(Number(rawBalance || 0) / 1e6).toFixed(2)} USDC.`
+        `Insufficient USDC balance. You need at least ${totalLiquidity} USDC, but your balance is ${(Number(rawBalance || 0) / 1e6).toFixed(2)} USDC.`,
       )
       return
     }
@@ -250,10 +272,13 @@ export default function PvpTicketBuilder({
   }
 
   const renderTicketSlip = () => {
-    const totalLiquidity = Object.values(liquidityAmounts).reduce((sum, amtStr) => {
-      const amt = parseFloat(amtStr)
-      return sum + (isNaN(amt) ? 0 : amt)
-    }, 0)
+    const totalLiquidity = Object.values(liquidityAmounts).reduce(
+      (sum, amtStr) => {
+        const amt = parseFloat(amtStr)
+        return sum + (isNaN(amt) ? 0 : amt)
+      },
+      0,
+    )
 
     return (
       <div className="flex flex-col gap-0 w-full h-full min-h-0 max-h-full">
@@ -333,43 +358,52 @@ export default function PvpTicketBuilder({
                   </button>
                   <div className="flex-1 min-w-0 flex flex-col gap-1">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 text-sm font-bold text-charcoal-primary dark:text-white truncate">
-                        <span className="shrink-0">⚽</span>
-                        <span className="truncate">{displaySelection}</span>
+                      <div className="flex flex-col gap-1.5 text-sm font-bold text-charcoal-primary dark:text-white truncate">
+                        <div className="flex items-center gap-1.5">
+                          <span className="shrink-0">⚽</span>
+                          <span className="truncate">{displaySelection}</span>
+                        </div>
+                        <div className="text-xs text-ash truncate">
+                          {selectedPvpEvent?.question}
+                        </div>
+                        <div className="text-[10px] font-mono text-ash/70 uppercase tracking-wider">
+                          {opt?.optionGroup?.replace(/_/g, " ") || "Option"}
+                        </div>
                       </div>
-                      {/* Odds representation */}
-                      <div className="text-sm font-mono font-bold text-ash/80 shrink-0">
-                        {opt?.poolA && opt?.poolB
-                          ? (
-                              (opt.poolA + opt.poolB) /
-                              (selection === "YES" ? opt.poolA : opt.poolB)
-                            ).toFixed(2)
-                          : "2.00"}
+                      <div className="">
+                        {/* Odds representation */}
+                        <div className="text-sm text-right font-mono font-bold text-ash/80">
+                          {opt?.poolA && opt?.poolB
+                            ? (
+                                (opt.poolA + opt.poolB) /
+                                (selection === "YES" ? opt.poolA : opt.poolB)
+                              ).toFixed(2)
+                            : "2.00"}
+                        </div>
+
+                        {activeTab === "liquidity" && (
+                          <div className="mt-2 pt-2 flex justify-end">
+                            <div className="flex items-center gap-2 w-32">
+                              <Input
+                                type="number"
+                                min="1"
+                                placeholder="USDC"
+                                value={liquidityAmounts[optId] || ""}
+                                onChange={(e) =>
+                                  handleLiquidityAmountChange(
+                                    optId,
+                                    e.target.value,
+                                  )
+                                }
+                                className="h-8 text-xs font-mono bg-white dark:bg-black border-stone-300 dark:border-zinc-700 text-right"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="text-xs text-ash truncate">
-                      {selectedPvpEvent?.question}
-                    </div>
-                    <div className="text-[10px] font-mono text-ash/70 uppercase tracking-wider">
-                      {opt?.optionGroup?.replace(/_/g, " ") || "Option"}
                     </div>
                   </div>
                 </div>
-
-                {activeTab === "liquidity" && (
-                  <div className="mt-2 pt-2 border-t border-dashed border-stone-300 dark:border-zinc-700 flex justify-end">
-                    <div className="flex items-center gap-2 w-32">
-                      <Input
-                        type="number"
-                        min="1"
-                        placeholder="USDC"
-                        value={liquidityAmounts[optId] || ""}
-                        onChange={(e) => handleLiquidityAmountChange(optId, e.target.value)}
-                        className="h-8 text-xs font-mono bg-white dark:bg-black border-stone-300 dark:border-zinc-700 text-right"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             )
           })}
@@ -380,13 +414,17 @@ export default function PvpTicketBuilder({
           {activeTab === "single" ? (
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-ash uppercase">Stake per bet</span>
+                <span className="text-xs font-bold text-ash uppercase">
+                  Stake per bet
+                </span>
                 <div className="flex items-center gap-2 w-32">
                   <span className="text-xs font-bold text-ash">USDC</span>
                   <Input
                     type="number"
                     min="1"
-                    value={betAmountPerSelection === 0 ? "" : betAmountPerSelection}
+                    value={
+                      betAmountPerSelection === 0 ? "" : betAmountPerSelection
+                    }
                     disabled={isSubmitting}
                     onChange={(e) => {
                       const val = e.target.value
@@ -396,16 +434,18 @@ export default function PvpTicketBuilder({
                   />
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-charcoal-primary dark:text-white">Total Stake</span>
+                <span className="text-xs font-bold text-charcoal-primary dark:text-white">
+                  Total Stake
+                </span>
                 <span className="text-sm font-bold font-mono text-charcoal-primary dark:text-white">
                   {betAmountPerSelection * selectionCount} USDC
                 </span>
               </div>
 
               {/* Coupon input hidden to match cleaner UI, or could be placed under an advanced toggle */}
-              
+
               <button
                 onClick={() => {
                   setIsMobileDrawerOpen(false)
@@ -424,7 +464,38 @@ export default function PvpTicketBuilder({
           ) : (
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-charcoal-primary dark:text-white">Total Liquidity</span>
+                <span className="text-xs font-bold text-ash uppercase">
+                  Liquidity per market
+                </span>
+                <div className="flex items-center gap-2 w-32">
+                  <span className="text-xs font-bold text-ash">USDC</span>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={
+                      liquidityPerSelection === 0 ? "" : liquidityPerSelection
+                    }
+                    disabled={isSubmitting}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      const num = parseFloat(val)
+                      setLiquidityPerSelection(isNaN(num) ? 0 : num)
+                      
+                      const newAmounts = { ...liquidityAmounts }
+                      Object.keys(pvpSelections).forEach((optId) => {
+                        newAmounts[optId] = val
+                      })
+                      setLiquidityAmounts(newAmounts)
+                    }}
+                    className="h-8 text-right font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-charcoal-primary dark:text-white">
+                  Total Liquidity
+                </span>
                 <span className="text-sm font-bold font-mono text-charcoal-primary dark:text-white">
                   {totalLiquidity} USDC
                 </span>
@@ -499,9 +570,7 @@ export default function PvpTicketBuilder({
           </div>
 
           {/* Ticket Slip (Desktop) */}
-          <div className="hidden sm:block">
-            {renderTicketSlip()}
-          </div>
+          <div className="hidden sm:block">{renderTicketSlip()}</div>
 
           {/* Ticket Slip (Mobile) */}
           <div className="sm:hidden">
@@ -517,7 +586,10 @@ export default function PvpTicketBuilder({
               )}
             </button>
 
-            <Drawer open={isMobileDrawerOpen} onOpenChange={setIsMobileDrawerOpen}>
+            <Drawer
+              open={isMobileDrawerOpen}
+              onOpenChange={setIsMobileDrawerOpen}
+            >
               <DrawerContent className="max-h-[92vh] flex flex-col rounded-t-3xl border-t border-stone-surface bg-warm-canvas pb-4 outline-none">
                 <DrawerHeader className="relative flex-shrink-0 flex items-center justify-between border-b border-stone-surface pb-3 pt-2 mb-2 px-4">
                   <DrawerTitle className="font-heading text-lg font-bold text-charcoal-primary">
