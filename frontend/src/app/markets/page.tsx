@@ -18,6 +18,7 @@ import PvpSidebarStats from "@/components/markets/PvpSidebarStats"
 import DuelHistory from "@/components/markets/DuelHistory"
 
 type MarketsTab = "general" | "pvp-arena"
+type MobilePvpTab = "markets" | "history" | "stats"
 
 function MarketsContent() {
   const router = useRouter()
@@ -26,6 +27,7 @@ function MarketsContent() {
   const [activeTab, setActiveTab] = useState<MarketsTab>(
     tabQuery === "general" || tabQuery === "pvp-arena" ? tabQuery : "general",
   )
+  const [mobilePvpTab, setMobilePvpTab] = useState<MobilePvpTab>("markets")
   const { profile } = useWalletProfile()
 
   useEffect(() => {
@@ -180,31 +182,73 @@ function MarketsContent() {
 
       {/* PvP Arena Tab */}
       {activeTab === "pvp-arena" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-          {/* Main Duelling Area */}
-          <PvpArenaTab
-            pvpEvents={pvpEvents}
-            pvpEventsLoading={pvpEventsLoading || myTicketsLoading}
-            pvpStatus={pvpStatus}
-            pvpStatusLoading={pvpStatusLoading}
-            refetchPvpStatus={refetchPvpStatus}
-            profile={profile}
-            referralsData={referralsData}
-            selectedPvpEventId={selectedPvpEventId}
-            setSelectedPvpEventId={handleSelectPvpEvent}
-            claimedMarketIds={claimedMarketIds}
-            setClaimedMarketIds={setClaimedMarketIds}
-          />
+        <div className="flex flex-col gap-4">
+          {/* Mobile Sub-tabs Menu (Only visible on mobile) */}
+          <div className="lg:hidden flex border-b border-border dark:border-zinc-800 gap-2 pb-px overflow-x-auto hide-scrollbar">
+            <button
+              onClick={() => setMobilePvpTab("markets")}
+              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold tracking-tight whitespace-nowrap transition-colors ${
+                mobilePvpTab === "markets"
+                  ? "border-charcoal-primary text-charcoal-primary dark:border-white dark:text-white"
+                  : "border-transparent text-ash hover:text-charcoal-primary dark:hover:text-white"
+              }`}
+            >
+              Markets
+            </button>
+            <button
+              onClick={() => setMobilePvpTab("history")}
+              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold tracking-tight whitespace-nowrap transition-colors ${
+                mobilePvpTab === "history"
+                  ? "border-charcoal-primary text-charcoal-primary dark:border-white dark:text-white"
+                  : "border-transparent text-ash hover:text-charcoal-primary dark:hover:text-white"
+              }`}
+            >
+              Duel History
+            </button>
+            <button
+              onClick={() => setMobilePvpTab("stats")}
+              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold tracking-tight whitespace-nowrap transition-colors ${
+                mobilePvpTab === "stats"
+                  ? "border-charcoal-primary text-charcoal-primary dark:border-white dark:text-white"
+                  : "border-transparent text-ash hover:text-charcoal-primary dark:hover:text-white"
+              }`}
+            >
+              PvP Stats
+            </button>
+          </div>
 
-          {/* Right Sidebar: Profile stats & Duel History */}
-          <div className="flex flex-col gap-4">
-            <PvpSidebarStats
-              profile={profile}
-              referralsData={referralsData}
-              claimedMarketIds={claimedMarketIds}
-              onClaimSuccess={handleClaimSuccess}
-            />
-            <DuelHistory />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+            {/* Main Duelling Area */}
+            <div className={`lg:col-span-2 ${mobilePvpTab === "markets" ? "block" : "hidden"} lg:block`}>
+              <PvpArenaTab
+                pvpEvents={pvpEvents}
+                pvpEventsLoading={pvpEventsLoading || myTicketsLoading}
+                pvpStatus={pvpStatus}
+                pvpStatusLoading={pvpStatusLoading}
+                refetchPvpStatus={refetchPvpStatus}
+                profile={profile}
+                referralsData={referralsData}
+                selectedPvpEventId={selectedPvpEventId}
+                setSelectedPvpEventId={handleSelectPvpEvent}
+                claimedMarketIds={claimedMarketIds}
+                setClaimedMarketIds={setClaimedMarketIds}
+              />
+            </div>
+
+            {/* Right Sidebar: Profile stats & Duel History */}
+            <div className={`flex flex-col gap-4 ${mobilePvpTab !== "markets" ? "block" : "hidden"} lg:flex`}>
+              <div className={`${mobilePvpTab === "stats" ? "block" : "hidden"} lg:block`}>
+                <PvpSidebarStats
+                  profile={profile}
+                  referralsData={referralsData}
+                  claimedMarketIds={claimedMarketIds}
+                  onClaimSuccess={handleClaimSuccess}
+                />
+              </div>
+              <div className={`${mobilePvpTab === "history" ? "block" : "hidden"} lg:block`}>
+                <DuelHistory />
+              </div>
+            </div>
           </div>
         </div>
       )}
