@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { apiRequest } from "@/store/apiClient"
-import { toast } from "react-hot-toast"
+import { toast } from "@/lib/toast"
 import { HelpCircle, ChevronRight, Check, Receipt, X } from "lucide-react"
 import {
   Drawer,
@@ -255,14 +255,15 @@ export default function PvpTicketBuilder({
     }
 
     const rawTotalLiquidity = BigInt(Math.round(totalLiquidity * 1e6))
+    
+    setIsMobileDrawerOpen(false)
+
     if (rawTotalLiquidity > (rawBalance || BigInt(0))) {
       toast.error(
-        `Insufficient USDC balance. You need at least ${totalLiquidity} USDC, but your balance is ${(Number(rawBalance || 0) / 1e6).toFixed(2)} USDC.`,
+        `Insufficient USDC balance. You need at least ${totalLiquidity} USDC to submit this ticket, but your balance is ${(Number(rawBalance || 0) / 1e6).toFixed(2)} USDC.`,
       )
       return
     }
-
-    setIsMobileDrawerOpen(false)
     try {
       await onProvideLiquidity(validAmounts)
       setLiquidityAmounts({})
@@ -487,7 +488,7 @@ export default function PvpTicketBuilder({
                       })
                       setLiquidityAmounts(newAmounts)
                     }}
-                    className="h-8 text-right font-mono"
+                    className="h-9 text-xs font-bold font-mono bg-stone-100 dark:bg-zinc-900 border-stone-300 dark:border-zinc-700 text-right"
                   />
                 </div>
               </div>
