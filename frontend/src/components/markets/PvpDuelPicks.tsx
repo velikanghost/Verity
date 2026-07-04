@@ -118,7 +118,7 @@ export default function PvpDuelPicks({ pvpStatus, onSelectChildMarketForTrade, o
                         e.stopPropagation()
                         onAddLiquidity(marketId)
                       }}
-                      className="px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors uppercase tracking-wider"
+                      className="px-2 py-0.5 rounded border border-border dark:border-zinc-700 text-[9px] font-bold text-ash dark:text-zinc-400 bg-white-surface dark:bg-zinc-900 hover:text-charcoal-primary dark:hover:text-zinc-200 hover:border-charcoal-primary/30 dark:hover:border-zinc-500 transition-all uppercase tracking-wider"
                     >
                       + LP
                     </button>
