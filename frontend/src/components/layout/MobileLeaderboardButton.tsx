@@ -2,8 +2,16 @@
 
 import { Trophy } from "lucide-react"
 import Link from "next/link"
+import { usePathname, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 
-export default function MobileLeaderboardButton() {
+function ButtonContent() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const isPvpArena = pathname === "/markets" && searchParams.get("tab") === "pvp-arena"
+
+  if (isPvpArena) return null
+
   return (
     <Link
       href="/leaderboard"
@@ -12,5 +20,13 @@ export default function MobileLeaderboardButton() {
     >
       <Trophy className="h-6 w-6" />
     </Link>
+  )
+}
+
+export default function MobileLeaderboardButton() {
+  return (
+    <Suspense fallback={null}>
+      <ButtonContent />
+    </Suspense>
   )
 }

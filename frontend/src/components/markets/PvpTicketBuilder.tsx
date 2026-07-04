@@ -3,7 +3,14 @@
 import { useMemo, useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { apiRequest } from "@/store/apiClient"
-import { HelpCircle, ChevronRight, Check } from "lucide-react"
+import { HelpCircle, ChevronRight, Check, Receipt, X } from "lucide-react"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from "@/components/ui/drawer"
 import { useUsdcBalance } from "@/hooks/useUsdcBalance"
 import ArenaCategory, { getCategoryMeta } from "./PvpArenaCategory"
 import { getCountryFlag } from "./PvpMatchupCarousel"
@@ -148,6 +155,7 @@ export default function PvpTicketBuilder({
   const [couponCode, setCouponCode] = useState("")
   const [couponMultiplier, setCouponMultiplier] = useState<number | null>(null)
   const [couponError, setCouponError] = useState<string | null>(null)
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
 
   useEffect(() => {
     const code = couponCode.trim()
@@ -200,6 +208,188 @@ export default function PvpTicketBuilder({
   }, [selectedPvpEvent])
 
   const progressPercent = Math.min((selectionCount / 3) * 100, 100)
+
+  const renderTicketSlip = () => (
+    <div className="flex flex-col gap-0 w-full">
+      {/* Selection Summary */}
+      {selectionCount > 0 && (
+        <div className="rounded-xl bg-indigo-50/40 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 p-3 mt-2">
+          <span className="block text-[10px] font-bold uppercase text-ash tracking-wider mb-1.5">
+            Your Picks — {selectionCount} selections
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(pvpSelections).map(([optId, selection]) => {
+              const opt = selectedPvpEvent.options.find(
+                (o: any) => o.id === optId,
+              )
+              const isMultiOpt = opt?.outcomeCount && opt.outcomeCount > 2
+              let displaySelection = isMultiOpt
+                ? cleanOutcomeName(
+                    selection,
+                    parsedTeams.teamA,
+                    parsedTeams.teamB,
+                  )
+                : selection === "YES"
+                  ? cleanOutcomeName(
+                      opt?.yesCondition || "Yes",
+                      parsedTeams.teamA,
+                      parsedTeams.teamB,
+                    )
+                  : cleanOutcomeName(
+                      opt?.noCondition || "No",
+                      parsedTeams.teamA,
+                      parsedTeams.teamB,
+                    )
+              if (
+                opt &&
+                (opt.optionGroup === "red_card" ||
+                  opt.optionGroup === "red_cards")
+              ) {
+                displaySelection =
+                  selection === "YES" ? "Red card shown" : "No red card"
+              }
+              return (
+                <span
+                  key={optId}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {opt?.optionName}: {displaySelection}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Bet amount settings */}
+      <div className="flex flex-col gap-3.5 bg-stone-100/50 dark:bg-zinc-900/30 p-4 rounded-xl border border-border/60 dark:border-zinc-800/40 mt-4 mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+          <div className="space-y-0.5">
+            <span className="text-xs font-mono font-bold text-ash uppercase block">
+              Bet Amount per selection
+            </span>
+            <span className="text-[10px] text-ash block">
+              Each selected option will be purchased for this amount.
+            </span>
+          </div>
+          <div className="flex flex-col gap-1 w-full sm:w-auto">
+            <span className="text-[10px] font-mono text-ash/80 sm:hidden block text-right">
+              Balance: {formattedBalance} USDC
+            </span>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Input
+                type="number"
+                min="1"
+                max="1000"
+                value={
+                  betAmountPerSelection === 0 ? "" : betAmountPerSelection
+                }
+                disabled={isSubmitting}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (val === "") {
+                    onSetBetAmount(0)
+                  } else {
+                    onSetBetAmount(Number(val))
+                  }
+                }}
+                className="w-full sm:w-20 h-9 px-3 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <span className="text-xs font-mono font-bold text-charcoal-primary dark:text-zinc-400">
+                USDC
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-between border-t border-dashed border-border/60 dark:border-zinc-800/60 pt-2.5 mt-0.5">
+          <span className="text-xs font-mono text-ash font-bold uppercase">
+            Total Ticket Cost ({selectionCount} Selections)
+          </span>
+          <strong className="text-sm font-bold font-mono text-indigo-600 dark:text-indigo-400">
+            {betAmountPerSelection * selectionCount} USDC
+          </strong>
+        </div>
+      </div>
+
+      {/* Coupon Code Input */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-t border-dashed border-border/60 dark:border-zinc-800/60 pt-4 mt-2">
+        <span className="text-xs font-mono text-ash font-bold uppercase">
+          Apply Coupon Code
+        </span>
+        <div className="flex items-center gap-2">
+          <Input
+            type="text"
+            placeholder="e.g. WELCOME20"
+            value={couponCode}
+            disabled={isSubmitting}
+            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+            className="w-32 h-9 px-2 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white focus-visible:ring-1 focus-visible:ring-indigo-500 text-right disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+        </div>
+      </div>
+      {couponError && couponCode.length > 0 && (
+        <div className="text-[10px] text-red-500 font-mono text-right w-full mt-1">
+          {couponError}
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-t border-border dark:border-zinc-800 pt-4 mt-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {couponMultiplier ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+              Coupon Active: {couponMultiplier}x XP
+            </span>
+          ) : referralsData?.welcomeBoosts?.isEligible &&
+            referralsData.welcomeBoosts.nextGameMultiplier > 1.0 ? (
+            <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm w-full sm:w-auto">
+              ⚡ Welcome Boost:{" "}
+              {referralsData.welcomeBoosts.nextGameMultiplier}x XP (
+              {referralsData.welcomeBoosts.ticketsCount === 0
+                ? "1st"
+                : "2nd"}{" "}
+              game)
+            </span>
+          ) : downtimeBoostRemaining > 0 ? (
+            <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-500/10 dark:bg-amber-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm w-full sm:w-auto">
+              ⚡ Downtime Boost: 2x ({downtimeBoostRemaining} remaining)
+            </span>
+          ) : missionBoostRemaining > 0 ? (
+            <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-orange-500/10 dark:bg-orange-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-orange-600 dark:text-orange-400 border border-orange-500/20 shadow-sm w-full sm:w-auto">
+              ⚡ Mission Boost:{" "}
+              {activeBoostsList.find((b: any) => b.source === "mission")
+                ?.multiplier || 2.0}
+              x
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-ash/80 text-center w-full sm:w-auto block">
+              ⚡ Boosts Remaining:{" "}
+              <strong className="text-charcoal-primary dark:text-white font-mono font-bold">
+                {doubleBoostRemaining}
+              </strong>
+              {doubleBoostRemaining > 0 && " (Auto 1.2x XP)"}
+            </span>
+          )}
+        </div>
+
+        <button
+          onClick={() => {
+            setIsMobileDrawerOpen(false)
+            onSubmitTicket((!couponError && couponCode.trim()) || undefined)
+          }}
+          disabled={isSubmitting || selectionCount < 3}
+          className="verity-pill px-6 h-11 bg-indigo-600 text-white hover:bg-indigo-500 font-bold uppercase tracking-wider text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4 sm:mt-0"
+        >
+          {isSubmitting
+            ? "Submitting..."
+            : selectionCount < 3
+              ? `Select ${3 - selectionCount} More Categories`
+              : "Submit ticket & Queue"}
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <div className="flex flex-col gap-5 w-full pb-20 relative">
@@ -256,179 +446,40 @@ export default function PvpTicketBuilder({
             ))}
           </div>
 
-          {/* Selection Summary */}
-          {selectionCount > 0 && (
-            <div className="rounded-xl bg-indigo-50/40 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 p-3 mt-2">
-              <span className="block text-[10px] font-bold uppercase text-ash tracking-wider mb-1.5">
-                Your Picks — {selectionCount} selections
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(pvpSelections).map(([optId, selection]) => {
-                  const opt = selectedPvpEvent.options.find(
-                    (o: any) => o.id === optId,
-                  )
-                  const isMultiOpt = opt?.outcomeCount && opt.outcomeCount > 2
-                  let displaySelection = isMultiOpt
-                    ? cleanOutcomeName(
-                        selection,
-                        parsedTeams.teamA,
-                        parsedTeams.teamB,
-                      )
-                    : selection === "YES"
-                      ? cleanOutcomeName(
-                          opt?.yesCondition || "Yes",
-                          parsedTeams.teamA,
-                          parsedTeams.teamB,
-                        )
-                      : cleanOutcomeName(
-                          opt?.noCondition || "No",
-                          parsedTeams.teamA,
-                          parsedTeams.teamB,
-                        )
-                  if (
-                    opt &&
-                    (opt.optionGroup === "red_card" ||
-                      opt.optionGroup === "red_cards")
-                  ) {
-                    displaySelection =
-                      selection === "YES" ? "Red card shown" : "No red card"
-                  }
-                  return (
-                    <span
-                      key={optId}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      {opt?.optionName}: {displaySelection}
-                    </span>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Bet amount settings */}
-          <div className="flex flex-col gap-3.5 bg-stone-100/50 dark:bg-zinc-900/30 p-4 rounded-xl border border-border/60 dark:border-zinc-800/40 mt-4 mb-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-              <div className="space-y-0.5">
-                <span className="text-xs font-mono font-bold text-ash uppercase block">
-                  Bet Amount per selection
-                </span>
-                <span className="text-[10px] text-ash block">
-                  Each selected option will be purchased for this amount.
-                </span>
-              </div>
-              <div className="flex flex-col gap-1 w-full sm:w-auto">
-                <span className="text-[10px] font-mono text-ash/80 sm:hidden block text-right">
-                  Balance: {formattedBalance} USDC
-                </span>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Input
-                    type="number"
-                    min="1"
-                    max="1000"
-                    value={
-                      betAmountPerSelection === 0 ? "" : betAmountPerSelection
-                    }
-                    disabled={isSubmitting}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val === "") {
-                        onSetBetAmount(0)
-                      } else {
-                        onSetBetAmount(Number(val))
-                      }
-                    }}
-                    className="w-full sm:w-20 h-9 px-3 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <span className="text-xs font-mono font-bold text-charcoal-primary dark:text-zinc-400">
-                    USDC
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between border-t border-dashed border-border/60 dark:border-zinc-800/60 pt-2.5 mt-0.5">
-              <span className="text-xs font-mono text-ash font-bold uppercase">
-                Total Ticket Cost ({selectionCount} Selections)
-              </span>
-              <strong className="text-sm font-bold font-mono text-indigo-600 dark:text-indigo-400">
-                {betAmountPerSelection * selectionCount} USDC
-              </strong>
-            </div>
+          {/* Ticket Slip (Desktop) */}
+          <div className="hidden sm:block">
+            {renderTicketSlip()}
           </div>
 
-          {/* Coupon Code Input */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-t border-dashed border-border/60 dark:border-zinc-800/60 pt-4 mt-2">
-            <span className="text-xs font-mono text-ash font-bold uppercase">
-              Apply Coupon Code
-            </span>
-            <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                placeholder="e.g. WELCOME20"
-                value={couponCode}
-                disabled={isSubmitting}
-                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                className="w-32 h-9 px-2 border border-border dark:border-zinc-800 bg-white-surface dark:bg-zinc-900 text-xs font-bold font-mono rounded-md text-charcoal-primary dark:text-white focus-visible:ring-1 focus-visible:ring-indigo-500 text-right disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-          </div>
-          {couponError && couponCode.length > 0 && (
-            <div className="text-[10px] text-red-500 font-mono text-right w-full mt-1">
-              {couponError}
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-t border-border dark:border-zinc-800 pt-4 mt-2">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              {couponMultiplier ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
-                  Coupon Active: {couponMultiplier}x XP
-                </span>
-              ) : referralsData?.welcomeBoosts?.isEligible &&
-                referralsData.welcomeBoosts.nextGameMultiplier > 1.0 ? (
-                <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm w-full sm:w-auto">
-                  ⚡ Welcome Boost:{" "}
-                  {referralsData.welcomeBoosts.nextGameMultiplier}x XP (
-                  {referralsData.welcomeBoosts.ticketsCount === 0
-                    ? "1st"
-                    : "2nd"}{" "}
-                  game)
-                </span>
-              ) : downtimeBoostRemaining > 0 ? (
-                <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-500/10 dark:bg-amber-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm w-full sm:w-auto">
-                  ⚡ Downtime Boost: 2x ({downtimeBoostRemaining} remaining)
-                </span>
-              ) : missionBoostRemaining > 0 ? (
-                <span className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1.5 rounded-full bg-orange-500/10 dark:bg-orange-500/5 text-[10px] font-bold font-mono uppercase tracking-wider text-orange-600 dark:text-orange-400 border border-orange-500/20 shadow-sm w-full sm:w-auto">
-                  ⚡ Mission Boost:{" "}
-                  {activeBoostsList.find((b: any) => b.source === "mission")
-                    ?.multiplier || 2.0}
-                  x
-                </span>
-              ) : (
-                <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-ash/80 text-center w-full sm:w-auto block">
-                  ⚡ Boosts Remaining:{" "}
-                  <strong className="text-charcoal-primary dark:text-white font-mono font-bold">
-                    {doubleBoostRemaining}
-                  </strong>
-                  {doubleBoostRemaining > 0 && " (Auto 1.2x XP)"}
+          {/* Ticket Slip (Mobile) */}
+          <div className="sm:hidden">
+            <button
+              onClick={() => setIsMobileDrawerOpen(true)}
+              className="fixed bottom-[calc(env(safe-area-inset-bottom)+82px)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-sm clickable border-2 border-white/10"
+            >
+              <Receipt className="h-6 w-6" />
+              {selectionCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-zinc-900">
+                  {selectionCount}
                 </span>
               )}
-            </div>
-
-            <button
-              onClick={() => onSubmitTicket((!couponError && couponCode.trim()) || undefined)}
-              disabled={isSubmitting || selectionCount < 3}
-              className="verity-pill px-6 h-11 bg-indigo-600 text-white hover:bg-indigo-500 font-bold uppercase tracking-wider text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {isSubmitting
-                ? "Submitting..."
-                : selectionCount < 3
-                  ? `Select ${3 - selectionCount} More Categories`
-                  : "Submit ticket & Queue"}
-              <ChevronRight className="h-4 w-4" />
             </button>
+
+            <Drawer open={isMobileDrawerOpen} onOpenChange={setIsMobileDrawerOpen}>
+              <DrawerContent className="max-h-[92vh] rounded-t-3xl border-t border-stone-surface bg-warm-canvas pb-6 px-4 outline-none overflow-y-auto">
+                <DrawerHeader className="relative flex items-center justify-between border-b border-stone-surface pb-3 pt-2 mb-4">
+                  <DrawerTitle className="font-heading text-lg font-bold text-charcoal-primary">
+                    Your Selections
+                  </DrawerTitle>
+                  <DrawerClose className="rounded-full p-1.5 hover:bg-stone-surface text-ash hover:text-charcoal-primary transition-colors">
+                    <X className="h-4.5 w-4.5" />
+                  </DrawerClose>
+                </DrawerHeader>
+                <div className="px-1 pb-4">
+                  {renderTicketSlip()}
+                </div>
+              </DrawerContent>
+            </Drawer>
           </div>
         </div>
       )}
