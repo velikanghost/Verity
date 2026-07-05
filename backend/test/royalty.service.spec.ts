@@ -71,70 +71,20 @@ describe("RoyaltyService", () => {
     expect(service).toBeDefined()
   })
 
-  describe("processTradeRoyalty", () => {
-    it("should return early if feeUsdc is 0 or less", async () => {
-      const trade = mockTrade({ feeUsdc: 0 })
-      await service.processTradeRoyalty(trade)
-      expect(blockchainService.getPoolState).not.toHaveBeenCalled()
-      expect(trade.save).not.toHaveBeenCalled()
-    })
 
-    it("should return early if royaltyPaid is already true", async () => {
-      const trade = mockTrade({ royaltyPaid: true })
-      await service.processTradeRoyalty(trade)
-      expect(blockchainService.getPoolState).not.toHaveBeenCalled()
-      expect(trade.save).not.toHaveBeenCalled()
-    })
 
-    it("should mark royalty as paid and amount as 0 if rounded royaltyAmount is 0", async () => {
-      // 0.000001 USDC * 0.20 = 0.0000002 -> round to 6 decimals is 0
-      const trade = mockTrade({ feeUsdc: 0.000001 })
-      await service.processTradeRoyalty(trade)
-      expect(blockchainService.getPoolState).not.toHaveBeenCalled()
-      expect(trade.royaltyPaid).toBe(true)
-      expect(trade.royaltyAmountUsdc).toBe(0)
-      expect(trade.save).toHaveBeenCalled()
-    })
+  describe("processPendingRoyaltiesQueue", () => {
+    it("should process pending trades in batch, group by creator, and execute sequential transfers", async () => {
+      const trade1 = mockTrade({ feeUsdc: 2.0, royaltyPaid: false })
+      const trade2 = mockTrade({ feeUsdc: 3.0, royaltyPaid: false })
 
-    it("should warn and skip if creatorAddress is missing or zero address", async () => {
-      const trade = mockTrade({ feeUsdc: 1.0 })
-      blockchainService.getPoolState.mockResolvedValue({
-        creatorAddress: "0x0000000000000000000000000000000000000000",
-        creatorShares: 100n,
-        totalLpShares: 1000n,
-        active: true,
-        resolved: false,
-        adminLpShares: 0n,
-      })
+      // Mock database find query return value
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue([trade1, trade2]),
+      }
+      marketTradeModel.find.mockReturnValue(mockQuery)
 
-      await service.processTradeRoyalty(trade)
-      expect(blockchainService.getPoolState).toHaveBeenCalledWith(trade.marketId.toString())
-      expect(blockchainService.transferUsdcFromTreasury).not.toHaveBeenCalled()
-      expect(trade.save).not.toHaveBeenCalled()
-    })
-
-    it("should skip transfer and set txHash to self_split if creator is admin/treasury", async () => {
-      const trade = mockTrade({ feeUsdc: 1.0 })
-      blockchainService.getPoolState.mockResolvedValue({
-        creatorAddress: "0xAdminAddress",
-        creatorShares: 100n,
-        totalLpShares: 1000n,
-        active: true,
-        resolved: false,
-        adminLpShares: 0n,
-      })
-
-      await service.processTradeRoyalty(trade)
-      expect(blockchainService.getPoolState).toHaveBeenCalledWith(trade.marketId.toString())
-      expect(blockchainService.transferUsdcFromTreasury).not.toHaveBeenCalled()
-      expect(trade.royaltyPaid).toBe(true)
-      expect(trade.royaltyPaidTxHash).toBe("self_split")
-      expect(trade.royaltyAmountUsdc).toBe(0.20) // 1.0 * 0.40 * 0.50
-      expect(trade.save).toHaveBeenCalled()
-    })
-
-    it("should transfer USDC from treasury and update trade if creator is a third party", async () => {
-      const trade = mockTrade({ feeUsdc: 10.0 })
       blockchainService.getPoolState.mockResolvedValue({
         creatorAddress: "0xCreatorAddress",
         creatorShares: 100n,
@@ -143,35 +93,27 @@ describe("RoyaltyService", () => {
         resolved: false,
         adminLpShares: 0n,
       })
-      blockchainService.transferUsdcFromTreasury.mockResolvedValue("0xTxHash123")
 
-      await service.processTradeRoyalty(trade)
-      expect(blockchainService.getPoolState).toHaveBeenCalledWith(trade.marketId.toString())
+      blockchainService.transferUsdcFromTreasury.mockResolvedValue("0xBatchTxHash")
+
+      await service.processPendingRoyaltiesQueue()
+
+      expect(marketTradeModel.find).toHaveBeenCalledWith({
+        feeUsdc: { $gt: 0 },
+        royaltyPaid: { $ne: true },
+      })
       expect(blockchainService.transferUsdcFromTreasury).toHaveBeenCalledWith(
-        "0xCreatorAddress",
-        2.0, // 10.0 * 0.40 * 0.50 = 2.0
+        "0xcreatoraddress",
+        1.0, // (2.0 + 3.0) * 0.40 * 0.50 = 1.0 USDC
       )
-      expect(trade.royaltyPaid).toBe(true)
-      expect(trade.royaltyPaidTxHash).toBe("0xTxHash123")
-      expect(trade.royaltyAmountUsdc).toBe(2.0)
-      expect(trade.save).toHaveBeenCalled()
-    })
-
-    it("should catch transfer errors and not throw/crash", async () => {
-      const trade = mockTrade({ feeUsdc: 5.0 })
-      blockchainService.getPoolState.mockResolvedValue({
-        creatorAddress: "0xCreatorAddress",
-        creatorShares: 100n,
-        totalLpShares: 1000n,
-        active: true,
-        resolved: false,
-        adminLpShares: 0n,
-      })
-      blockchainService.transferUsdcFromTreasury.mockRejectedValue(new Error("RPC Timeout"))
-
-      await expect(service.processTradeRoyalty(trade)).resolves.not.toThrow()
-      expect(trade.royaltyPaid).toBe(false)
-      expect(trade.save).not.toHaveBeenCalled()
+      expect(trade1.royaltyPaid).toBe(true)
+      expect(trade1.royaltyPaidTxHash).toBe("0xBatchTxHash")
+      expect(trade1.royaltyAmountUsdc).toBe(0.4) // 2.0 * 0.20
+      expect(trade2.royaltyPaid).toBe(true)
+      expect(trade2.royaltyPaidTxHash).toBe("0xBatchTxHash")
+      expect(trade2.royaltyAmountUsdc).toBe(0.6) // 3.0 * 0.20
+      expect(trade1.save).toHaveBeenCalled()
+      expect(trade2.save).toHaveBeenCalled()
     })
   })
 })

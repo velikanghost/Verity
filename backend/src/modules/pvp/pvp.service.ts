@@ -2078,6 +2078,8 @@ export class PvpService {
                     isCorrect: p.isCorrect,
                     yesCondition: matchChild?.yesCondition || "YES",
                     noCondition: matchChild?.noCondition || "NO",
+                    status: matchChild?.status || "unknown",
+                    resolvedOutcome: matchChild?.resolvedOutcome || null,
                   }
                 })
               : [],

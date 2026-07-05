@@ -753,6 +753,8 @@ export class PostsService {
 
     this.validateMarketHeuristics(input)
 
+    const minPoolBalance = await this.blockchainService.getMinPoolBalance()
+
     const mId = input.marketId
       ? new Types.ObjectId(input.marketId)
       : new Types.ObjectId()
@@ -792,6 +794,7 @@ export class PostsService {
         marketType: "parent",
         parentMarketId: null,
         optionName: null,
+        minimumPoolBalance: minPoolBalance,
       })
 
       // 2. Loop and create child markets
@@ -832,6 +835,7 @@ export class PostsService {
           marketType: "child",
           parentMarketId: parentMarketId,
           optionName: option.trim(),
+          minimumPoolBalance: minPoolBalance,
         })
 
         // Initialize liquidity pool in DB for the child market
@@ -886,6 +890,7 @@ export class PostsService {
           ? new Types.ObjectId(input.parentMarketId)
           : null,
         optionName: input.optionName || null,
+        minimumPoolBalance: minPoolBalance,
       })
 
       // Automatically initialize liquidity pool in DB from the pre-deposit

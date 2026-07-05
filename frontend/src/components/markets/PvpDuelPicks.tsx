@@ -2,9 +2,11 @@ import { cleanOutcomeName } from "./PvpTicketBuilder"
 
 interface PvpDuelPicksProps {
   pvpStatus: any
+  onSelectChildMarketForTrade?: (market: any) => void
+  onAddLiquidity?: (marketId: string) => void
 }
 
-export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
+export default function PvpDuelPicks({ pvpStatus, onSelectChildMarketForTrade, onAddLiquidity }: PvpDuelPicksProps) {
   const userPicks = pvpStatus.ticket?.picks || []
   const oppPicks = pvpStatus.opponent?.picks || []
 
@@ -70,11 +72,11 @@ export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
 
           const isResolved =
             childOpt?.status === "resolved" ||
-            childOpt?.resolvedOutcome !== null ||
+            (childOpt?.resolvedOutcome !== null && childOpt?.resolvedOutcome !== undefined) ||
             pick?.status === "resolved" ||
-            pick?.resolvedOutcome !== null ||
+            (pick?.resolvedOutcome !== null && pick?.resolvedOutcome !== undefined) ||
             oppPick?.status === "resolved" ||
-            oppPick?.resolvedOutcome !== null
+            (oppPick?.resolvedOutcome !== null && oppPick?.resolvedOutcome !== undefined)
 
           const resolvedOutcome =
             childOpt?.resolvedOutcome ||
@@ -85,7 +87,7 @@ export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
           return (
             <div
               key={marketId}
-              className="flex flex-col gap-3 p-4 rounded-xl bg-parchment-card dark:bg-zinc-900/40 border border-border dark:border-zinc-800/85"
+              className="flex flex-col gap-3 p-4 rounded-xl bg-parchment-card dark:bg-zinc-900/40 border border-border dark:border-zinc-800/85 transition-all"
             >
               {/* Top row: Title + Shares */}
               <div className="flex items-baseline justify-between gap-2">
@@ -97,9 +99,22 @@ export default function PvpDuelPicks({ pvpStatus }: PvpDuelPicksProps) {
                     "Pick"
                   ).toUpperCase()}
                 </span>
-                <span className="text-[10px] text-stone-400 dark:text-zinc-500 font-inter shrink-0">
-                  Shares: <strong>{invested.toFixed(2)}</strong>
-                </span>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[10px] text-stone-400 dark:text-zinc-500 font-inter">
+                    Shares: <strong>{invested.toFixed(2)}</strong>
+                  </span>
+                  {childOpt && !isResolved && onAddLiquidity && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onAddLiquidity(marketId)
+                      }}
+                      className="px-2 py-0.5 rounded border border-border dark:border-zinc-700 text-[9px] font-bold text-ash dark:text-zinc-400 bg-white-surface dark:bg-zinc-900 hover:text-charcoal-primary dark:hover:text-zinc-200 hover:border-charcoal-primary/30 dark:hover:border-zinc-500 transition-all uppercase tracking-wider"
+                    >
+                      + LP
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Bottom row: Selections */}

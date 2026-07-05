@@ -21,10 +21,10 @@ export class CreateMissionDto {
   @IsOptional()
   xpReward?: number | null
 
-  @ApiProperty({ example: "https://twitter.com/verity" })
+  @ApiPropertyOptional({ example: "https://twitter.com/verity" })
   @IsString()
-  @IsNotEmpty()
-  actionUrl: string
+  @IsOptional()
+  actionUrl?: string | null
 
   @ApiPropertyOptional({ example: "social", enum: ["social", "activity"] })
   @IsString()
@@ -45,6 +45,11 @@ export class CreateMissionDto {
   @IsNumber()
   @IsOptional()
   rewardMatchesCount?: number | null
+
+  @ApiPropertyOptional({ example: "60d0fe4f5311236168a109ca" })
+  @IsString()
+  @IsOptional()
+  marketId?: string | null
 }
 
 export class UpdateMissionDto {
@@ -62,7 +67,7 @@ export class UpdateMissionDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
-  actionUrl?: string
+  actionUrl?: string | null
 
   @ApiPropertyOptional()
   @IsString()
@@ -88,4 +93,9 @@ export class UpdateMissionDto {
   @IsNumber()
   @IsOptional()
   rewardMatchesCount?: number | null
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  marketId?: string | null
 }

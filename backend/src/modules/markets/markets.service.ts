@@ -218,10 +218,18 @@ export class MarketsService implements OnModuleInit {
       ? new Date(trade.createdAt).toISOString()
       : new Date().toISOString()
 
+    const m = trade.marketId as any
+    const marketIdStr =
+      m && typeof m === "object" && "_id" in m
+        ? m._id.toString()
+        : trade.marketId
+          ? trade.marketId.toString()
+          : ""
+
     return {
       id: trade.id || (trade as any)._id?.toString(),
-      market_id: trade.marketId.toString(),
-      user_id: trade.userId.toString(),
+      market_id: marketIdStr,
+      user_id: trade.userId?.toString() || "",
       side: trade.side,
       action: trade.action,
       shares: trade.shares,
@@ -523,11 +531,15 @@ export class MarketsService implements OnModuleInit {
           market.resolveAbove ?? true,
         )
       } else {
+        this.logger.log(
+          `Registering market ${marketId} on-chain with outcomeCount=${market.outcomeCount}`,
+        )
         await this.blockchainService.registerMarket(
           marketId,
           creator.walletAddress,
           deadlineUnix,
           fundingDeadlineUnix,
+          market.outcomeCount,
         )
       }
     } catch (error) {
@@ -734,7 +746,10 @@ export class MarketsService implements OnModuleInit {
 
     const amountUsdc = dto.amount
     const grossUsdc = dto.grossAmount || dto.amount
-    const feeUsdc = dto.feeAmount || 0
+    let feeUsdc = dto.feeAmount || 0
+    if (feeUsdc === 0 && amountUsdc > 0) {
+      feeUsdc = Number((amountUsdc * 0.02).toFixed(6))
+    }
 
     // Create MarketTrade record
     const shares = dto.grossAmount || dto.amount
@@ -761,22 +776,42 @@ export class MarketsService implements OnModuleInit {
     })
 
     if (dto.action === "BUY") {
-      if (position) {
-        position.shares += shares
-        position.investedUsdc += amountUsdc
-        position.avgPrice = position.investedUsdc / (position.shares || 1)
-        position.isArchived = false
-        await position.save()
-      } else {
-        await this.marketPositionModel.create({
-          marketId: new Types.ObjectId(marketId),
-          userId: new Types.ObjectId(dto.profileId),
-          side: dto.side,
-          shares,
-          avgPrice: price,
-          investedUsdc: amountUsdc,
-          realizedPnl: 0,
-        })
+      try {
+        if (position) {
+          position.shares += shares
+          position.investedUsdc += amountUsdc
+          position.avgPrice = position.investedUsdc / (position.shares || 1)
+          position.isArchived = false
+          await position.save()
+        } else {
+          await this.marketPositionModel.create({
+            marketId: new Types.ObjectId(marketId),
+            userId: new Types.ObjectId(dto.profileId),
+            side: dto.side,
+            shares,
+            avgPrice: price,
+            investedUsdc: amountUsdc,
+            realizedPnl: 0,
+          })
+        }
+      } catch (error: any) {
+        if (error.code === 11000) {
+          // Fallback to update if insert fails due to race condition duplicate key
+          position = await this.marketPositionModel.findOne({
+            marketId: new Types.ObjectId(marketId),
+            userId: new Types.ObjectId(dto.profileId),
+            side: dto.side,
+          })
+          if (position) {
+            position.shares += shares
+            position.investedUsdc += amountUsdc
+            position.avgPrice = position.investedUsdc / (position.shares || 1)
+            position.isArchived = false
+            await position.save()
+          }
+        } else {
+          throw error
+        }
       }
     } else if (dto.action === "SELL") {
       if (!position) {
@@ -822,13 +857,6 @@ export class MarketsService implements OnModuleInit {
       "user-updated",
       {},
     )
-
-    // Process creator royalty payment in real-time
-    // this.royaltyService.processTradeRoyalty(trade).catch((err) => {
-    //   this.logger.error(
-    //     `Failed to process trade royalty for trade ${trade._id}: ${err.message}`,
-    //   )
-    // })
   }
 
   async syncMarketPrices(marketId: string): Promise<void> {

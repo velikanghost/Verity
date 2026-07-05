@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/components/providers/AuthModals"
-import { type Address } from "viem"
+import { type Address, maxUint256 } from "viem"
 import {
   arcUsdcAddress,
   FACTORY_ADDRESS,
@@ -97,7 +97,7 @@ export function useUsdcTransfer() {
       calls.push({
         contractAddress: arcUsdcAddress,
         abiFunctionSignature: "approve(address,uint256)",
-        abiParameters: [FACTORY_ADDRESS, totalRequired],
+        abiParameters: [FACTORY_ADDRESS, maxUint256],
       })
     }
 

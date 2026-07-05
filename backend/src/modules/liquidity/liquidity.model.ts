@@ -4,6 +4,7 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose"
 export type LiquidityPoolDocument = HydratedDocument<LiquidityPool>
 export type LPPositionDocument = HydratedDocument<LPPosition>
 export type LiquidityEventDocument = HydratedDocument<LiquidityEvent>
+export type LpFeeLedgerDocument = HydratedDocument<LpFeeLedger>
 
 @Schema({ timestamps: true, versionKey: false })
 export class LiquidityPool {
@@ -40,7 +41,7 @@ export class LiquidityPool {
   @Prop({ type: Number, default: 0 })
   currentPoolBalance: number
 
-  @Prop({ type: Number, default: 6 })
+  @Prop({ type: Number, default: 20 })
   minimumPoolBalance: number
 
   @Prop({ type: Date, required: true })
@@ -145,3 +146,35 @@ export class LiquidityEvent {
 }
 
 export const LiquidityEventSchema = SchemaFactory.createForClass(LiquidityEvent)
+
+@Schema({ timestamps: true, versionKey: false })
+export class LpFeeLedger {
+  @Prop({ type: String, required: true, unique: true, lowercase: true, trim: true, index: true })
+  walletAddress: string
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", default: null, index: true })
+  userId: Types.ObjectId | null
+
+  @Prop({ type: Number, default: 0 })
+  accruedFeesUsdc: number
+
+  @Prop({ type: Number, default: 0 })
+  totalPaidFeesUsdc: number
+
+  @Prop({ type: String, default: null })
+  lastPayoutTxHash: string | null
+
+  @Prop({ type: String, default: null })
+  pendingAuthSignature: string | null
+
+  @Prop({ type: String, default: null })
+  pendingAuthNonce: string | null
+
+  @Prop({ type: Number, default: null })
+  pendingAuthValidBefore: number | null
+
+  @Prop({ type: String, enum: ["pending", "authorized", "settled"], default: "pending", index: true })
+  payoutStatus: "pending" | "authorized" | "settled"
+}
+
+export const LpFeeLedgerSchema = SchemaFactory.createForClass(LpFeeLedger)

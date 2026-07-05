@@ -381,8 +381,10 @@ export default function MarketCard({
         </div>
       )}
 
+      <div className="border-t border-dashed border-stone-surface my-3" />
+
       <div
-        className="flex max-w-full items-center justify-between border-t border-dashed border-stone-surface pt-2 text-ash sm:max-w-[425px]"
+        className="flex max-w-full items-center justify-between pt-1 text-ash sm:max-w-[425px]"
         onClick={stopClick}
       >
         <button

@@ -22,6 +22,7 @@ import { AgentModule } from "../agent/agent.module"
 import { PvpModule } from "../pvp/pvp.module"
 import { LiquidityModule } from "../liquidity/liquidity.module"
 import { RoyaltyService } from "./royalty.service"
+import { CircleWalletModule } from "../circle-wallet/circle-wallet.module"
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { RoyaltyService } from "./royalty.service"
     forwardRef(() => PostsModule),
     PvpModule,
     LiquidityModule,
+    CircleWalletModule,
   ],
   controllers: [MarketsController],
   providers: [MarketsService, MarketsKeeperService, RoyaltyService],

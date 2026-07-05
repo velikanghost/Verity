@@ -115,11 +115,15 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
               market.resolveAbove ?? true,
             )
           } else {
+            this.logger.log(
+              `[Keeper] Registering market ${marketIdStr} on-chain with outcomeCount=${market.outcomeCount}`,
+            )
             await this.blockchainService.registerMarket(
               marketIdStr,
               creator.walletAddress,
               deadlineUnix,
               fundingDeadlineUnix,
+              market.outcomeCount,
             )
           }
 
@@ -208,11 +212,6 @@ export class MarketsKeeperService implements OnModuleInit, OnModuleDestroy {
     const expiredMarkets = await this.marketModel.find({
       isPythMarket: { $ne: true },
       marketType: { $ne: "parent" },
-      // Exclude multi-outcome markets (optimistic resolver contract only supports binary)
-      // $or: [
-      //   { outcomeCount: { $exists: false } },
-      //   { outcomeCount: { $lte: 2 } },
-      // ],
       status: { $in: ["tradable", "resolving", "closed"] },
       deadline: { $lte: now },
     })

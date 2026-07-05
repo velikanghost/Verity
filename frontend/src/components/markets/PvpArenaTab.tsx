@@ -6,17 +6,27 @@ import { useAuth } from "@/components/providers/AuthModals"
 import { useMarketResolution } from "@/hooks/useMarketResolution"
 import { useUsdcBalance } from "@/hooks/useUsdcBalance"
 import { arcUsdcAddress, FPMM_ADDRESS, publicClient } from "@/lib/arc"
+import { maxUint256 } from "viem"
 import {
   useSubmitPvpTicketMutation,
   useExecuteMarketTradeMutation,
 } from "@/store/verity/verityQueries"
 import { toast } from "@/lib/toast"
-import { Lock, ArrowRight, Loader2, Swords } from "lucide-react"
 import PvpMatchupCarousel, {
   getCountryFlag,
   parseEventTeams,
 } from "./PvpMatchupCarousel"
 import PvpClaimBanner from "./PvpClaimBanner"
+import { useDrawerStore } from "@/store/drawerStore"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from "@/components/ui/drawer"
+import MarketDetail from "@/components/markets/MarketDetail"
+import { X, Lock, ArrowRight, Loader2, Swords } from "lucide-react"
 
 // Sub-components
 import PvpArenaSkeleton from "./PvpArenaSkeleton"
@@ -24,6 +34,7 @@ import PvpDuelStatus from "./PvpDuelStatus"
 import PvpDuelPicks from "./PvpDuelPicks"
 import PvpTicketBuilder from "./PvpTicketBuilder"
 import PvpLiquidityModal from "./PvpLiquidityModal"
+import { useMarketLiquidity } from "@/hooks/useMarketLiquidity"
 
 function formatMarketId(marketId: string): `0x${string}` {
   const clean = marketId.replace(/^0x/, "")
@@ -61,14 +72,21 @@ export default function PvpArenaTab({
   const { user, executeTxBatch, closeTxConfirm } = useAuth()
   const { redeemMultipleWinnings } = useMarketResolution()
   const { rawBalance } = useUsdcBalance()
+  const {
+    tradeMarketId,
+    isTradeDrawerOpen,
+    openTradeDrawer,
+    closeTradeDrawer,
+  } = useDrawerStore()
   const submitTicketMutation = useSubmitPvpTicketMutation()
   const { mutateAsync: executeMarketTrade } = useExecuteMarketTradeMutation()
+  const { batchAddPoolLiquidity } = useMarketLiquidity()
 
   // ─── Local state ────────────────────────────────────────────
   const [mounted, setMounted] = useState<boolean>(false)
   const [showBuilderOverride, setShowBuilderOverride] = useState<boolean>(false)
   const [betAmountPerSelection, setBetAmountPerSelection] = useState<number>(5)
-  const [pvpSelections, setPvpSelections] = useState<Record<string, string>>({})
+  const [allPvpSelections, setAllPvpSelections] = useState<Record<string, Record<string, string>>>({})
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [isRegisteringQueue, setIsRegisteringQueue] = useState<boolean>(false)
   const [showTooltip, setShowTooltip] = useState<boolean>(false)
@@ -189,12 +207,13 @@ export default function PvpArenaTab({
       selectedPvpEvent.status === "resolved" ||
       selectedPvpEvent.status === "closed")
 
+  const pvpSelections = selectedPvpEvent ? (allPvpSelections[selectedPvpEvent.id] || {}) : {}
+
   // ─── Effects ────────────────────────────────────────────────
 
-  // Reset selections when event changes
+  // Reset override when event changes
   useEffect(() => {
     if (selectedPvpEvent) {
-      setPvpSelections({})
       setShowBuilderOverride(false)
     }
   }, [selectedPvpEvent])
@@ -203,12 +222,16 @@ export default function PvpArenaTab({
 
   const handleToggleSelection = useCallback(
     (optId: string, selection: string) => {
-      setPvpSelections((prev) => {
-        const next = { ...prev }
+      if (!selectedPvpEvent) return;
 
-        if (next[optId] === selection) {
-          delete next[optId]
-          return next
+      setAllPvpSelections((prevAll) => {
+        const eventId = selectedPvpEvent.id;
+        const prevEventSelections = prevAll[eventId] || {};
+        const nextEventSelections = { ...prevEventSelections };
+
+        if (nextEventSelections[optId] === selection) {
+          delete nextEventSelections[optId];
+          return { ...prevAll, [eventId]: nextEventSelections };
         }
 
         const currentOpt = selectedPvpEvent?.options?.find(
@@ -219,13 +242,13 @@ export default function PvpArenaTab({
         if (group) {
           selectedPvpEvent.options.forEach((otherOpt: any) => {
             if (otherOpt.id !== optId && otherOpt.optionGroup === group) {
-              delete next[otherOpt.id]
+              delete nextEventSelections[otherOpt.id]
             }
           })
         }
 
-        next[optId] = selection
-        return next
+        nextEventSelections[optId] = selection;
+        return { ...prevAll, [eventId]: nextEventSelections };
       })
     },
     [selectedPvpEvent],
@@ -358,7 +381,7 @@ export default function PvpArenaTab({
         batchCalls.push({
           contractAddress: arcUsdcAddress,
           abiFunctionSignature: "approve(address,uint256)",
-          abiParameters: [FPMM_ADDRESS, rawTotalAmount],
+          abiParameters: [FPMM_ADDRESS, maxUint256],
         })
       }
 
@@ -418,7 +441,11 @@ export default function PvpArenaTab({
       setIsRegisteringQueue(true)
       setIsSubmitting(false)
       setShowBuilderOverride(false)
-      setPvpSelections({})
+      setAllPvpSelections((prev) => {
+        const next = { ...prev }
+        delete next[selectedPvpEvent.id]
+        return next
+      })
 
       // 5. Register trades and submit ticket to queue in background
       const tradePromises = picks.map((pick) => {
@@ -463,6 +490,38 @@ export default function PvpArenaTab({
       if (!err.message?.includes("rejected")) {
         toast.error("Failed to purchase tickets.")
       }
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleProvideLiquidity = async (amounts: Record<string, number>) => {
+    if (!profile) {
+      toast.error("Please connect your wallet first.")
+      return
+    }
+
+    const deposits = Object.entries(amounts).map(([optId, amt]) => ({
+      marketId: optId,
+      amount: amt,
+    }))
+
+    if (deposits.length === 0) return
+
+    setIsSubmitting(true)
+    try {
+      await batchAddPoolLiquidity(deposits, profile.id)
+      
+      // Clear selections for this event after providing liquidity
+      setAllPvpSelections((prev) => {
+        const next = { ...prev }
+        delete next[selectedPvpEvent.id]
+        return next
+      })
+      setShowBuilderOverride(false)
+      void refetchPvpStatus()
+    } catch (error: any) {
+      // Error handled by hook
+    } finally {
       setIsSubmitting(false)
     }
   }
@@ -531,7 +590,13 @@ export default function PvpArenaTab({
                 onClaim={handleClaim}
                 showEmoji={true}
               />
-              <PvpDuelPicks pvpStatus={pvpStatus} />
+              <PvpDuelPicks
+                pvpStatus={pvpStatus}
+                onSelectChildMarketForTrade={(market) =>
+                  openTradeDrawer(market.id)
+                }
+                onAddLiquidity={(id) => setLiquidityMarketId(id)}
+              />
             </div>
           )}
 
@@ -665,6 +730,7 @@ export default function PvpArenaTab({
                 onSetShowTooltip={setShowTooltip}
                 onSubmitTicket={handleSubmitPvpTicket}
                 onAddLiquidity={(id) => setLiquidityMarketId(id)}
+                onProvideLiquidity={handleProvideLiquidity}
               />
             ))}
         </>
@@ -679,6 +745,28 @@ export default function PvpArenaTab({
         refetchPvpStatus={refetchPvpStatus}
         profile={profile}
       />
+
+      {/* Dynamic Trade Drawer for PvP Picks */}
+      <Drawer
+        open={isTradeDrawerOpen}
+        onOpenChange={(open) => !open && closeTradeDrawer()}
+      >
+        <DrawerContent className="max-h-[92vh] rounded-t-3xl border-t border-stone-surface bg-warm-canvas pb-6 px-4 outline-none overflow-y-auto">
+          <DrawerHeader className="relative flex items-center justify-between border-b border-stone-surface pb-3 pt-2 mb-4">
+            <DrawerTitle className="font-heading text-lg font-bold text-charcoal-primary">
+              Trade Outcome Shares
+            </DrawerTitle>
+            <DrawerClose className="rounded-full p-1.5 hover:bg-stone-surface text-ash hover:text-charcoal-primary transition-colors">
+              <X className="h-4.5 w-4.5" />
+            </DrawerClose>
+          </DrawerHeader>
+          <div className="px-2">
+            {tradeMarketId && (
+              <MarketDetail marketId={tradeMarketId} hideOutcomesList={true} />
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }

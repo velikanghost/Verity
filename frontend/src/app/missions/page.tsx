@@ -63,8 +63,18 @@ export default function MissionsPage() {
     }
   }
 
-  const handleStart = (missionId: string, actionUrl: string) => {
-    window.open(actionUrl, "_blank", "noopener,noreferrer")
+  const handleStart = (
+    missionId: string,
+    actionUrl: string | null | undefined,
+    missionType: string,
+  ) => {
+    if (missionType !== "activity" && actionUrl) {
+      if (actionUrl.startsWith("http://") || actionUrl.startsWith("https://")) {
+        window.open(actionUrl, "_blank", "noopener,noreferrer")
+      } else {
+        window.location.href = actionUrl
+      }
+    }
     if (!startedMissions.includes(missionId)) {
       setStartedMissions((prev) => [...prev, missionId])
     }
@@ -103,21 +113,30 @@ export default function MissionsPage() {
   }
 
   // Dynamic descriptions for missions based on verificationKey
-  const getMissionDescription = (
-    verificationKey: string | null | undefined,
-    title: string,
-  ): string => {
-    switch (verificationKey) {
+  const getMissionDescription = (mission: any): string => {
+    const key = mission.verificationKey
+    const question = mission.marketQuestion
+    switch (key) {
       case "has_voted":
-        return "Place a vote on any active prediction market."
+        return question
+          ? `Place a vote on the "${question}" market.`
+          : "Place a vote on any active prediction market."
       case "has_commented":
-        return "Post a comment on any market feed."
+        return question
+          ? `Post a comment on the "${question}" market feed.`
+          : "Post a comment on any market feed."
       case "has_liked":
-        return "Like any post or market in the feed."
+        return question
+          ? `Like the "${question}" market post.`
+          : "Like any post or market in the feed."
       case "has_traded":
-        return "Place a trade (buy shares) on any open match today."
+        return question
+          ? `Place a trade (buy shares) on the "${question}" market.`
+          : "Place a trade (buy shares) on any open match today."
       case "has_added_liquidity":
-        return "Provide liquidity to any market pool."
+        return question
+          ? `Provide liquidity to the "${question}" market pool.`
+          : "Provide liquidity to any market pool."
       case "has_created_market":
         return "Propose and create a new prediction market."
       case "has_set_profile":
@@ -131,9 +150,7 @@ export default function MissionsPage() {
       case "twitter_retweet_and_comment":
         return "Repost and reply to the specified post on X/Twitter."
       default:
-        return title
-          ? `Complete the required activity for ${title}.`
-          : "Complete this activity to earn rewards."
+        return mission.title
     }
   }
 
@@ -262,10 +279,7 @@ export default function MissionsPage() {
                       {mission.title}
                     </h3>
                     <p className="text-sm text-graphite dark:text-zinc-400 mt-0.5 leading-normal">
-                      {getMissionDescription(
-                        mission.verificationKey,
-                        mission.title,
-                      )}
+                      {getMissionDescription(mission)}
                     </p>
                   </div>
                 </div>
@@ -308,7 +322,7 @@ export default function MissionsPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleStart(mission.id, mission.actionUrl)}
+                      onClick={() => handleStart(mission.id, mission.actionUrl, mission.missionType)}
                       className="text-[#FF4D00] hover:underline font-semibold text-sm bg-transparent border-none outline-none cursor-pointer p-1"
                     >
                       Start

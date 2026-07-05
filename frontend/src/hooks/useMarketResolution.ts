@@ -11,6 +11,7 @@ import {
   publicClient,
   erc20Abi,
 } from "@/lib/arc"
+import { maxUint256 } from "viem"
 import { verityOptimisticResolverAbi } from "@/lib/contracts-generated"
 import { toast } from "@/lib/toast"
 
@@ -59,7 +60,7 @@ export function useMarketResolution() {
         calls.push({
           contractAddress: arcUsdcAddress,
           abiFunctionSignature: "approve(address,uint256)",
-          abiParameters: [RESOLVER_ADDRESS, bondAmount],
+          abiParameters: [RESOLVER_ADDRESS, maxUint256],
         })
       }
 

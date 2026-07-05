@@ -50,12 +50,12 @@ export function reviewPredictionPost(input: MarketInput): VerityAgentReview {
     })
   }
 
-  if (question && !hasNumber(`${question} ${yesCondition} ${noCondition}`)) {
-    findings.push({
-      severity: "blocker",
-      message: "Add a measurable number, percentage, date, price, or count.",
-    })
-  }
+  // if (question && !hasNumber(`${question} ${yesCondition} ${noCondition}`)) {
+  //   findings.push({
+  //     severity: "blocker",
+  //     message: "Add a measurable number, percentage, date, price, or count.",
+  //   })
+  // }
 
   if (VAGUE_WORDS.some((word) => question.toLowerCase().includes(word))) {
     findings.push({

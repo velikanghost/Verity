@@ -77,18 +77,17 @@ export default function MyHoldingsPanel({
                           : "bg-stone-surface text-ash"
                       }`}
                     >
-                      {isWinner ? "WINNING" : "LOST"}{" "}
-                      {pos.side === "YES" ? "YES" : "NO"} Shares
+                      {isWinner ? "WINNING" : "LOST"} {pos.side} Shares
                     </span>
                   ) : (
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold shadow-subtle ${
-                        pos.side === "YES"
-                          ? "bg-meadow-green/10 text-meadow-green"
-                          : "bg-ember-orange/10 text-ember-orange"
+                        pos.side === "NO"
+                          ? "bg-ember-orange/10 text-ember-orange"
+                          : "bg-meadow-green/10 text-meadow-green"
                       }`}
                     >
-                      {pos.side === "YES" ? "YES" : "NO"} Shares
+                      {pos.side} Shares
                     </span>
                   )}
 

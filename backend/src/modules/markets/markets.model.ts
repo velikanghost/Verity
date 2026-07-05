@@ -114,7 +114,7 @@ export class Market {
   @Prop({ type: Number, default: 10 })
   creatorLiquidityUsdc: number
 
-  @Prop({ type: Number, default: 6 })
+  @Prop({ type: Number, default: 20 })
   minimumPoolBalance: number
 
   @Prop({ type: Date, default: null })
@@ -374,6 +374,27 @@ export class MarketTrade {
 
   @Prop({ type: Number, default: 0 })
   royaltyAmountUsdc: number
+
+  @Prop({ type: String, default: null })
+  royaltyAuthSignature: string | null
+
+  @Prop({ type: String, default: null })
+  royaltyNonce: string | null
+
+  @Prop({ type: Number, default: null })
+  royaltyValidBefore: number | null
+
+  @Prop({ type: String, enum: ["pending", "authorized", "settled"], default: "pending", index: true })
+  royaltyStatus: "pending" | "authorized" | "settled"
+
+  @Prop({ type: Boolean, default: true, index: true })
+  lpFeesPending: boolean
+
+  @Prop({ type: Boolean, default: false })
+  lpFeesPaid: boolean
+
+  @Prop({ type: String, default: null })
+  lpFeesPaidTxHash: string | null
 
   @Prop({ type: Date, default: Date.now, index: true })
   createdAt: Date

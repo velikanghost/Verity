@@ -140,30 +140,30 @@
    DARK THEME — single consolidated block
    ─────────────────────────────────────────────────────────────────────────── */
 :root[data-theme="dark"] {
-  /* Dynamic neutral palette — dark values */
-  --warm-canvas: #11110f;
-  --stone-surface: #2a2926;
-  --parchment-card: #1e1d1b;
+  /* Dynamic neutral palette — dark values (aligned with Family Midnight) */
+  --warm-canvas: #121212;
+  --stone-surface: #1e1d1b;
+  --parchment-card: #181816;
   --graphite: #b5b3b0;
   --charcoal-primary: #e8e6e3;
   --midnight: #f4f3ef;
   --ash: #9a9896;
   --fog: #4a4947;
   --smoke: #6a6967;
-  --white-surface: #1b1b19;
+  --white-surface: #151513;
 
   /* Semantic tokens — dark */
-  --background: #11110f;
+  --background: #121212;
   --foreground: #f4f3ef;
-  --surface: rgba(27, 27, 25, 0.95);
-  --surface-solid: #1b1b19;
-  --surface-muted: #24231f;
+  --surface: rgba(21, 21, 19, 0.95);
+  --surface-solid: #151513;
+  --surface-muted: #1c1c1a;
   --surface-hover: rgba(255, 255, 255, 0.06);
-  --border: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.28);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
   --muted: #a3a39b;
   --inverse: #f4f3ef;
-  --inverse-text: #11110f;
+  --inverse-text: #121212;
   --panel-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
   --panel-shadow-hover:
     rgba(255, 255, 255, 0.03) 0px 1px 6px 0px,
