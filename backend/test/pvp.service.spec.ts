@@ -578,11 +578,11 @@ describe("PvpService", () => {
     })
   })
 
-  describe("top 20 matching constraint", () => {
-    it("should match a top 20 player only with another top 20 player", async () => {
+  describe("top 10 matching constraint", () => {
+    it("should match a top 10 player only with another top 10 player", async () => {
       const parentMarketId = new Types.ObjectId()
       const submitterId = new Types.ObjectId()
-      const top20CandidateId = new Types.ObjectId()
+      const top10CandidateId = new Types.ObjectId()
       const normalCandidateId = new Types.ObjectId()
 
       const ticket: any = {
@@ -597,9 +597,9 @@ describe("PvpService", () => {
         save: jest.fn(),
       }
 
-      const top20Candidate: any = {
+      const top10Candidate: any = {
         _id: new Types.ObjectId(),
-        userId: { _id: top20CandidateId, arenaXp: 4000 },
+        userId: { _id: top10CandidateId, arenaXp: 4000 },
         parentMarketId,
         picks: [
           { marketId: "market-1", selection: "NO" },
@@ -623,8 +623,8 @@ describe("PvpService", () => {
         createdAt: new Date(),
       }
 
-      jest.spyOn(service, "getTop20UserIds").mockResolvedValue(
-        new Set([submitterId.toString(), top20CandidateId.toString()]),
+      jest.spyOn(service, "getTop10UserIds").mockResolvedValue(
+        new Set([submitterId.toString(), top10CandidateId.toString()]),
       )
 
       userModel.findById.mockImplementation((id: any) => {
@@ -635,16 +635,16 @@ describe("PvpService", () => {
       })
 
       pvpTicketModel.find.mockReturnValue({
-        populate: jest.fn().mockResolvedValue([normalCandidate, top20Candidate]),
+        populate: jest.fn().mockResolvedValue([normalCandidate, top10Candidate]),
       })
 
       const mockPvpMatch = {
         _id: new Types.ObjectId(),
         parentMarketId,
         ticket1Id: ticket._id,
-        ticket2Id: top20Candidate._id,
+        ticket2Id: top10Candidate._id,
         user1Id: ticket.userId,
-        user2Id: top20CandidateId,
+        user2Id: top10CandidateId,
         divergenceScore: 2,
         status: "matched",
       }
@@ -656,14 +656,14 @@ describe("PvpService", () => {
 
       expect(result).toEqual(mockPvpMatch)
       expect(ticket.status).toBe("matched")
-      expect(top20Candidate.status).toBe("matched")
+      expect(top10Candidate.status).toBe("matched")
       expect(normalCandidate.status).toBe("queued")
     })
 
-    it("should match a non-top 20 player only with another non-top 20 player", async () => {
+    it("should match a non-top 10 player only with another non-top 10 player", async () => {
       const parentMarketId = new Types.ObjectId()
       const submitterId = new Types.ObjectId()
-      const top20CandidateId = new Types.ObjectId()
+      const top10CandidateId = new Types.ObjectId()
       const normalCandidateId = new Types.ObjectId()
 
       const ticket: any = {
@@ -678,9 +678,9 @@ describe("PvpService", () => {
         save: jest.fn(),
       }
 
-      const top20Candidate: any = {
+      const top10Candidate: any = {
         _id: new Types.ObjectId(),
-        userId: { _id: top20CandidateId, arenaXp: 4000 },
+        userId: { _id: top10CandidateId, arenaXp: 4000 },
         parentMarketId,
         picks: [
           { marketId: "market-1", selection: "NO" },
@@ -704,8 +704,8 @@ describe("PvpService", () => {
         createdAt: new Date(),
       }
 
-      jest.spyOn(service, "getTop20UserIds").mockResolvedValue(
-        new Set([top20CandidateId.toString()]),
+      jest.spyOn(service, "getTop10UserIds").mockResolvedValue(
+        new Set([top10CandidateId.toString()]),
       )
 
       userModel.findById.mockImplementation((id: any) => {
@@ -716,7 +716,7 @@ describe("PvpService", () => {
       })
 
       pvpTicketModel.find.mockReturnValue({
-        populate: jest.fn().mockResolvedValue([top20Candidate, normalCandidate]),
+        populate: jest.fn().mockResolvedValue([top10Candidate, normalCandidate]),
       })
 
       const mockPvpMatch = {
@@ -738,7 +738,7 @@ describe("PvpService", () => {
       expect(result).toEqual(mockPvpMatch)
       expect(ticket.status).toBe("matched")
       expect(normalCandidate.status).toBe("matched")
-      expect(top20Candidate.status).toBe("queued")
+      expect(top10Candidate.status).toBe("queued")
     })
   })
 

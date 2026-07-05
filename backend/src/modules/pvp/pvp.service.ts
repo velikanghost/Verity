@@ -172,20 +172,20 @@ export class PvpService {
     return 4 // Platinum
   }
 
-  async getTop20UserIds(): Promise<Set<string>> {
-    const top20Query = this.userModel.find({ isOnboarded: true })
-    let top20Users: any[] = []
-    if (typeof top20Query.sort === "function") {
-      top20Users = await top20Query
+  async getTop10UserIds(): Promise<Set<string>> {
+    const top10Query = this.userModel.find({ isOnboarded: true })
+    let top10Users: any[] = []
+    if (typeof top10Query.sort === "function") {
+      top10Users = await top10Query
         .sort({ arenaXp: -1 })
-        .limit(20)
+        .limit(10)
         .select("_id")
         .lean()
     } else {
-      const res = await top20Query
-      top20Users = Array.isArray(res) ? res : []
+      const res = await top10Query
+      top10Users = Array.isArray(res) ? res : []
     }
-    return new Set(top20Users.map((u: any) => u._id.toString()))
+    return new Set(top10Users.map((u: any) => u._id.toString()))
   }
 
   constructor(
@@ -1290,8 +1290,8 @@ export class PvpService {
     const submitterXp = submitter?.arenaXp ?? 0
     const submitterTier = this.getRankTier(submitterXp)
 
-    const top20UserIds = await this.getTop20UserIds()
-    const isSubmitterTop20 = top20UserIds.has(ticket.userId.toString())
+    const top10UserIds = await this.getTop10UserIds()
+    const isSubmitterTop10 = top10UserIds.has(ticket.userId.toString())
 
     const eligibleCandidates: Array<{
       ticket: PvpTicketDocument
@@ -1304,10 +1304,10 @@ export class PvpService {
       const candidateUser = candidate.userId as any
       const candidateUserIdStr =
         candidateUser?._id?.toString() || candidate.userId.toString()
-      const isCandidateTop20 = top20UserIds.has(candidateUserIdStr)
+      const isCandidateTop10 = top10UserIds.has(candidateUserIdStr)
 
-      if (isSubmitterTop20 !== isCandidateTop20) {
-        continue // Top 20 can only match with Top 20, non-Top 20 can only match with non-Top 20
+      if (isSubmitterTop10 !== isCandidateTop10) {
+        continue // Top 10 can only match with Top 10, non-Top 10 can only match with non-Top 10
       }
 
       let divergence = 0
