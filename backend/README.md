@@ -18,7 +18,7 @@ The backend is organized into 16 domain modules under `src/modules/`:
 | **notifications** | Activity feed: matchup results, boost awards, market resolution events                                    |
 | **socket**        | Socket.IO WebSocket gateway for real-time feed/market/user broadcasts                                    |
 | **comments**      | Threaded comment system on posts                                                                         |
-| **circle-wallet** | Circle WaaS smart wallet integration utilities                                                           |
+| **circle-wallet** | Circle WaaS smart wallet provisioning and Circle Batching/Nanopayments payouts service                   |
 | **pvp**           | Player-vs-Player Matchups Arena: coordinates duels, queues tickets, matches opponents, and scores duels  |
 | **coupons**       | Handles promotional duel boost coupons                                                                   |
 | **missions**      | Database onboarding milestones rewarding Arena XP                                                        |
@@ -45,6 +45,32 @@ The `BlockchainService` uses **Viem** to interact with four smart contracts on A
 - Reads: escrow balances, pool states, LP shares, market prices, proposal statuses, dispute windows
 - Writes: market registration, resolution proposals, finalization (via admin wallet)
 - **AA/Safe decoder**: `getCallSequence()` recursively unwraps nested calldata from EntryPoint `handleOps`, Smart Account `execute`/`executeBatch`, and Safe `execTransaction` to correctly verify transactions from smart wallets
+
+## Nanopayments & Fee Distribution (Circle Batching)
+
+Verity implements a hybrid database/on-chain micro-fee routing system utilizing the **Circle Gateway Client (`@circle-fin/x402-batching/client`)** to payout accumulated fees to Liquidity Providers and Creator/Treasury addresses.
+
+### Flow Architecture
+
+1. **Fee Accumulation**:
+   - Every trade executed via the Fixed Product Market Maker (`VerityFPMM`) incurs a 2.0% fee.
+   - The fee is split: **60% to LPs** and **40% to Creator/Treasury**.
+   - These are calculated off-chain and logged in the database (`LpFeeLedger` for LP fees, and individual `MarketTrade` documents for Creator royalties).
+
+2. **LP Fee Payouts (`LpFeeService`)**:
+   - A background queue (`processPendingLpFees()`) regularly scans for trades with pending fees.
+   - It updates users' accrued balances in the `LpFeeLedger` collection.
+   - If an LP's accrued fees meet the auto-push threshold (`LP_FEE_AUTOPUSH_THRESHOLD_USDC`, e.g. `1.0 USDC`), the service calls the `NanopaymentsService` to execute a payout.
+   - LPs can also trigger a manual claim via the `/liquidity/claim-fees` endpoint.
+
+3. **Creator Royalties (`RoyaltyService`)**:
+   - The royalty queue monitors finalized trades and groups creator royalties by recipient address.
+   - It issues batched payouts to creator wallets using the `NanopaymentsService`.
+
+4. **Circle Gateway Batching (`NanopaymentsService`)**:
+   - Interacts with Circle's X402 Batching client.
+   - Checks the Gateway balance. If the balance is insufficient to cover the payout, it automatically triggers a developer-controlled top-up deposit from the main treasury wallet (configured via `ADMIN_PRIVATE_KEY` / `KEEPER_PRIVATE_KEY`) to the batching gateway.
+   - Executes off-chain batched withdrawals to target user wallets, completing the gas-efficient distribution of USDC micro-payouts.
 
 ## Getting Started
 

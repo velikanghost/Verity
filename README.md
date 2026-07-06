@@ -77,6 +77,16 @@ sequenceDiagram
     Vault-->>User: Winning shares → USDC payout
 ```
 
+### 4. Nanopayments & Fee Distribution (Circle Batching)
+
+Verity utilizes an off-chain/on-chain hybrid micro-payout engine (Nanopayments) powered by **Circle's X402 Batching Gateway Client (`@circle-fin/x402-batching`)** to distribute accumulated fees without incurring prohibitive on-chain transaction costs.
+
+- **Trading Fees**: Every buy/sell transaction incurs a `2.0%` fee (200 BPS).
+  - **60%** goes to the pool's Liquidity Providers (LPs).
+  - **40%** goes to the Creator Royalties / Treasury.
+- **LP Fee Payouts**: LP fees are calculated off-chain and accumulated in the `LpFeeLedger` model in MongoDB. When a user's accrued fees cross the auto-push threshold (configured via `LP_FEE_AUTOPUSH_THRESHOLD_USDC`), or when they manually trigger a claim, a Circle WaaS transaction is submitted via the `NanopaymentsService` to pay out the USDC.
+- **Creator Royalties**: Creator royalties are similarly tracked and batched from trade fees, then sent directly to the creator's wallet address via the Circle Gateway Client.
+
 ## Architecture
 
 ```plaintext
@@ -99,6 +109,7 @@ Verity/
 │       │   ├── coupons/         # Promotional duel boost coupons
 │       │   ├── missions/        # Onboarding achievements
 │       │   ├── categories/      # Category tag filters
+│       │   ├── circle-wallet/   # Circle WaaS provisioning & Nanopayments payouts
 │       │   ├── notifications/   # Activity feed notifications
 │       │   ├── posts/           #社交 posts coordinators
 │       │   ├── socket/          # WebSocket real-time updates
@@ -121,7 +132,7 @@ Four contracts deployed on Arc Testnet handle the full market lifecycle: a **Con
 
 ### Backend API (NestJS 11)
 
-A modular REST API with Swagger documentation, passwordless Email OTP authentication with local database verification, Circle smart account wallet provisioning, WebSocket broadcasting for real-time feed updates, and an automated keeper service that resolves expired markets every 30 seconds using AI agents or Pyth price oracles.
+A modular REST API with Swagger documentation, passwordless Email OTP authentication with local database verification, Circle smart account wallet provisioning, WebSocket broadcasting for real-time feed updates, an automated keeper service that resolves expired markets every 30 seconds using AI agents or Pyth price oracles, and a gas-efficient Circle Nanopayments payout engine for micro-fees/royalties.
 
 ### Frontend (Next.js + React 19)
 
