@@ -163,16 +163,17 @@ export default function PvpDuelPicks({ pvpStatus, onSelectChildMarketForTrade, o
                 )}
 
                 {/* Points — only shown when resolved */}
-                {((pick && pick.isCorrect !== null) ||
-                  (oppPick && oppPick.isCorrect !== null)) && (
+                {(((pick && (pick.arenaCorrect ?? pick.isCorrect) !== null) ||
+                  (oppPick &&
+                    (oppPick.arenaCorrect ?? oppPick.isCorrect) !== null))) && (
                   <div className="flex flex-col items-center justify-center px-3 py-1.5 rounded-[8px] border border-border dark:border-zinc-800 shrink-0">
                     <span className="text-[9px] font-inter text-ash uppercase">
                       Points
                     </span>
                     <span
-                      className={`text-xs font-bold ${pick?.isCorrect ? "text-meadow-green" : "text-charcoal-primary dark:text-zinc-400"}`}
+                      className={`text-xs font-bold ${(pick?.arenaCorrect ?? pick?.isCorrect) ? "text-meadow-green" : "text-charcoal-primary dark:text-zinc-400"}`}
                     >
-                      {pick?.isCorrect ? "+1 pt" : "0 pts"}
+                      {(pick?.arenaCorrect ?? pick?.isCorrect) ? "+1 pt" : "0 pts"}
                     </span>
                   </div>
                 )}

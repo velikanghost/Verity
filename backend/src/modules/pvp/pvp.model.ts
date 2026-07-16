@@ -14,6 +14,14 @@ export class PvpPick {
 
   @Prop({ type: Boolean, default: null })
   isCorrect: boolean | null
+
+  // Arena/duel correctness used for scoring & leaderboards. Falls back to
+  // `isCorrect` when null. Diverges from `isCorrect` only when a market is
+  // resolved wrong-but-immutable on-chain: `isCorrect` follows the on-chain
+  // outcome (for USDC claims), while `arenaCorrect` follows the real-world
+  // result (for the duel score).
+  @Prop({ type: Boolean, default: null })
+  arenaCorrect: boolean | null
 }
 
 @Schema({ timestamps: true, versionKey: false })

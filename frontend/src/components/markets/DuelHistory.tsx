@@ -224,16 +224,16 @@ export default function DuelHistory() {
                           </span>
                           <span
                             className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold ${
-                              pick.isCorrect === true
+                              (pick.arenaCorrect ?? pick.isCorrect) === true
                                 ? "bg-meadow-green/10 text-meadow-green border border-meadow-green/20"
-                                : pick.isCorrect === false
+                                : (pick.arenaCorrect ?? pick.isCorrect) === false
                                   ? "bg-ember-orange/10 text-ember-orange border border-ember-orange/20"
                                   : "bg-stone-100 dark:bg-zinc-800 text-ash"
                             }`}
                           >
-                            {pick.isCorrect === true
+                            {(pick.arenaCorrect ?? pick.isCorrect) === true
                               ? "CORRECT"
-                              : pick.isCorrect === false
+                              : (pick.arenaCorrect ?? pick.isCorrect) === false
                                 ? "WRONG"
                                 : "PENDING"}
                           </span>

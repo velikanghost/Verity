@@ -141,14 +141,16 @@ export default function PvpArenaTab({
 
   const runningScoreUser = useMemo(() => {
     if (!pvpStatus?.ticket?.picks) return 0
-    return pvpStatus.ticket.picks.filter((p: any) => p.isCorrect === true)
-      .length
+    return pvpStatus.ticket.picks.filter(
+      (p: any) => (p.arenaCorrect ?? p.isCorrect) === true,
+    ).length
   }, [pvpStatus])
 
   const runningScoreOpponent = useMemo(() => {
     if (!pvpStatus?.opponent?.picks) return 0
-    return pvpStatus.opponent.picks.filter((p: any) => p.isCorrect === true)
-      .length
+    return pvpStatus.opponent.picks.filter(
+      (p: any) => (p.arenaCorrect ?? p.isCorrect) === true,
+    ).length
   }, [pvpStatus])
 
   const optionForLP = useMemo(() => {

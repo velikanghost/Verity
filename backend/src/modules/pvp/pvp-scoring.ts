@@ -10,9 +10,11 @@ const PERFECT_SCORE_BONUS_XP = 20
 const XP_BOOST_MULTIPLIER = 1.2
 
 export function calculatePvpScore(
-  picks: Array<{ isCorrect: boolean | null }>,
+  picks: Array<{ isCorrect: boolean | null; arenaCorrect?: boolean | null }>,
 ): number {
-  return picks.filter((pick) => pick.isCorrect === true).length
+  // Score the duel on arena correctness, falling back to on-chain `isCorrect`.
+  return picks.filter((pick) => (pick.arenaCorrect ?? pick.isCorrect) === true)
+    .length
 }
 
 export function calculatePvpResultXp(
